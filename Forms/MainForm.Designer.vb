@@ -49,6 +49,15 @@ Partial Class MainForm
         btnCANCEL = New ReaLTaiizor.Controls.Button()
         exitQuestions = New Label()
         pnlExitConfirmation = New RoundedPanel()
+        pnlApp = New Panel()
+        pnlHeader = New Panel()
+        btnMinApp = New Button()
+        btnExitApp = New Button()
+        flowNav = New FlowLayoutPanel()
+        lblAppTitle = New Label()
+        picLogoApp = New PictureBox()
+        picCCSApp = New PictureBox()
+        pnlContent = New Panel()
         pnlLogin.SuspendLayout()
         CType(SplitContainer1, ComponentModel.ISupportInitialize).BeginInit()
         SplitContainer1.Panel1.SuspendLayout()
@@ -61,6 +70,10 @@ Partial Class MainForm
         pnlUser.SuspendLayout()
         pnlPass.SuspendLayout()
         pnlExitConfirmation.SuspendLayout()
+        pnlApp.SuspendLayout()
+        pnlHeader.SuspendLayout()
+        CType(picLogoApp, ComponentModel.ISupportInitialize).BeginInit()
+        CType(picCCSApp, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
         ' 
         ' pnlLogin
@@ -412,14 +425,121 @@ Partial Class MainForm
         pnlExitConfirmation.TabIndex = 5
         pnlExitConfirmation.Visible = False
         ' 
+        ' pnlApp
+        ' 
+        pnlApp.Controls.Add(pnlHeader)
+        pnlApp.Controls.Add(pnlContent)
+        pnlApp.Dock = DockStyle.Fill
+        pnlApp.Location = New Point(0, 0)
+        pnlApp.Name = "pnlApp"
+        pnlApp.Size = New Size(1924, 1055)
+        pnlApp.TabIndex = 6
+        ' 
+        ' pnlHeader
+        ' 
+        pnlHeader.BackColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
+        pnlHeader.Controls.Add(btnMinApp)
+        pnlHeader.Controls.Add(btnExitApp)
+        pnlHeader.Controls.Add(flowNav)
+        pnlHeader.Controls.Add(lblAppTitle)
+        pnlHeader.Controls.Add(picLogoApp)
+        pnlHeader.Controls.Add(picCCSApp)
+        pnlHeader.Dock = DockStyle.Top
+        pnlHeader.Location = New Point(0, 0)
+        pnlHeader.Name = "pnlHeader"
+        pnlHeader.Size = New Size(1924, 138)
+        pnlHeader.TabIndex = 0
+        ' 
+        ' btnMinApp
+        ' 
+        btnMinApp.BackColor = Color.Transparent
+        btnMinApp.BackgroundImageLayout = ImageLayout.None
+        btnMinApp.FlatAppearance.BorderSize = 0
+        btnMinApp.FlatStyle = FlatStyle.Flat
+        btnMinApp.Font = New Font("Microsoft Sans Serif", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        btnMinApp.Location = New Point(1827, 0)
+        btnMinApp.Name = "btnMinApp"
+        btnMinApp.Size = New Size(46, 32)
+        btnMinApp.TabIndex = 6
+        btnMinApp.Text = "─"
+        btnMinApp.UseVisualStyleBackColor = False
+        ' 
+        ' btnExitApp
+        ' 
+        btnExitApp.BackColor = Color.Transparent
+        btnExitApp.BackgroundImageLayout = ImageLayout.None
+        btnExitApp.FlatAppearance.BorderSize = 0
+        btnExitApp.FlatStyle = FlatStyle.Flat
+        btnExitApp.Font = New Font("Microsoft Sans Serif", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        btnExitApp.Location = New Point(1878, 0)
+        btnExitApp.Name = "btnExitApp"
+        btnExitApp.Size = New Size(46, 32)
+        btnExitApp.TabIndex = 7
+        btnExitApp.Text = "✕"
+        btnExitApp.UseVisualStyleBackColor = False
+        ' 
+        ' flowNav
+        ' 
+        flowNav.AutoSize = True
+        flowNav.AutoSizeMode = AutoSizeMode.GrowAndShrink
+        flowNav.BackColor = Color.Transparent
+        flowNav.Location = New Point(671, 110)
+        flowNav.Name = "flowNav"
+        flowNav.Size = New Size(0, 0)
+        flowNav.TabIndex = 3
+        flowNav.WrapContents = False
+        ' 
+        ' lblAppTitle
+        ' 
+        lblAppTitle.AutoSize = True
+        lblAppTitle.BackColor = Color.Transparent
+        lblAppTitle.Font = New Font("Century Gothic", 28.2F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        lblAppTitle.ForeColor = Color.FromArgb(CByte(255), CByte(242), CByte(127))
+        lblAppTitle.Location = New Point(115, 47)
+        lblAppTitle.Name = "lblAppTitle"
+        lblAppTitle.Size = New Size(450, 56)
+        lblAppTitle.TabIndex = 2
+        lblAppTitle.Text = "GRADE ENCODING"
+        ' 
+        ' picLogoApp
+        ' 
+        picLogoApp.BackColor = Color.Transparent
+        picLogoApp.BackgroundImage = My.Resources.Resources.PLP_LOGO
+        picLogoApp.BackgroundImageLayout = ImageLayout.Zoom
+        picLogoApp.Location = New Point(34, 44)
+        picLogoApp.Name = "picLogoApp"
+        picLogoApp.Size = New Size(65, 65)
+        picLogoApp.TabIndex = 0
+        picLogoApp.TabStop = False
+        ' 
+        ' picCCSApp
+        ' 
+        picCCSApp.BackColor = Color.Transparent
+        picCCSApp.BackgroundImage = My.Resources.Resources.compscilogo
+        picCCSApp.BackgroundImageLayout = ImageLayout.Zoom
+        picCCSApp.Location = New Point(575, 44)
+        picCCSApp.Name = "picCCSApp"
+        picCCSApp.Size = New Size(65, 65)
+        picCCSApp.TabIndex = 1
+        picCCSApp.TabStop = False
+        ' 
+        ' pnlContent
+        ' 
+        pnlContent.Dock = DockStyle.Fill
+        pnlContent.Location = New Point(0, 0)
+        pnlContent.Name = "pnlContent"
+        pnlContent.Size = New Size(1924, 1055)
+        pnlContent.TabIndex = 1
+        ' 
         ' MainForm
         ' 
         AutoScaleDimensions = New SizeF(8.0F, 20.0F)
         AutoScaleMode = AutoScaleMode.Font
         BackColor = SystemColors.Control
         ClientSize = New Size(1924, 1055)
-        Controls.Add(pnlExitConfirmation)
         Controls.Add(pnlLogin)
+        Controls.Add(pnlApp)
+        Controls.Add(pnlExitConfirmation)
         FormBorderStyle = FormBorderStyle.None
         Icon = CType(resources.GetObject("$this.Icon"), Icon)
         Name = "MainForm"
@@ -441,6 +561,11 @@ Partial Class MainForm
         pnlPass.ResumeLayout(False)
         pnlPass.PerformLayout()
         pnlExitConfirmation.ResumeLayout(False)
+        pnlApp.ResumeLayout(False)
+        pnlHeader.ResumeLayout(False)
+        pnlHeader.PerformLayout()
+        CType(picLogoApp, ComponentModel.ISupportInitialize).EndInit()
+        CType(picCCSApp, ComponentModel.ISupportInitialize).EndInit()
         ResumeLayout(False)
     End Sub
 
@@ -471,5 +596,14 @@ Partial Class MainForm
     Friend WithEvents exitQuestions As Label
     Friend WithEvents btnCANCEL As ReaLTaiizor.Controls.Button
     Friend WithEvents pnlExitConfirmation As RoundedPanel
+    Friend WithEvents pnlApp As Panel
+    Friend WithEvents pnlHeader As Panel
+    Friend WithEvents pnlContent As Panel
+    Friend WithEvents picLogoApp As PictureBox
+    Friend WithEvents picCCSApp As PictureBox
+    Friend WithEvents lblAppTitle As Label
+    Friend WithEvents flowNav As FlowLayoutPanel
+    Friend WithEvents btnMinApp As Button
+    Friend WithEvents btnExitApp As Button
 
 End Class
