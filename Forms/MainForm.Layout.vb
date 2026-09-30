@@ -15,7 +15,6 @@
 
         UpdateLeftPanel()
         UpdateRightPanel()
-        CenterExitPanel()
 
         ' App header window buttons
         If pnlHeader.Width > 0 Then

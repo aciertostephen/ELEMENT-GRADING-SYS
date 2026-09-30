@@ -45,19 +45,19 @@ Partial Class MainForm
         lblUsername = New Label()
         lblPassword = New Label()
         linkForgot = New LinkLabel()
+        flowNav = New FlowLayoutPanel()
         btnEXITF = New ReaLTaiizor.Controls.Button()
         btnCANCEL = New ReaLTaiizor.Controls.Button()
         exitQuestions = New Label()
         pnlExitConfirmation = New RoundedPanel()
         pnlApp = New Panel()
+        pnlContent = New Panel()
         pnlHeader = New Panel()
         btnMinApp = New Button()
         btnExitApp = New Button()
-        flowNav = New FlowLayoutPanel()
         lblAppTitle = New Label()
         picLogoApp = New PictureBox()
         picCCSApp = New PictureBox()
-        pnlContent = New Panel()
         pnlLogin.SuspendLayout()
         CType(SplitContainer1, ComponentModel.ISupportInitialize).BeginInit()
         SplitContainer1.Panel1.SuspendLayout()
@@ -146,7 +146,7 @@ Partial Class MainForm
         ' lblGrade
         ' 
         lblGrade.AutoSize = True
-        lblGrade.Font = New Font("Century Gothic", 60.0F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        lblGrade.Font = New Font("Century Gothic", 60F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
         lblGrade.ForeColor = Color.White
         lblGrade.Location = New Point(394, 526)
         lblGrade.Name = "lblGrade"
@@ -158,7 +158,7 @@ Partial Class MainForm
         ' lblSchool
         ' 
         lblSchool.AutoSize = True
-        lblSchool.Font = New Font("Century Gothic", 12.0F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        lblSchool.Font = New Font("Century Gothic", 12F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
         lblSchool.ForeColor = Color.FromArgb(CByte(247), CByte(242), CByte(101))
         lblSchool.Location = New Point(406, 150)
         lblSchool.Name = "lblSchool"
@@ -181,7 +181,7 @@ Partial Class MainForm
         ' lblEncoder
         ' 
         lblEncoder.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
-        lblEncoder.Font = New Font("Century Gothic", 60.0F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        lblEncoder.Font = New Font("Century Gothic", 60F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
         lblEncoder.ForeColor = Color.White
         lblEncoder.Location = New Point(329, 643)
         lblEncoder.Name = "lblEncoder"
@@ -253,7 +253,7 @@ Partial Class MainForm
         ' 
         txtUsername.BackColor = Color.FromArgb(CByte(224), CByte(224), CByte(224))
         txtUsername.BorderStyle = BorderStyle.None
-        txtUsername.Font = New Font("Century Gothic", 12.0F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        txtUsername.Font = New Font("Century Gothic", 12F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         txtUsername.Location = New Point(13, 14)
         txtUsername.Name = "txtUsername"
         txtUsername.Size = New Size(465, 25)
@@ -276,7 +276,7 @@ Partial Class MainForm
         ' 
         txtPassword.BackColor = Color.FromArgb(CByte(224), CByte(224), CByte(224))
         txtPassword.BorderStyle = BorderStyle.None
-        txtPassword.Font = New Font("Century Gothic", 12.0F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        txtPassword.Font = New Font("Century Gothic", 12F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         txtPassword.Location = New Point(14, 15)
         txtPassword.Name = "txtPassword"
         txtPassword.Size = New Size(465, 25)
@@ -326,7 +326,7 @@ Partial Class MainForm
         ' lblUsername
         ' 
         lblUsername.BackColor = Color.Transparent
-        lblUsername.Font = New Font("Century Gothic", 12.0F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        lblUsername.Font = New Font("Century Gothic", 12F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         lblUsername.Location = New Point(146, 360)
         lblUsername.Name = "lblUsername"
         lblUsername.Size = New Size(172, 28)
@@ -336,7 +336,7 @@ Partial Class MainForm
         ' lblPassword
         ' 
         lblPassword.BackColor = Color.Transparent
-        lblPassword.Font = New Font("Century Gothic", 12.0F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        lblPassword.Font = New Font("Century Gothic", 12F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         lblPassword.Location = New Point(146, 459)
         lblPassword.Name = "lblPassword"
         lblPassword.Size = New Size(108, 28)
@@ -347,7 +347,7 @@ Partial Class MainForm
         ' linkForgot
         ' 
         linkForgot.BackColor = Color.Transparent
-        linkForgot.Font = New Font("Century Gothic", 9.0F, FontStyle.Bold)
+        linkForgot.Font = New Font("Century Gothic", 9F, FontStyle.Bold)
         linkForgot.LinkBehavior = LinkBehavior.NeverUnderline
         linkForgot.LinkColor = Color.FromArgb(CByte(126), CByte(126), CByte(126))
         linkForgot.Location = New Point(499, 702)
@@ -357,6 +357,17 @@ Partial Class MainForm
         linkForgot.TabStop = True
         linkForgot.Text = "Forgot Password?"
         ' 
+        ' flowNav
+        ' 
+        flowNav.AutoSize = True
+        flowNav.AutoSizeMode = AutoSizeMode.GrowAndShrink
+        flowNav.BackColor = Color.Transparent
+        flowNav.Location = New Point(665, 81)
+        flowNav.Name = "flowNav"
+        flowNav.Size = New Size(0, 0)
+        flowNav.TabIndex = 3
+        flowNav.WrapContents = False
+        ' 
         ' btnEXITF
         ' 
         btnEXITF.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
@@ -364,7 +375,7 @@ Partial Class MainForm
         btnEXITF.BorderColor = Color.FromArgb(CByte(32), CByte(34), CByte(37))
         btnEXITF.EnteredBorderColor = Color.Transparent
         btnEXITF.EnteredColor = Color.FromArgb(CByte(220), CByte(70), CByte(70))
-        btnEXITF.Font = New Font("Century Gothic", 9.0F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        btnEXITF.Font = New Font("Century Gothic", 9F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
         btnEXITF.Image = Nothing
         btnEXITF.ImageAlign = ContentAlignment.MiddleLeft
         btnEXITF.InactiveColor = Color.FromArgb(CByte(200), CByte(51), CByte(51))
@@ -385,7 +396,7 @@ Partial Class MainForm
         btnCANCEL.BorderColor = Color.FromArgb(CByte(32), CByte(34), CByte(37))
         btnCANCEL.EnteredBorderColor = Color.Transparent
         btnCANCEL.EnteredColor = Color.FromArgb(CByte(125), CByte(132), CByte(145))
-        btnCANCEL.Font = New Font("Century Gothic", 9.0F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        btnCANCEL.Font = New Font("Century Gothic", 9F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
         btnCANCEL.Image = Nothing
         btnCANCEL.ImageAlign = ContentAlignment.MiddleLeft
         btnCANCEL.InactiveColor = Color.FromArgb(CByte(107), CByte(114), CByte(128))
@@ -402,7 +413,7 @@ Partial Class MainForm
         ' exitQuestions
         ' 
         exitQuestions.BackColor = Color.Transparent
-        exitQuestions.Font = New Font("Century Gothic", 24.0F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        exitQuestions.Font = New Font("Century Gothic", 24F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         exitQuestions.Location = New Point(34, 35)
         exitQuestions.Name = "exitQuestions"
         exitQuestions.Size = New Size(424, 49)
@@ -427,13 +438,23 @@ Partial Class MainForm
         ' 
         ' pnlApp
         ' 
-        pnlApp.Controls.Add(pnlHeader)
+        pnlApp.BackColor = Color.White
         pnlApp.Controls.Add(pnlContent)
+        pnlApp.Controls.Add(pnlHeader)
         pnlApp.Dock = DockStyle.Fill
         pnlApp.Location = New Point(0, 0)
         pnlApp.Name = "pnlApp"
         pnlApp.Size = New Size(1924, 1055)
         pnlApp.TabIndex = 6
+        ' 
+        ' pnlContent
+        ' 
+        pnlContent.BackColor = Color.White
+        pnlContent.Dock = DockStyle.Fill
+        pnlContent.Location = New Point(0, 138)
+        pnlContent.Name = "pnlContent"
+        pnlContent.Size = New Size(1924, 917)
+        pnlContent.TabIndex = 1
         ' 
         ' pnlHeader
         ' 
@@ -478,17 +499,6 @@ Partial Class MainForm
         btnExitApp.Text = "✕"
         btnExitApp.UseVisualStyleBackColor = False
         ' 
-        ' flowNav
-        ' 
-        flowNav.AutoSize = True
-        flowNav.AutoSizeMode = AutoSizeMode.GrowAndShrink
-        flowNav.BackColor = Color.Transparent
-        flowNav.Location = New Point(671, 91)
-        flowNav.Name = "flowNav"
-        flowNav.Size = New Size(0, 0)
-        flowNav.TabIndex = 3
-        flowNav.WrapContents = False
-        ' 
         ' lblAppTitle
         ' 
         lblAppTitle.AutoSize = True
@@ -523,17 +533,9 @@ Partial Class MainForm
         picCCSApp.TabIndex = 1
         picCCSApp.TabStop = False
         ' 
-        ' pnlContent
-        ' 
-        pnlContent.Dock = DockStyle.Fill
-        pnlContent.Location = New Point(0, 0)
-        pnlContent.Name = "pnlContent"
-        pnlContent.Size = New Size(1924, 1055)
-        pnlContent.TabIndex = 1
-        ' 
         ' MainForm
         ' 
-        AutoScaleDimensions = New SizeF(8.0F, 20.0F)
+        AutoScaleDimensions = New SizeF(8F, 20F)
         AutoScaleMode = AutoScaleMode.Font
         BackColor = SystemColors.Control
         ClientSize = New Size(1924, 1055)

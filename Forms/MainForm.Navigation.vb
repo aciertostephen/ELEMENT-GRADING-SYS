@@ -32,19 +32,31 @@
         Dim b As New Button()
         b.Text = text
         b.AutoSize = True
-        b.Margin = New Padding(20, 0, 0, 0)
+        b.Margin = New Padding(40, 0, 0, 0)
         b.FlatStyle = FlatStyle.Flat
         b.FlatAppearance.BorderSize = 0
-        b.FlatAppearance.MouseOverBackColor = Color.FromArgb(30, 110, 80)   ' subtle green highlight, not white
-        b.FlatAppearance.MouseDownBackColor = Color.FromArgb(20, 90, 65)    ' slightly darker on click
+        b.FlatAppearance.MouseOverBackColor = Color.FromArgb(30, 110, 80)
+        b.FlatAppearance.MouseDownBackColor = Color.FromArgb(20, 90, 65)
         b.BackColor = Color.Transparent
         b.UseVisualStyleBackColor = False
         b.ForeColor = Color.White
-        b.Font = New Font("Century Gothic", 10, FontStyle.Bold)
+        b.Font = New Font("Century Gothic", 12, FontStyle.Regular)   ' measure using BOLD from the start
         b.Cursor = Cursors.Hand
         b.TabStop = False
 
-        AddHandler b.Click, Sub(s, e) onClick()
+        ' Lock in the bold-sized width so toggling bold never changes button size
+        Dim boldSize As Size = TextRenderer.MeasureText(text, b.Font)
+        b.AutoSize = False
+        b.Size = New Size(boldSize.Width + 20, boldSize.Height + 10)   ' + padding
+        b.TextAlign = ContentAlignment.MiddleCenter
+
+        AddHandler b.Click, Sub(s, e)
+                                For Each ctrl As Control In flowNav.Controls
+                                    ctrl.Font = New Font(ctrl.Font, FontStyle.Regular)
+                                Next
+                                b.Font = New Font(b.Font, FontStyle.Bold)
+                                onClick()
+                            End Sub
 
         flowNav.Controls.Add(b)
 
