@@ -57,7 +57,7 @@
     Private Sub CenterDeletePanel()
         pnlDeleteConfirmation.Location = New Point(
             (Me.ClientSize.Width - pnlDeleteConfirmation.Width) \ 2,
-            (Me.ClientSize.Height - pnlDeleteConfirmation.Height) \ 2)
+            (Me.ClientSize.Height - (pnlDeleteConfirmation.Height + 138)) \ 2)
     End Sub
 
 End Class
