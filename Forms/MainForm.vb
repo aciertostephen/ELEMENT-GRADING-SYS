@@ -24,7 +24,7 @@
         StyleWindowButton(btnMinLog, Color.FromArgb(230, 230, 230), Color.FromArgb(210, 210, 210))
         StyleWindowButton(btnExitLog, Color.FromArgb(232, 17, 35), Color.FromArgb(241, 112, 122))
 
-        StyleWindowButton(btnMinApp, Color.FromArgb(230, 230, 230), Color.FromArgb(210, 210, 210))
+        StyleWindowButton(btnMinApp, Color.FromArgb(30, 110, 80), Color.FromArgb(20, 90, 65))
         StyleWindowButton(btnExitApp, Color.FromArgb(232, 17, 35), Color.FromArgb(241, 112, 122))
 
         UpdateLayout()

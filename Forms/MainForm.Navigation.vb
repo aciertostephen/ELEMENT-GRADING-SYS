@@ -35,7 +35,10 @@
         b.Margin = New Padding(20, 0, 0, 0)
         b.FlatStyle = FlatStyle.Flat
         b.FlatAppearance.BorderSize = 0
+        b.FlatAppearance.MouseOverBackColor = Color.FromArgb(30, 110, 80)   ' subtle green highlight, not white
+        b.FlatAppearance.MouseDownBackColor = Color.FromArgb(20, 90, 65)    ' slightly darker on click
         b.BackColor = Color.Transparent
+        b.UseVisualStyleBackColor = False
         b.ForeColor = Color.White
         b.Font = New Font("Century Gothic", 10, FontStyle.Bold)
         b.Cursor = Cursors.Hand

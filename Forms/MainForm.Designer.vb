@@ -483,7 +483,7 @@ Partial Class MainForm
         flowNav.AutoSize = True
         flowNav.AutoSizeMode = AutoSizeMode.GrowAndShrink
         flowNav.BackColor = Color.Transparent
-        flowNav.Location = New Point(671, 110)
+        flowNav.Location = New Point(671, 91)
         flowNav.Name = "flowNav"
         flowNav.Size = New Size(0, 0)
         flowNav.TabIndex = 3
