@@ -4,8 +4,8 @@
         pnlLogin.Visible = False
         pnlApp.Visible = True
 
-        SetupNavForRole("Admin")           ' hardcoded for now — real role comes from DB later
-        ShowPage(New ucUserManagement())   ' default landing page
+        SetupNavForRole("Admin")
+        ShowPage(New ucUserManagement())
     End Sub
 
 End Class
