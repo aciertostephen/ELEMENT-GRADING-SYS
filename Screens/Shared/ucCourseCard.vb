@@ -10,6 +10,14 @@
         lblProgress.Text = "ENCODING PROGRESS : " & progress & "%"
         ProgressBar1.Value = progress
     End Sub
+    Public Sub SetDataStudent(courseCode As String, section As String, professor As String, progress As Integer)
+        lblCourseCode.Text = courseCode
+        lblSection.Text = "SECTION : " & section
+        lblYear.Text = "PROFESSOR : " & professor   ' reusing the "Year" label's position for Professor
+        lblEnrolled.Visible = False                  ' hide the Enrolled line entirely
+        lblProgress.Text = "ENCODING PROGRESS : " & progress & "%"
+        ProgressBar1.Value = progress
+    End Sub
 
     Private Sub ucCourseCard_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         Me.Cursor = Cursors.Hand
