@@ -22,6 +22,8 @@ Partial Class ucGradingConfig
     'Do not modify it using the code editor.
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
+        Dim DataGridViewCellStyle1 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle2 As DataGridViewCellStyle = New DataGridViewCellStyle()
         tblGrading = New TableLayoutPanel()
         tblConfigCards = New TableLayoutPanel()
         RoundedPanel1 = New RoundedPanel()
@@ -42,41 +44,48 @@ Partial Class ucGradingConfig
         lblLockStatusCaption = New Label()
         lblDeadlineCaption = New Label()
         lblEncodingTitle = New Label()
-        RoundedPanel3 = New RoundedPanel()
+        pnlGradingScale = New RoundedPanel()
+        btnEditScale = New ReaLTaiizor.Controls.Button()
+        dgvGradingScale = New DataGridView()
+        percentage = New DataGridViewTextBoxColumn()
+        gwa = New DataGridViewTextBoxColumn()
+        lblScaleTitle = New Label()
         tblGrading.SuspendLayout()
         tblConfigCards.SuspendLayout()
         RoundedPanel1.SuspendLayout()
         RoundedPanel2.SuspendLayout()
+        pnlGradingScale.SuspendLayout()
+        CType(dgvGradingScale, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
         ' 
         ' tblGrading
         ' 
         tblGrading.ColumnCount = 1
-        tblGrading.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 100.0F))
+        tblGrading.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 100F))
         tblGrading.Controls.Add(tblConfigCards, 0, 0)
-        tblGrading.Controls.Add(RoundedPanel3, 0, 1)
+        tblGrading.Controls.Add(pnlGradingScale, 0, 1)
         tblGrading.Location = New Point(0, 0)
         tblGrading.Name = "tblGrading"
         tblGrading.Padding = New Padding(20)
         tblGrading.RowCount = 2
-        tblGrading.RowStyles.Add(New RowStyle(SizeType.Absolute, 300.0F))
-        tblGrading.RowStyles.Add(New RowStyle(SizeType.Absolute, 300.0F))
-        tblGrading.Size = New Size(1924, 660)
+        tblGrading.RowStyles.Add(New RowStyle(SizeType.Absolute, 300F))
+        tblGrading.RowStyles.Add(New RowStyle(SizeType.Absolute, 400F))
+        tblGrading.Size = New Size(1924, 740)
         tblGrading.TabIndex = 0
         ' 
         ' tblConfigCards
         ' 
         tblConfigCards.ColumnCount = 2
-        tblConfigCards.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 50.0F))
-        tblConfigCards.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 50.0F))
+        tblConfigCards.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 50F))
+        tblConfigCards.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 50F))
         tblConfigCards.Controls.Add(RoundedPanel1, 0, 0)
         tblConfigCards.Controls.Add(RoundedPanel2, 1, 0)
         tblConfigCards.Dock = DockStyle.Fill
         tblConfigCards.Location = New Point(23, 23)
         tblConfigCards.Name = "tblConfigCards"
         tblConfigCards.RowCount = 1
-        tblConfigCards.RowStyles.Add(New RowStyle(SizeType.Percent, 100.0F))
-        tblConfigCards.RowStyles.Add(New RowStyle(SizeType.Absolute, 20.0F))
+        tblConfigCards.RowStyles.Add(New RowStyle(SizeType.Percent, 100F))
+        tblConfigCards.RowStyles.Add(New RowStyle(SizeType.Absolute, 20F))
         tblConfigCards.Size = New Size(1878, 294)
         tblConfigCards.TabIndex = 0
         ' 
@@ -219,7 +228,7 @@ Partial Class ucGradingConfig
         btnEditSemester.BorderColor = Color.FromArgb(CByte(32), CByte(34), CByte(37))
         btnEditSemester.EnteredBorderColor = Color.Empty
         btnEditSemester.EnteredColor = Color.FromArgb(CByte(44), CByte(110), CByte(90))
-        btnEditSemester.Font = New Font("Century Gothic", 9.0F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        btnEditSemester.Font = New Font("Century Gothic", 9F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
         btnEditSemester.Image = Nothing
         btnEditSemester.ImageAlign = ContentAlignment.MiddleLeft
         btnEditSemester.InactiveColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
@@ -260,7 +269,7 @@ Partial Class ucGradingConfig
         btnEditEncoding.BorderColor = Color.FromArgb(CByte(32), CByte(34), CByte(37))
         btnEditEncoding.EnteredBorderColor = Color.Empty
         btnEditEncoding.EnteredColor = Color.FromArgb(CByte(44), CByte(110), CByte(90))
-        btnEditEncoding.Font = New Font("Century Gothic", 9.0F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        btnEditEncoding.Font = New Font("Century Gothic", 9F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
         btnEditEncoding.Image = Nothing
         btnEditEncoding.ImageAlign = ContentAlignment.MiddleLeft
         btnEditEncoding.InactiveColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
@@ -334,23 +343,102 @@ Partial Class ucGradingConfig
         lblEncodingTitle.TabIndex = 7
         lblEncodingTitle.Text = "GRADE ENCODING CONFIGURATION"
         ' 
-        ' RoundedPanel3
+        ' pnlGradingScale
         ' 
-        RoundedPanel3.ActiveBorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
-        RoundedPanel3.BackColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
-        RoundedPanel3.BorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
-        RoundedPanel3.BorderThickness = 1
-        RoundedPanel3.Dock = DockStyle.Fill
-        RoundedPanel3.Location = New Point(20, 340)
-        RoundedPanel3.Margin = New Padding(0, 20, 0, 0)
-        RoundedPanel3.Name = "RoundedPanel3"
-        RoundedPanel3.Radius = 20
-        RoundedPanel3.Size = New Size(1884, 300)
-        RoundedPanel3.TabIndex = 1
+        pnlGradingScale.ActiveBorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
+        pnlGradingScale.BackColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
+        pnlGradingScale.BorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
+        pnlGradingScale.BorderThickness = 1
+        pnlGradingScale.Controls.Add(btnEditScale)
+        pnlGradingScale.Controls.Add(dgvGradingScale)
+        pnlGradingScale.Controls.Add(lblScaleTitle)
+        pnlGradingScale.Dock = DockStyle.Fill
+        pnlGradingScale.Location = New Point(20, 340)
+        pnlGradingScale.Margin = New Padding(0, 20, 0, 0)
+        pnlGradingScale.Name = "pnlGradingScale"
+        pnlGradingScale.Radius = 12
+        pnlGradingScale.Size = New Size(1884, 380)
+        pnlGradingScale.TabIndex = 1
+        ' 
+        ' btnEditScale
+        ' 
+        btnEditScale.BackColor = Color.Transparent
+        btnEditScale.BackgroundImageLayout = ImageLayout.Zoom
+        btnEditScale.BorderColor = Color.FromArgb(CByte(32), CByte(34), CByte(37))
+        btnEditScale.EnteredBorderColor = Color.Empty
+        btnEditScale.EnteredColor = Color.FromArgb(CByte(44), CByte(110), CByte(90))
+        btnEditScale.Font = New Font("Century Gothic", 9F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        btnEditScale.Image = Nothing
+        btnEditScale.ImageAlign = ContentAlignment.MiddleLeft
+        btnEditScale.InactiveColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
+        btnEditScale.Location = New Point(39, 322)
+        btnEditScale.Name = "btnEditScale"
+        btnEditScale.PressedBorderColor = Color.Transparent
+        btnEditScale.PressedColor = Color.FromArgb(CByte(25), CByte(70), CByte(57))
+        btnEditScale.Size = New Size(195, 29)
+        btnEditScale.TabIndex = 9
+        btnEditScale.Text = "Edit"
+        btnEditScale.TextAlignment = StringAlignment.Center
+        btnEditScale.UseWaitCursor = True
+        ' 
+        ' dgvGradingScale
+        ' 
+        dgvGradingScale.AllowUserToAddRows = False
+        dgvGradingScale.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+        dgvGradingScale.BackgroundColor = Color.White
+        dgvGradingScale.BorderStyle = BorderStyle.None
+        DataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle1.BackColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
+        DataGridViewCellStyle1.Font = New Font("Century Gothic", 12F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        DataGridViewCellStyle1.ForeColor = SystemColors.WindowText
+        DataGridViewCellStyle1.SelectionBackColor = SystemColors.Highlight
+        DataGridViewCellStyle1.SelectionForeColor = SystemColors.HighlightText
+        DataGridViewCellStyle1.WrapMode = DataGridViewTriState.True
+        dgvGradingScale.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle1
+        dgvGradingScale.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize
+        dgvGradingScale.Columns.AddRange(New DataGridViewColumn() {percentage, gwa})
+        DataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle2.BackColor = SystemColors.Window
+        DataGridViewCellStyle2.Font = New Font("Century Gothic", 12F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        DataGridViewCellStyle2.ForeColor = SystemColors.ControlText
+        DataGridViewCellStyle2.SelectionBackColor = SystemColors.Highlight
+        DataGridViewCellStyle2.SelectionForeColor = SystemColors.HighlightText
+        DataGridViewCellStyle2.WrapMode = DataGridViewTriState.False
+        dgvGradingScale.DefaultCellStyle = DataGridViewCellStyle2
+        dgvGradingScale.Location = New Point(65, 65)
+        dgvGradingScale.Name = "dgvGradingScale"
+        dgvGradingScale.RowHeadersVisible = False
+        dgvGradingScale.RowHeadersWidth = 51
+        dgvGradingScale.Size = New Size(1730, 180)
+        dgvGradingScale.TabIndex = 8
+        ' 
+        ' percentage
+        ' 
+        percentage.HeaderText = "Percentage Range"
+        percentage.MinimumWidth = 6
+        percentage.Name = "percentage"
+        ' 
+        ' gwa
+        ' 
+        gwa.HeaderText = "GWA"
+        gwa.MinimumWidth = 6
+        gwa.Name = "gwa"
+        ' 
+        ' lblScaleTitle
+        ' 
+        lblScaleTitle.AutoSize = True
+        lblScaleTitle.BackColor = Color.Transparent
+        lblScaleTitle.Font = New Font("Century Gothic", 10.8F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        lblScaleTitle.ForeColor = Color.FromArgb(CByte(126), CByte(126), CByte(126))
+        lblScaleTitle.Location = New Point(39, 29)
+        lblScaleTitle.Name = "lblScaleTitle"
+        lblScaleTitle.Size = New Size(245, 22)
+        lblScaleTitle.TabIndex = 7
+        lblScaleTitle.Text = "GRADING SCALE AND GWA"
         ' 
         ' ucGradingConfig
         ' 
-        AutoScaleDimensions = New SizeF(8.0F, 20.0F)
+        AutoScaleDimensions = New SizeF(8F, 20F)
         AutoScaleMode = AutoScaleMode.Font
         BackColor = Color.White
         Controls.Add(tblGrading)
@@ -362,6 +450,9 @@ Partial Class ucGradingConfig
         RoundedPanel1.PerformLayout()
         RoundedPanel2.ResumeLayout(False)
         RoundedPanel2.PerformLayout()
+        pnlGradingScale.ResumeLayout(False)
+        pnlGradingScale.PerformLayout()
+        CType(dgvGradingScale, ComponentModel.ISupportInitialize).EndInit()
         ResumeLayout(False)
     End Sub
 
@@ -388,7 +479,12 @@ Partial Class ucGradingConfig
     Friend WithEvents lblDeadlineCaption As Label
     Friend WithEvents lblEncodingTitle As Label
     Friend WithEvents btnEditEncoding As ReaLTaiizor.Controls.Button
-    Friend WithEvents RoundedPanel3 As RoundedPanel
+    Friend WithEvents pnlGradingScale As RoundedPanel
+    Friend WithEvents lblScaleTitle As Label
+    Friend WithEvents dgvGradingScale As DataGridView
+    Friend WithEvents btnEditScale As ReaLTaiizor.Controls.Button
+    Friend WithEvents percentage As DataGridViewTextBoxColumn
+    Friend WithEvents gwa As DataGridViewTextBoxColumn
 
 
 End Class
