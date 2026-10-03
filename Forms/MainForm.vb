@@ -100,4 +100,5 @@
     Private Sub btnExitApp_MouseLeave(sender As Object, e As EventArgs) Handles btnExitApp.MouseLeave
         btnExitApp.ForeColor = Color.Black
     End Sub
+
 End Class

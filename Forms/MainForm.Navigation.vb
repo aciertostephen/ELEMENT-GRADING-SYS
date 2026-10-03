@@ -1,6 +1,6 @@
 ﻿Partial Public Class MainForm
 
-    Private Sub ShowPage(page As UserControl)
+    Friend Sub ShowPage(page As UserControl)
         pnlContent.Controls.Clear()
         page.Dock = DockStyle.Fill
         pnlContent.Controls.Add(page)

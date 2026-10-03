@@ -118,12 +118,12 @@ Partial Class ucUserManagement
         DataGridViewCellStyle2.WrapMode = DataGridViewTriState.False
         dgvUsers.DefaultCellStyle = DataGridViewCellStyle2
         dgvUsers.GridColor = Color.White
-        dgvUsers.Location = New Point(17, 166)
+        dgvUsers.Location = New Point(17, 163)
         dgvUsers.Name = "dgvUsers"
         dgvUsers.RowHeadersVisible = False
         dgvUsers.RowHeadersWidth = 51
         dgvUsers.SelectionMode = DataGridViewSelectionMode.FullRowSelect
-        dgvUsers.Size = New Size(1415, 722)
+        dgvUsers.Size = New Size(1415, 725)
         dgvUsers.TabIndex = 2
         ' 
         ' user
@@ -175,7 +175,7 @@ Partial Class ucUserManagement
         pnlToolbar.Dock = DockStyle.Top
         pnlToolbar.Location = New Point(0, 100)
         pnlToolbar.Name = "pnlToolbar"
-        pnlToolbar.Size = New Size(1453, 50)
+        pnlToolbar.Size = New Size(1453, 57)
         pnlToolbar.TabIndex = 1
         ' 
         ' btnFilter
@@ -189,7 +189,7 @@ Partial Class ucUserManagement
         btnFilter.Image = Nothing
         btnFilter.ImageAlign = ContentAlignment.MiddleLeft
         btnFilter.InactiveColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
-        btnFilter.Location = New Point(323, 4)
+        btnFilter.Location = New Point(323, 8)
         btnFilter.Name = "btnFilter"
         btnFilter.PressedBorderColor = Color.Transparent
         btnFilter.PressedColor = Color.FromArgb(CByte(25), CByte(70), CByte(57))
@@ -206,7 +206,7 @@ Partial Class ucUserManagement
         pnlSearch.BorderColor = Color.FromArgb(CByte(209), CByte(213), CByte(219))
         pnlSearch.BorderThickness = 1
         pnlSearch.Controls.Add(txtSearch)
-        pnlSearch.Location = New Point(17, 4)
+        pnlSearch.Location = New Point(17, 8)
         pnlSearch.Name = "pnlSearch"
         pnlSearch.Radius = 8
         pnlSearch.Size = New Size(300, 40)
