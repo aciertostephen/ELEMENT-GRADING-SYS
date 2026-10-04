@@ -27,6 +27,9 @@
         StyleWindowButton(btnMinApp, Color.FromArgb(30, 110, 80), Color.FromArgb(20, 90, 65))
         StyleWindowButton(btnExitApp, Color.FromArgb(232, 17, 35), Color.FromArgb(241, 112, 122))
 
+        btnNotif.Text = ChrW(&HEA8F)
+        btnNotif.Font = New Font("Segoe MDL2 Assets", 18)
+        btnNotif.TextAlign = ContentAlignment.MiddleCenter
         UpdateLayout()
 
     End Sub
@@ -99,6 +102,30 @@
 
     Private Sub btnExitApp_MouseLeave(sender As Object, e As EventArgs) Handles btnExitApp.MouseLeave
         btnExitApp.ForeColor = Color.Black
+    End Sub
+
+    Private Sub btnNotif_Click(sender As Object, e As EventArgs) Handles btnNotif.Click
+
+        If pnlNotifications.Visible Then
+            pnlNotifications.Visible = False
+            Return
+        End If
+
+        LoadNotifications()
+
+        pnlNotifications.Location = New Point(
+        btnNotif.PointToScreen(Point.Empty).X - Me.PointToScreen(Point.Empty).X - 25 - pnlNotifications.Width + btnNotif.Width,
+        pnlHeader.Bottom + 25
+    )
+
+        pnlNotifications.Visible = True
+        pnlNotifications.BringToFront()
+
+    End Sub
+    Private Sub MainForm_Click(sender As Object, e As EventArgs) Handles Me.Click
+        If pnlNotifications.Visible Then
+            pnlNotifications.Visible = False
+        End If
     End Sub
 
 End Class

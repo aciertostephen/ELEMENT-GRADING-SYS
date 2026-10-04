@@ -53,11 +53,19 @@ Partial Class MainForm
         pnlApp = New Panel()
         pnlContent = New Panel()
         pnlHeader = New Panel()
+        lblProfileSettingsLink = New LinkLabel()
+        btnNotif = New Button()
         btnMinApp = New Button()
         btnExitApp = New Button()
         lblAppTitle = New Label()
         picLogoApp = New PictureBox()
         picCCSApp = New PictureBox()
+        pnlNotifications = New RoundedPanel()
+        flowNotifList = New FlowLayoutPanel()
+        pnlFilterRow = New Panel()
+        btnClassification = New ReaLTaiizor.Controls.Button()
+        btnFromFilter = New ReaLTaiizor.Controls.Button()
+        btnAllFilter = New ReaLTaiizor.Controls.AloneButton()
         pnlLogin.SuspendLayout()
         CType(SplitContainer1, ComponentModel.ISupportInitialize).BeginInit()
         SplitContainer1.Panel1.SuspendLayout()
@@ -74,6 +82,8 @@ Partial Class MainForm
         pnlHeader.SuspendLayout()
         CType(picLogoApp, ComponentModel.ISupportInitialize).BeginInit()
         CType(picCCSApp, ComponentModel.ISupportInitialize).BeginInit()
+        pnlNotifications.SuspendLayout()
+        pnlFilterRow.SuspendLayout()
         SuspendLayout()
         ' 
         ' pnlLogin
@@ -181,11 +191,12 @@ Partial Class MainForm
         ' lblEncoder
         ' 
         lblEncoder.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
+        lblEncoder.AutoSize = True
         lblEncoder.Font = New Font("Century Gothic", 60F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
         lblEncoder.ForeColor = Color.White
         lblEncoder.Location = New Point(329, 643)
         lblEncoder.Name = "lblEncoder"
-        lblEncoder.Size = New Size(522, 116)
+        lblEncoder.Size = New Size(518, 117)
         lblEncoder.TabIndex = 2
         lblEncoder.Text = "ENCODER"
         ' 
@@ -459,6 +470,8 @@ Partial Class MainForm
         ' pnlHeader
         ' 
         pnlHeader.BackColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
+        pnlHeader.Controls.Add(lblProfileSettingsLink)
+        pnlHeader.Controls.Add(btnNotif)
         pnlHeader.Controls.Add(btnMinApp)
         pnlHeader.Controls.Add(btnExitApp)
         pnlHeader.Controls.Add(flowNav)
@@ -470,6 +483,32 @@ Partial Class MainForm
         pnlHeader.Name = "pnlHeader"
         pnlHeader.Size = New Size(1924, 138)
         pnlHeader.TabIndex = 0
+        ' 
+        ' lblProfileSettingsLink
+        ' 
+        lblProfileSettingsLink.AutoSize = True
+        lblProfileSettingsLink.Font = New Font("Century Gothic", 13.8F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        lblProfileSettingsLink.LinkBehavior = LinkBehavior.NeverUnderline
+        lblProfileSettingsLink.LinkColor = Color.White
+        lblProfileSettingsLink.Location = New Point(1712, 93)
+        lblProfileSettingsLink.Name = "lblProfileSettingsLink"
+        lblProfileSettingsLink.Size = New Size(205, 27)
+        lblProfileSettingsLink.TabIndex = 9
+        lblProfileSettingsLink.TabStop = True
+        lblProfileSettingsLink.Text = "PROFILE SETTINGS"
+        ' 
+        ' btnNotif
+        ' 
+        btnNotif.BackColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
+        btnNotif.FlatAppearance.BorderSize = 0
+        btnNotif.FlatStyle = FlatStyle.Flat
+        btnNotif.Font = New Font("Segoe MDL2 Assets", 16.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        btnNotif.ForeColor = Color.White
+        btnNotif.Location = New Point(1835, 71)
+        btnNotif.Name = "btnNotif"
+        btnNotif.Size = New Size(86, 63)
+        btnNotif.TabIndex = 8
+        btnNotif.UseVisualStyleBackColor = False
         ' 
         ' btnMinApp
         ' 
@@ -533,15 +572,109 @@ Partial Class MainForm
         picCCSApp.TabIndex = 1
         picCCSApp.TabStop = False
         ' 
+        ' pnlNotifications
+        ' 
+        pnlNotifications.ActiveBorderColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
+        pnlNotifications.BackColor = Color.White
+        pnlNotifications.BorderColor = Color.Black
+        pnlNotifications.BorderThickness = 1
+        pnlNotifications.Controls.Add(flowNotifList)
+        pnlNotifications.Controls.Add(pnlFilterRow)
+        pnlNotifications.Location = New Point(1000, 70)
+        pnlNotifications.Name = "pnlNotifications"
+        pnlNotifications.Radius = 12
+        pnlNotifications.Size = New Size(900, 470)
+        pnlNotifications.TabIndex = 0
+        pnlNotifications.Visible = False
+        ' 
+        ' flowNotifList
+        ' 
+        flowNotifList.AutoScroll = True
+        flowNotifList.BackColor = Color.Transparent
+        flowNotifList.Dock = DockStyle.Fill
+        flowNotifList.FlowDirection = FlowDirection.TopDown
+        flowNotifList.Location = New Point(0, 50)
+        flowNotifList.Name = "flowNotifList"
+        flowNotifList.Size = New Size(900, 420)
+        flowNotifList.TabIndex = 15
+        flowNotifList.WrapContents = False
+        ' 
+        ' pnlFilterRow
+        ' 
+        pnlFilterRow.BackColor = Color.Transparent
+        pnlFilterRow.Controls.Add(btnClassification)
+        pnlFilterRow.Controls.Add(btnFromFilter)
+        pnlFilterRow.Controls.Add(btnAllFilter)
+        pnlFilterRow.Dock = DockStyle.Top
+        pnlFilterRow.Location = New Point(0, 0)
+        pnlFilterRow.Name = "pnlFilterRow"
+        pnlFilterRow.Size = New Size(900, 50)
+        pnlFilterRow.TabIndex = 14
+        ' 
+        ' btnClassification
+        ' 
+        btnClassification.BackColor = Color.Transparent
+        btnClassification.BackgroundImageLayout = ImageLayout.Zoom
+        btnClassification.BorderColor = Color.FromArgb(CByte(32), CByte(34), CByte(37))
+        btnClassification.EnteredBorderColor = Color.Empty
+        btnClassification.EnteredColor = Color.FromArgb(CByte(44), CByte(110), CByte(90))
+        btnClassification.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        btnClassification.Image = Nothing
+        btnClassification.ImageAlign = ContentAlignment.MiddleLeft
+        btnClassification.InactiveColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
+        btnClassification.Location = New Point(701, 10)
+        btnClassification.Name = "btnClassification"
+        btnClassification.PressedBorderColor = Color.Transparent
+        btnClassification.PressedColor = Color.FromArgb(CByte(25), CByte(70), CByte(57))
+        btnClassification.Size = New Size(179, 30)
+        btnClassification.TabIndex = 13
+        btnClassification.Text = "Classification ▾"
+        btnClassification.TextAlignment = StringAlignment.Center
+        btnClassification.UseWaitCursor = True
+        ' 
+        ' btnFromFilter
+        ' 
+        btnFromFilter.BackColor = Color.Transparent
+        btnFromFilter.BackgroundImageLayout = ImageLayout.Zoom
+        btnFromFilter.BorderColor = Color.FromArgb(CByte(32), CByte(34), CByte(37))
+        btnFromFilter.EnteredBorderColor = Color.Empty
+        btnFromFilter.EnteredColor = Color.FromArgb(CByte(44), CByte(110), CByte(90))
+        btnFromFilter.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        btnFromFilter.Image = Nothing
+        btnFromFilter.ImageAlign = ContentAlignment.MiddleLeft
+        btnFromFilter.InactiveColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
+        btnFromFilter.Location = New Point(366, 10)
+        btnFromFilter.Name = "btnFromFilter"
+        btnFromFilter.PressedBorderColor = Color.Transparent
+        btnFromFilter.PressedColor = Color.FromArgb(CByte(25), CByte(70), CByte(57))
+        btnFromFilter.Size = New Size(180, 30)
+        btnFromFilter.TabIndex = 12
+        btnFromFilter.Text = "From ▾"
+        btnFromFilter.TextAlignment = StringAlignment.Center
+        btnFromFilter.UseWaitCursor = True
+        ' 
+        ' btnAllFilter
+        ' 
+        btnAllFilter.BackColor = Color.Transparent
+        btnAllFilter.EnabledCalc = True
+        btnAllFilter.Font = New Font("Century Gothic", 10.2F)
+        btnAllFilter.ForeColor = Color.Black
+        btnAllFilter.Location = New Point(552, 10)
+        btnAllFilter.Name = "btnAllFilter"
+        btnAllFilter.Size = New Size(143, 30)
+        btnAllFilter.TabIndex = 11
+        btnAllFilter.Text = "All"
+        ' 
         ' MainForm
         ' 
-        AutoScaleDimensions = New SizeF(8F, 20F)
+        AutoScaleDimensions = New SizeF(8.0F, 20.0F)
         AutoScaleMode = AutoScaleMode.Font
         BackColor = SystemColors.Control
         ClientSize = New Size(1924, 1055)
         Controls.Add(pnlLogin)
         Controls.Add(pnlApp)
         Controls.Add(pnlExitConfirmation)
+        Controls.Add(pnlNotifications)
         FormBorderStyle = FormBorderStyle.None
         Icon = CType(resources.GetObject("$this.Icon"), Icon)
         Name = "MainForm"
@@ -568,6 +701,8 @@ Partial Class MainForm
         pnlHeader.PerformLayout()
         CType(picLogoApp, ComponentModel.ISupportInitialize).EndInit()
         CType(picCCSApp, ComponentModel.ISupportInitialize).EndInit()
+        pnlNotifications.ResumeLayout(False)
+        pnlFilterRow.ResumeLayout(False)
         ResumeLayout(False)
     End Sub
 
@@ -607,5 +742,13 @@ Partial Class MainForm
     Friend WithEvents flowNav As FlowLayoutPanel
     Friend WithEvents btnMinApp As Button
     Friend WithEvents btnExitApp As Button
+    Friend WithEvents btnNotif As Button
+    Friend WithEvents pnlNotifications As RoundedPanel
+    Friend WithEvents btnAllFilter As ReaLTaiizor.Controls.AloneButton
+    Friend WithEvents btnClassification As ReaLTaiizor.Controls.Button
+    Friend WithEvents btnFromFilter As ReaLTaiizor.Controls.Button
+    Friend WithEvents pnlFilterRow As Panel
+    Friend WithEvents flowNotifList As FlowLayoutPanel
+    Friend WithEvents lblProfileSettingsLink As LinkLabel
 
 End Class

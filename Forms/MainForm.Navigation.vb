@@ -6,9 +6,18 @@
         pnlContent.Controls.Add(page)
     End Sub
 
+    Private _currentRole As String
     Private Sub SetupNavForRole(role As String)
 
+        _currentRole = role
         flowNav.Controls.Clear()
+
+        ' Bell icon is Admin-only per the mockup
+        btnNotif.Visible = (role = "Admin")
+        pnlNotifications.Visible = False
+
+        ' Profile Settings is Teacher/Student-only per the mockup (Admin doesn't have it)
+        lblProfileSettingsLink.Visible = (role = "Teacher" OrElse role = "Student")
 
         Select Case role
             Case "Admin"
@@ -17,7 +26,7 @@
                 AddNavButton("GRADING CONFIGURATION", Sub() ShowPage(New ucGradingConfig()))
 
             Case "Teacher"
-                ' no nav links per the mockup — Profile Settings only
+            ' no nav links per the mockup — Profile Settings only
 
             Case "Student"
                 AddNavButton("MAIN DASHBOARD", Sub() ShowPage(New ucStudentDashboard()), isDefault:=True)
@@ -39,32 +48,74 @@
         b.BackColor = Color.Transparent
         b.UseVisualStyleBackColor = False
         b.ForeColor = Color.White
-        b.Font = New Font("Century Gothic", 12, FontStyle.Bold)   ' measure as bold
+        b.Font = New Font("Century Gothic", 10, FontStyle.Bold)
         b.Cursor = Cursors.Hand
         b.TabStop = False
 
-        ' Lock in the bold-sized width so toggling bold never changes button size
         Dim boldSize As Size = TextRenderer.MeasureText(text, b.Font)
         b.AutoSize = False
         b.Size = New Size(boldSize.Width + 20, boldSize.Height + 10)
         b.TextAlign = ContentAlignment.MiddleCenter
 
         AddHandler b.Click, Sub(s, e)
-                                For Each ctrl As Control In flowNav.Controls
-                                    ctrl.Font = New Font(ctrl.Font, FontStyle.Regular)
-                                Next
-                                b.Font = New Font(b.Font, FontStyle.Bold)
+                                SetActiveNavControl(b)
                                 onClick()
                             End Sub
 
         flowNav.Controls.Add(b)
 
-        ' If this is the page that loads by default, mark it active right now
         If isDefault Then
             b.Font = New Font(b.Font, FontStyle.Bold)
         Else
             b.Font = New Font(b.Font, FontStyle.Regular)
         End If
+
+    End Sub
+
+    Private Sub LoadNotifications()
+
+        flowNotifList.Controls.Clear()
+
+        AddNotification("HH:MM AM  -  DD-MM-YYYY", "Official Midterm Grades for BSCS 1A - GE 001 are now available.", False)
+        AddNotification("HH:MM AM  -  DD-MM-YYYY", "Subject Add / Drop / Transfer Application", False)
+        AddNotification("HH:MM AM  -  DD-MM-YYYY", "Class Update Notice", False)
+        AddNotification("HH:MM AM  -  DD-MM-YYYY", "Official Midterm Grades for BSCS 1A - GE 001 are now available.", False)
+        AddNotification("HH:MM AM  -  DD-MM-YYYY", "Subject Add / Drop / Transfer Application", False)
+        AddNotification("HH:MM AM  -  DD-MM-YYYY", "Class Update Notice", True)   ' Completed
+
+    End Sub
+
+    Private Sub AddNotification(timestamp As String, message As String, isCompleted As Boolean)
+        Dim item As New ucNotificationItem()
+        item.Width = flowNotifList.Width - 25
+        item.SetData(timestamp, message, isCompleted)
+        AddHandler item.ActionClicked, Sub() MessageBox.Show("Review clicked: " & message)
+        flowNotifList.Controls.Add(item)
+    End Sub
+
+    Private Sub lblProfileSettingsLink_Click(sender As Object, e As EventArgs) Handles lblProfileSettingsLink.Click
+
+        SetActiveNavControl(lblProfileSettingsLink)
+
+        Dim page As New ucProfileSettings()
+        page.SetData(
+        "Last Name, Full Name M.I.",
+        _currentRole,
+        If(_currentRole = "Teacher", "Professor", "Student"),
+        "Department", "Email", "Phone Number"
+    )
+        ShowPage(page)
+
+    End Sub
+    Private Sub SetActiveNavControl(active As Control)
+
+        For Each ctrl As Control In flowNav.Controls
+            ctrl.Font = New Font(ctrl.Font, FontStyle.Regular)
+        Next
+
+        lblProfileSettingsLink.Font = New Font(lblProfileSettingsLink.Font, FontStyle.Regular)
+
+        active.Font = New Font(active.Font, FontStyle.Bold)
 
     End Sub
 
