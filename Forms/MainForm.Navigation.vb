@@ -10,13 +10,12 @@
     Private Sub SetupNavForRole(role As String)
 
         _currentRole = role
+
         flowNav.Controls.Clear()
 
-        ' Bell icon is Admin-only per the mockup
         btnNotif.Visible = (role = "Admin")
+        btnLogoutAdmin.Visible = (role = "Admin")          ' ← add this line
         pnlNotifications.Visible = False
-
-        ' Profile Settings is Teacher/Student-only per the mockup (Admin doesn't have it)
         lblProfileSettingsLink.Visible = (role = "Teacher" OrElse role = "Student")
 
         Select Case role

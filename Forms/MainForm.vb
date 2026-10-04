@@ -128,4 +128,8 @@
         End If
     End Sub
 
+    Private Sub btnLogoutAdmin_Click(sender As Object, e As EventArgs) Handles btnLogoutAdmin.Click
+        pnlApp.Visible = False
+        pnlLogin.Visible = True
+    End Sub
 End Class
