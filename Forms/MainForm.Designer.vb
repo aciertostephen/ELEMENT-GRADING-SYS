@@ -185,7 +185,7 @@ Partial Class MainForm
         lblEncoder.ForeColor = Color.White
         lblEncoder.Location = New Point(329, 643)
         lblEncoder.Name = "lblEncoder"
-        lblEncoder.Size = New Size(522, 102)
+        lblEncoder.Size = New Size(522, 116)
         lblEncoder.TabIndex = 2
         lblEncoder.Text = "ENCODER"
         ' 
