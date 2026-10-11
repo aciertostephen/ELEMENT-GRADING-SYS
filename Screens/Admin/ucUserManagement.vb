@@ -23,7 +23,6 @@ Public Class ucUserManagement
     Private Const STATUS_ACTIVE As String = "Active"
     Private Const STATUS_INACTIVE As String = "Inactive"
 
-    ' Filter keys
     Private Const FILTER_ALL As String = "All"
     Private Const FILTER_STUDENT As String = "Student"
     Private Const FILTER_FACULTY As String = "Faculty"
@@ -42,13 +41,10 @@ Public Class ucUserManagement
 
     Private currentFilter As String = FILTER_ALL
 
-    ' Filter dropdown (created once, disposed with the control)
     Private ReadOnly cmsFilterMenu As New ContextMenuStrip()
 
-    ' Debounce timer for the search box
     Private WithEvents tmrSearch As New Timer() With {.Interval = 250}
 
-    ' Stat card value labels, created once and only updated afterwards
     Private ReadOnly statValueLabels As New Dictionary(Of String, Label)
 
     '========================================
@@ -83,7 +79,6 @@ Public Class ucUserManagement
         Return source.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0
     End Function
 
-    ''' <summary>Single source of truth for what counts as faculty.</summary>
     Private Shared Function IsFaculty(role As String) As Boolean
         Return SameText(role, ROLE_PROFESSOR) OrElse
                SameText(role, "Faculty") OrElse
@@ -197,7 +192,6 @@ Public Class ucUserManagement
             Dim role As String = CellText(row, Col.Role)
             Dim status As String = CellText(row, Col.Status)
 
-            ' Calculate global stats during the same pass
             total += 1
             If IsFaculty(role) Then
                 faculty += 1
@@ -206,7 +200,6 @@ Public Class ucUserManagement
             End If
             If SameText(status, STATUS_INACTIVE) Then inactive += 1
 
-            ' Evaluate Visibility
             Dim matchesSearch As Boolean = String.IsNullOrEmpty(query) OrElse
                                        CellText(row, Col.UserId).ToLower().Contains(query) OrElse
                                        CellText(row, Col.FullName).ToLower().Contains(query) OrElse
@@ -223,7 +216,6 @@ Public Class ucUserManagement
 
         dgvUsers.ResumeLayout()
 
-        ' Update Stat Box Labels instantly
         If statValueLabels.ContainsKey("TOTAL USERS") Then
             statValueLabels("TOTAL USERS").Text = total.ToString()
             statValueLabels("FACULTY").Text = faculty.ToString()
@@ -332,7 +324,6 @@ Public Class ucUserManagement
         Dim fullName As String = CellText(selectedRow, Col.FullName)
         Dim currentStatus As String = CellText(selectedRow, Col.Status)
 
-        ' Toggle: Active -> Inactive, anything else -> Active
         Dim deactivating As Boolean = SameText(currentStatus, STATUS_ACTIVE)
 
         If deactivating AndAlso IsCurrentAdmin(userId) Then
