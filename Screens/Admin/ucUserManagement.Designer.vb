@@ -22,8 +22,8 @@ Partial Class ucUserManagement
     'Do not modify it using the code editor.
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
-        Dim DataGridViewCellStyle1 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle2 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle3 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle4 As DataGridViewCellStyle = New DataGridViewCellStyle()
         tblMain = New TableLayoutPanel()
         pnlUserBG = New RoundedPanel()
         dgvUsers = New DataGridView()
@@ -43,13 +43,9 @@ Partial Class ucUserManagement
         pnlMainBG = New RoundedPanel()
         btnDeleteBTN = New ReaLTaiizor.Controls.Button()
         linkResetPass = New LinkLabel()
-        linkDeactivate = New LinkLabel()
+        linkUserStatus = New LinkLabel()
         linkEditInfo = New LinkLabel()
         btnCreateUser = New ReaLTaiizor.Controls.Button()
-        pnlDeleteConfirmation = New RoundedPanel()
-        lblDeleteConfirm = New Label()
-        btnCancelDeletion = New ReaLTaiizor.Controls.Button()
-        btnDeleteAccount = New ReaLTaiizor.Controls.Button()
         tblMain.SuspendLayout()
         pnlUserBG.SuspendLayout()
         CType(dgvUsers, ComponentModel.ISupportInitialize).BeginInit()
@@ -57,7 +53,6 @@ Partial Class ucUserManagement
         pnlSearch.SuspendLayout()
         pnlStats.SuspendLayout()
         pnlMainBG.SuspendLayout()
-        pnlDeleteConfirmation.SuspendLayout()
         SuspendLayout()
         ' 
         ' tblMain
@@ -73,7 +68,7 @@ Partial Class ucUserManagement
         tblMain.RowCount = 2
         tblMain.RowStyles.Add(New RowStyle(SizeType.Percent, 100F))
         tblMain.RowStyles.Add(New RowStyle(SizeType.Absolute, 20F))
-        tblMain.Size = New Size(1924, 917)
+        tblMain.Size = New Size(1925, 917)
         tblMain.TabIndex = 2
         ' 
         ' pnlUserBG
@@ -96,27 +91,28 @@ Partial Class ucUserManagement
         ' 
         dgvUsers.AllowUserToAddRows = False
         dgvUsers.AllowUserToDeleteRows = False
+        dgvUsers.Anchor = AnchorStyles.None
         dgvUsers.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
         dgvUsers.BackgroundColor = Color.White
         dgvUsers.BorderStyle = BorderStyle.None
-        DataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle1.BackColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
-        DataGridViewCellStyle1.Font = New Font("Century Gothic", 9F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        DataGridViewCellStyle1.ForeColor = Color.White
-        DataGridViewCellStyle1.SelectionBackColor = SystemColors.Highlight
-        DataGridViewCellStyle1.SelectionForeColor = Color.White
-        DataGridViewCellStyle1.WrapMode = DataGridViewTriState.True
-        dgvUsers.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle1
+        DataGridViewCellStyle3.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle3.BackColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
+        DataGridViewCellStyle3.Font = New Font("Century Gothic", 9F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        DataGridViewCellStyle3.ForeColor = Color.White
+        DataGridViewCellStyle3.SelectionBackColor = SystemColors.Highlight
+        DataGridViewCellStyle3.SelectionForeColor = Color.White
+        DataGridViewCellStyle3.WrapMode = DataGridViewTriState.True
+        dgvUsers.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle3
         dgvUsers.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize
         dgvUsers.Columns.AddRange(New DataGridViewColumn() {user, username, role, email, phone, dateadd, status})
-        DataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle2.BackColor = Color.White
-        DataGridViewCellStyle2.Font = New Font("Segoe UI", 9F)
-        DataGridViewCellStyle2.ForeColor = SystemColors.ControlText
-        DataGridViewCellStyle2.SelectionBackColor = SystemColors.Highlight
-        DataGridViewCellStyle2.SelectionForeColor = SystemColors.HighlightText
-        DataGridViewCellStyle2.WrapMode = DataGridViewTriState.False
-        dgvUsers.DefaultCellStyle = DataGridViewCellStyle2
+        DataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle4.BackColor = Color.White
+        DataGridViewCellStyle4.Font = New Font("Segoe UI", 9F)
+        DataGridViewCellStyle4.ForeColor = SystemColors.ControlText
+        DataGridViewCellStyle4.SelectionBackColor = SystemColors.Highlight
+        DataGridViewCellStyle4.SelectionForeColor = SystemColors.HighlightText
+        DataGridViewCellStyle4.WrapMode = DataGridViewTriState.False
+        dgvUsers.DefaultCellStyle = DataGridViewCellStyle4
         dgvUsers.GridColor = Color.White
         dgvUsers.Location = New Point(17, 163)
         dgvUsers.Name = "dgvUsers"
@@ -182,17 +178,17 @@ Partial Class ucUserManagement
         ' 
         btnFilter.BackColor = Color.Transparent
         btnFilter.BackgroundImageLayout = ImageLayout.Zoom
-        btnFilter.BorderColor = Color.FromArgb(CByte(32), CByte(34), CByte(37))
+        btnFilter.BorderColor = Color.Transparent
         btnFilter.EnteredBorderColor = Color.Empty
-        btnFilter.EnteredColor = Color.FromArgb(CByte(44), CByte(110), CByte(90))
+        btnFilter.EnteredColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
         btnFilter.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         btnFilter.Image = Nothing
         btnFilter.ImageAlign = ContentAlignment.MiddleLeft
         btnFilter.InactiveColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
         btnFilter.Location = New Point(323, 8)
         btnFilter.Name = "btnFilter"
-        btnFilter.PressedBorderColor = Color.Transparent
-        btnFilter.PressedColor = Color.FromArgb(CByte(25), CByte(70), CByte(57))
+        btnFilter.PressedBorderColor = Color.Turquoise
+        btnFilter.PressedColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
         btnFilter.Size = New Size(145, 40)
         btnFilter.TabIndex = 3
         btnFilter.Text = "▾ Filter"
@@ -209,7 +205,7 @@ Partial Class ucUserManagement
         pnlSearch.Location = New Point(17, 8)
         pnlSearch.Name = "pnlSearch"
         pnlSearch.Radius = 8
-        pnlSearch.Size = New Size(300, 40)
+        pnlSearch.Size = New Size(299, 40)
         pnlSearch.TabIndex = 2
         ' 
         ' txtSearch
@@ -217,10 +213,10 @@ Partial Class ucUserManagement
         txtSearch.BackColor = Color.White
         txtSearch.BorderStyle = BorderStyle.None
         txtSearch.Font = New Font("Century Gothic", 9F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        txtSearch.Location = New Point(9, 10)
+        txtSearch.Location = New Point(9, 11)
         txtSearch.Name = "txtSearch"
         txtSearch.PlaceholderText = "Search"
-        txtSearch.Size = New Size(236, 19)
+        txtSearch.Size = New Size(235, 19)
         txtSearch.TabIndex = 1
         ' 
         ' pnlStats
@@ -245,15 +241,16 @@ Partial Class ucUserManagement
         ' 
         pnlMainBG.ActiveBorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
         pnlMainBG.Anchor = AnchorStyles.None
+        pnlMainBG.AutoSizeMode = AutoSizeMode.GrowAndShrink
         pnlMainBG.BackColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
         pnlMainBG.BorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
         pnlMainBG.BorderThickness = 1
         pnlMainBG.Controls.Add(btnDeleteBTN)
         pnlMainBG.Controls.Add(linkResetPass)
-        pnlMainBG.Controls.Add(linkDeactivate)
+        pnlMainBG.Controls.Add(linkUserStatus)
         pnlMainBG.Controls.Add(linkEditInfo)
         pnlMainBG.Controls.Add(btnCreateUser)
-        pnlMainBG.Location = New Point(1496, 3)
+        pnlMainBG.Location = New Point(1497, 3)
         pnlMainBG.Name = "pnlMainBG"
         pnlMainBG.Radius = 20
         pnlMainBG.Size = New Size(410, 891)
@@ -265,15 +262,15 @@ Partial Class ucUserManagement
         btnDeleteBTN.BackColor = Color.Transparent
         btnDeleteBTN.BorderColor = Color.Transparent
         btnDeleteBTN.EnteredBorderColor = Color.Transparent
-        btnDeleteBTN.EnteredColor = Color.FromArgb(CByte(220), CByte(70), CByte(70))
-        btnDeleteBTN.Font = New Font("Century Gothic", 9F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        btnDeleteBTN.EnteredColor = Color.DarkRed
+        btnDeleteBTN.Font = New Font("Century Gothic", 9F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         btnDeleteBTN.Image = Nothing
         btnDeleteBTN.ImageAlign = ContentAlignment.MiddleLeft
-        btnDeleteBTN.InactiveColor = Color.FromArgb(CByte(200), CByte(51), CByte(51))
+        btnDeleteBTN.InactiveColor = Color.Crimson
         btnDeleteBTN.Location = New Point(90, 807)
         btnDeleteBTN.Name = "btnDeleteBTN"
         btnDeleteBTN.PressedBorderColor = Color.Transparent
-        btnDeleteBTN.PressedColor = Color.FromArgb(CByte(165), CByte(38), CByte(38))
+        btnDeleteBTN.PressedColor = Color.DarkRed
         btnDeleteBTN.Size = New Size(235, 36)
         btnDeleteBTN.TabIndex = 9
         btnDeleteBTN.Text = "Delete Account"
@@ -282,11 +279,13 @@ Partial Class ucUserManagement
         ' 
         ' linkResetPass
         ' 
+        linkResetPass.ActiveLinkColor = Color.Black
         linkResetPass.BackColor = Color.Transparent
+        linkResetPass.DisabledLinkColor = Color.Gray
         linkResetPass.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         linkResetPass.ForeColor = Color.Black
         linkResetPass.LinkBehavior = LinkBehavior.NeverUnderline
-        linkResetPass.LinkColor = Color.Black
+        linkResetPass.LinkColor = Color.DimGray
         linkResetPass.Location = New Point(25, 265)
         linkResetPass.Name = "linkResetPass"
         linkResetPass.Size = New Size(146, 23)
@@ -294,27 +293,31 @@ Partial Class ucUserManagement
         linkResetPass.TabStop = True
         linkResetPass.Text = "Reset Password"
         ' 
-        ' linkDeactivate
+        ' linkUserStatus
         ' 
-        linkDeactivate.BackColor = Color.Transparent
-        linkDeactivate.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        linkDeactivate.ForeColor = Color.Black
-        linkDeactivate.LinkBehavior = LinkBehavior.NeverUnderline
-        linkDeactivate.LinkColor = Color.Black
-        linkDeactivate.Location = New Point(25, 223)
-        linkDeactivate.Name = "linkDeactivate"
-        linkDeactivate.Size = New Size(146, 23)
-        linkDeactivate.TabIndex = 7
-        linkDeactivate.TabStop = True
-        linkDeactivate.Text = "Deactivate"
+        linkUserStatus.ActiveLinkColor = Color.Black
+        linkUserStatus.BackColor = Color.Transparent
+        linkUserStatus.DisabledLinkColor = Color.Gray
+        linkUserStatus.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        linkUserStatus.ForeColor = Color.Black
+        linkUserStatus.LinkBehavior = LinkBehavior.NeverUnderline
+        linkUserStatus.LinkColor = Color.DimGray
+        linkUserStatus.Location = New Point(25, 223)
+        linkUserStatus.Name = "linkUserStatus"
+        linkUserStatus.Size = New Size(146, 23)
+        linkUserStatus.TabIndex = 7
+        linkUserStatus.TabStop = True
+        linkUserStatus.Text = "User Status"
         ' 
         ' linkEditInfo
         ' 
+        linkEditInfo.ActiveLinkColor = Color.Black
         linkEditInfo.BackColor = Color.Transparent
+        linkEditInfo.DisabledLinkColor = Color.Black
         linkEditInfo.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         linkEditInfo.ForeColor = Color.Black
         linkEditInfo.LinkBehavior = LinkBehavior.NeverUnderline
-        linkEditInfo.LinkColor = Color.Black
+        linkEditInfo.LinkColor = Color.DimGray
         linkEditInfo.Location = New Point(25, 176)
         linkEditInfo.Name = "linkEditInfo"
         linkEditInfo.Size = New Size(146, 23)
@@ -326,90 +329,22 @@ Partial Class ucUserManagement
         ' 
         btnCreateUser.BackColor = Color.Transparent
         btnCreateUser.BackgroundImageLayout = ImageLayout.Zoom
-        btnCreateUser.BorderColor = Color.FromArgb(CByte(32), CByte(34), CByte(37))
-        btnCreateUser.EnteredBorderColor = Color.Empty
-        btnCreateUser.EnteredColor = Color.FromArgb(CByte(44), CByte(110), CByte(90))
-        btnCreateUser.Font = New Font("Century Gothic", 9F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        btnCreateUser.BorderColor = Color.Transparent
+        btnCreateUser.EnteredBorderColor = Color.Transparent
+        btnCreateUser.EnteredColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
+        btnCreateUser.Font = New Font("Century Gothic", 9F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         btnCreateUser.Image = Nothing
         btnCreateUser.ImageAlign = ContentAlignment.MiddleLeft
         btnCreateUser.InactiveColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
         btnCreateUser.Location = New Point(90, 64)
         btnCreateUser.Name = "btnCreateUser"
         btnCreateUser.PressedBorderColor = Color.Transparent
-        btnCreateUser.PressedColor = Color.FromArgb(CByte(25), CByte(70), CByte(57))
+        btnCreateUser.PressedColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
         btnCreateUser.Size = New Size(235, 36)
         btnCreateUser.TabIndex = 4
         btnCreateUser.Text = "Create New User"
         btnCreateUser.TextAlignment = StringAlignment.Center
         btnCreateUser.UseWaitCursor = True
-        ' 
-        ' pnlDeleteConfirmation
-        ' 
-        pnlDeleteConfirmation.ActiveBorderColor = Color.Black
-        pnlDeleteConfirmation.BackColor = Color.White
-        pnlDeleteConfirmation.BorderColor = Color.Black
-        pnlDeleteConfirmation.BorderThickness = 1
-        pnlDeleteConfirmation.Controls.Add(lblDeleteConfirm)
-        pnlDeleteConfirmation.Controls.Add(btnCancelDeletion)
-        pnlDeleteConfirmation.Controls.Add(btnDeleteAccount)
-        pnlDeleteConfirmation.Location = New Point(637, 427)
-        pnlDeleteConfirmation.Name = "pnlDeleteConfirmation"
-        pnlDeleteConfirmation.Radius = 8
-        pnlDeleteConfirmation.Size = New Size(650, 200)
-        pnlDeleteConfirmation.TabIndex = 6
-        pnlDeleteConfirmation.Visible = False
-        ' 
-        ' lblDeleteConfirm
-        ' 
-        lblDeleteConfirm.BackColor = Color.Transparent
-        lblDeleteConfirm.Font = New Font("Century Gothic", 19.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        lblDeleteConfirm.Location = New Point(21, 24)
-        lblDeleteConfirm.Name = "lblDeleteConfirm"
-        lblDeleteConfirm.Size = New Size(593, 49)
-        lblDeleteConfirm.TabIndex = 0
-        lblDeleteConfirm.Text = "Do you want to delete this account?"
-        ' 
-        ' btnCancelDeletion
-        ' 
-        btnCancelDeletion.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
-        btnCancelDeletion.BackColor = Color.Transparent
-        btnCancelDeletion.BorderColor = Color.FromArgb(CByte(32), CByte(34), CByte(37))
-        btnCancelDeletion.EnteredBorderColor = Color.Transparent
-        btnCancelDeletion.EnteredColor = Color.FromArgb(CByte(125), CByte(132), CByte(145))
-        btnCancelDeletion.Font = New Font("Century Gothic", 9F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
-        btnCancelDeletion.Image = Nothing
-        btnCancelDeletion.ImageAlign = ContentAlignment.MiddleLeft
-        btnCancelDeletion.InactiveColor = Color.FromArgb(CByte(107), CByte(114), CByte(128))
-        btnCancelDeletion.Location = New Point(418, 128)
-        btnCancelDeletion.Name = "btnCancelDeletion"
-        btnCancelDeletion.PressedBorderColor = Color.Transparent
-        btnCancelDeletion.PressedColor = Color.FromArgb(CByte(86), CByte(92), CByte(103))
-        btnCancelDeletion.Size = New Size(100, 42)
-        btnCancelDeletion.TabIndex = 4
-        btnCancelDeletion.Text = "CANCEL"
-        btnCancelDeletion.TextAlignment = StringAlignment.Center
-        btnCancelDeletion.UseWaitCursor = True
-        ' 
-        ' btnDeleteAccount
-        ' 
-        btnDeleteAccount.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
-        btnDeleteAccount.BackColor = Color.Transparent
-        btnDeleteAccount.BorderColor = Color.FromArgb(CByte(32), CByte(34), CByte(37))
-        btnDeleteAccount.EnteredBorderColor = Color.Transparent
-        btnDeleteAccount.EnteredColor = Color.FromArgb(CByte(220), CByte(70), CByte(70))
-        btnDeleteAccount.Font = New Font("Century Gothic", 9F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
-        btnDeleteAccount.Image = Nothing
-        btnDeleteAccount.ImageAlign = ContentAlignment.MiddleLeft
-        btnDeleteAccount.InactiveColor = Color.FromArgb(CByte(200), CByte(51), CByte(51))
-        btnDeleteAccount.Location = New Point(526, 128)
-        btnDeleteAccount.Name = "btnDeleteAccount"
-        btnDeleteAccount.PressedBorderColor = Color.Transparent
-        btnDeleteAccount.PressedColor = Color.FromArgb(CByte(165), CByte(38), CByte(38))
-        btnDeleteAccount.Size = New Size(100, 42)
-        btnDeleteAccount.TabIndex = 3
-        btnDeleteAccount.Text = "DELETE"
-        btnDeleteAccount.TextAlignment = StringAlignment.Center
-        btnDeleteAccount.UseWaitCursor = True
         ' 
         ' ucUserManagement
         ' 
@@ -417,9 +352,8 @@ Partial Class ucUserManagement
         AutoScaleMode = AutoScaleMode.Font
         BackColor = Color.White
         Controls.Add(tblMain)
-        Controls.Add(pnlDeleteConfirmation)
         Name = "ucUserManagement"
-        Size = New Size(1924, 917)
+        Size = New Size(1925, 917)
         tblMain.ResumeLayout(False)
         pnlUserBG.ResumeLayout(False)
         CType(dgvUsers, ComponentModel.ISupportInitialize).EndInit()
@@ -428,7 +362,6 @@ Partial Class ucUserManagement
         pnlSearch.PerformLayout()
         pnlStats.ResumeLayout(False)
         pnlMainBG.ResumeLayout(False)
-        pnlDeleteConfirmation.ResumeLayout(False)
         ResumeLayout(False)
     End Sub
     Friend WithEvents tblMain As TableLayoutPanel
@@ -451,11 +384,7 @@ Partial Class ucUserManagement
     Friend WithEvents btnCreateUser As ReaLTaiizor.Controls.Button
     Friend WithEvents linkEditInfo As LinkLabel
     Friend WithEvents linkResetPass As LinkLabel
-    Friend WithEvents linkDeactivate As LinkLabel
+    Friend WithEvents linkUserStatus As LinkLabel
     Friend WithEvents btnDeleteBTN As ReaLTaiizor.Controls.Button
-    Friend WithEvents pnlDeleteConfirmation As RoundedPanel
-    Friend WithEvents lblDeleteConfirm As Label
-    Friend WithEvents btnCancelDeletion As ReaLTaiizor.Controls.Button
-    Friend WithEvents btnDeleteAccount As ReaLTaiizor.Controls.Button
 
 End Class
