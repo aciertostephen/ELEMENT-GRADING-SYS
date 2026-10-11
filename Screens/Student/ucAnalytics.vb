@@ -37,4 +37,7 @@ Public Class ucAnalytics
         FormsPlot3.Refresh()
     End Sub
 
+    Private Sub FormsPlot2_Load(sender As Object, e As EventArgs) Handles FormsPlot2.Load
+
+    End Sub
 End Class
