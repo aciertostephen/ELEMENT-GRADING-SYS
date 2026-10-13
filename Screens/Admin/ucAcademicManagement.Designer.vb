@@ -166,42 +166,42 @@ Partial Class ucAcademicManagement
         ' 
         ' cboSemester
         ' 
-        cboSemester.Font = New Font("Century Gothic", 16.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        cboSemester.Font = New Font("Century Gothic", 12.0F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         cboSemester.FormattingEnabled = True
         cboSemester.Items.AddRange(New Object() {"1st", "2nd", "Mid Year"})
-        cboSemester.Location = New Point(1119, 14)
+        cboSemester.Location = New Point(1119, 20)
         cboSemester.Name = "cboSemester"
-        cboSemester.Size = New Size(225, 41)
+        cboSemester.Size = New Size(225, 31)
         cboSemester.TabIndex = 8
         ' 
         ' cboAY
         ' 
-        cboAY.Font = New Font("Century Gothic", 16.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        cboAY.Font = New Font("Century Gothic", 12.0F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         cboAY.FormattingEnabled = True
         cboAY.Items.AddRange(New Object() {"2026-2027"})
-        cboAY.Location = New Point(753, 14)
+        cboAY.Location = New Point(753, 20)
         cboAY.Name = "cboAY"
-        cboAY.Size = New Size(225, 41)
+        cboAY.Size = New Size(225, 31)
         cboAY.TabIndex = 7
         ' 
         ' cboSection
         ' 
-        cboSection.Font = New Font("Century Gothic", 16.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        cboSection.Font = New Font("Century Gothic", 12.0F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         cboSection.FormattingEnabled = True
         cboSection.Items.AddRange(New Object() {"BSCS1A", "BSCS2A", "BSCS3A", "BSCS4A"})
-        cboSection.Location = New Point(434, 14)
+        cboSection.Location = New Point(434, 21)
         cboSection.Name = "cboSection"
-        cboSection.Size = New Size(225, 41)
+        cboSection.Size = New Size(225, 31)
         cboSection.TabIndex = 6
         ' 
         ' cboYearLevel
         ' 
-        cboYearLevel.Font = New Font("Century Gothic", 16.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        cboYearLevel.Font = New Font("Century Gothic", 12.0F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         cboYearLevel.FormattingEnabled = True
         cboYearLevel.Items.AddRange(New Object() {"1st Year", "2nd Year", "3rd Year", "4th Year"})
-        cboYearLevel.Location = New Point(91, 14)
+        cboYearLevel.Location = New Point(91, 22)
         cboYearLevel.Name = "cboYearLevel"
-        cboYearLevel.Size = New Size(225, 41)
+        cboYearLevel.Size = New Size(225, 31)
         cboYearLevel.TabIndex = 5
         ' 
         ' lblYear

@@ -22,8 +22,8 @@ Partial Class ucGradingConfig
     'Do not modify it using the code editor.
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
-        Dim DataGridViewCellStyle1 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle2 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle3 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle4 As DataGridViewCellStyle = New DataGridViewCellStyle()
         tblGrading = New TableLayoutPanel()
         tblConfigCards = New TableLayoutPanel()
         RoundedPanel1 = New RoundedPanel()
@@ -225,9 +225,9 @@ Partial Class ucGradingConfig
         ' 
         btnEditSemester.BackColor = Color.Transparent
         btnEditSemester.BackgroundImageLayout = ImageLayout.Zoom
-        btnEditSemester.BorderColor = Color.FromArgb(CByte(32), CByte(34), CByte(37))
-        btnEditSemester.EnteredBorderColor = Color.Empty
-        btnEditSemester.EnteredColor = Color.FromArgb(CByte(44), CByte(110), CByte(90))
+        btnEditSemester.BorderColor = Color.Transparent
+        btnEditSemester.EnteredBorderColor = Color.Transparent
+        btnEditSemester.EnteredColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
         btnEditSemester.Font = New Font("Century Gothic", 9F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
         btnEditSemester.Image = Nothing
         btnEditSemester.ImageAlign = ContentAlignment.MiddleLeft
@@ -235,7 +235,7 @@ Partial Class ucGradingConfig
         btnEditSemester.Location = New Point(36, 232)
         btnEditSemester.Name = "btnEditSemester"
         btnEditSemester.PressedBorderColor = Color.Transparent
-        btnEditSemester.PressedColor = Color.FromArgb(CByte(25), CByte(70), CByte(57))
+        btnEditSemester.PressedColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
         btnEditSemester.Size = New Size(195, 39)
         btnEditSemester.TabIndex = 5
         btnEditSemester.Text = "Edit"
@@ -266,9 +266,9 @@ Partial Class ucGradingConfig
         ' 
         btnEditEncoding.BackColor = Color.Transparent
         btnEditEncoding.BackgroundImageLayout = ImageLayout.Zoom
-        btnEditEncoding.BorderColor = Color.FromArgb(CByte(32), CByte(34), CByte(37))
-        btnEditEncoding.EnteredBorderColor = Color.Empty
-        btnEditEncoding.EnteredColor = Color.FromArgb(CByte(44), CByte(110), CByte(90))
+        btnEditEncoding.BorderColor = Color.Transparent
+        btnEditEncoding.EnteredBorderColor = Color.Transparent
+        btnEditEncoding.EnteredColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
         btnEditEncoding.Font = New Font("Century Gothic", 9F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
         btnEditEncoding.Image = Nothing
         btnEditEncoding.ImageAlign = ContentAlignment.MiddleLeft
@@ -276,7 +276,7 @@ Partial Class ucGradingConfig
         btnEditEncoding.Location = New Point(49, 232)
         btnEditEncoding.Name = "btnEditEncoding"
         btnEditEncoding.PressedBorderColor = Color.Transparent
-        btnEditEncoding.PressedColor = Color.FromArgb(CByte(25), CByte(70), CByte(57))
+        btnEditEncoding.PressedColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
         btnEditEncoding.Size = New Size(195, 39)
         btnEditEncoding.TabIndex = 19
         btnEditEncoding.Text = "Edit"
@@ -364,18 +364,18 @@ Partial Class ucGradingConfig
         ' 
         btnEditScale.BackColor = Color.Transparent
         btnEditScale.BackgroundImageLayout = ImageLayout.Zoom
-        btnEditScale.BorderColor = Color.FromArgb(CByte(32), CByte(34), CByte(37))
-        btnEditScale.EnteredBorderColor = Color.Empty
-        btnEditScale.EnteredColor = Color.FromArgb(CByte(44), CByte(110), CByte(90))
+        btnEditScale.BorderColor = Color.Transparent
+        btnEditScale.EnteredBorderColor = Color.Transparent
+        btnEditScale.EnteredColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
         btnEditScale.Font = New Font("Century Gothic", 9F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
         btnEditScale.Image = Nothing
         btnEditScale.ImageAlign = ContentAlignment.MiddleLeft
         btnEditScale.InactiveColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
-        btnEditScale.Location = New Point(39, 322)
+        btnEditScale.Location = New Point(39, 314)
         btnEditScale.Name = "btnEditScale"
         btnEditScale.PressedBorderColor = Color.Transparent
-        btnEditScale.PressedColor = Color.FromArgb(CByte(25), CByte(70), CByte(57))
-        btnEditScale.Size = New Size(195, 29)
+        btnEditScale.PressedColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
+        btnEditScale.Size = New Size(195, 39)
         btnEditScale.TabIndex = 9
         btnEditScale.Text = "Edit"
         btnEditScale.TextAlignment = StringAlignment.Center
@@ -387,24 +387,24 @@ Partial Class ucGradingConfig
         dgvGradingScale.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
         dgvGradingScale.BackgroundColor = Color.White
         dgvGradingScale.BorderStyle = BorderStyle.None
-        DataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle1.BackColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
-        DataGridViewCellStyle1.Font = New Font("Century Gothic", 12F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        DataGridViewCellStyle1.ForeColor = SystemColors.WindowText
-        DataGridViewCellStyle1.SelectionBackColor = SystemColors.Highlight
-        DataGridViewCellStyle1.SelectionForeColor = SystemColors.HighlightText
-        DataGridViewCellStyle1.WrapMode = DataGridViewTriState.True
-        dgvGradingScale.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle1
+        DataGridViewCellStyle3.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle3.BackColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
+        DataGridViewCellStyle3.Font = New Font("Century Gothic", 12F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        DataGridViewCellStyle3.ForeColor = SystemColors.WindowText
+        DataGridViewCellStyle3.SelectionBackColor = SystemColors.Highlight
+        DataGridViewCellStyle3.SelectionForeColor = SystemColors.HighlightText
+        DataGridViewCellStyle3.WrapMode = DataGridViewTriState.True
+        dgvGradingScale.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle3
         dgvGradingScale.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize
         dgvGradingScale.Columns.AddRange(New DataGridViewColumn() {percentage, gwa})
-        DataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle2.BackColor = SystemColors.Window
-        DataGridViewCellStyle2.Font = New Font("Century Gothic", 12F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        DataGridViewCellStyle2.ForeColor = SystemColors.ControlText
-        DataGridViewCellStyle2.SelectionBackColor = SystemColors.Highlight
-        DataGridViewCellStyle2.SelectionForeColor = SystemColors.HighlightText
-        DataGridViewCellStyle2.WrapMode = DataGridViewTriState.False
-        dgvGradingScale.DefaultCellStyle = DataGridViewCellStyle2
+        DataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle4.BackColor = SystemColors.Window
+        DataGridViewCellStyle4.Font = New Font("Century Gothic", 12F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        DataGridViewCellStyle4.ForeColor = SystemColors.ControlText
+        DataGridViewCellStyle4.SelectionBackColor = SystemColors.Highlight
+        DataGridViewCellStyle4.SelectionForeColor = SystemColors.HighlightText
+        DataGridViewCellStyle4.WrapMode = DataGridViewTriState.False
+        dgvGradingScale.DefaultCellStyle = DataGridViewCellStyle4
         dgvGradingScale.Location = New Point(65, 65)
         dgvGradingScale.Name = "dgvGradingScale"
         dgvGradingScale.RowHeadersVisible = False
@@ -417,12 +417,14 @@ Partial Class ucGradingConfig
         percentage.HeaderText = "Percentage Range"
         percentage.MinimumWidth = 6
         percentage.Name = "percentage"
+        percentage.SortMode = DataGridViewColumnSortMode.NotSortable
         ' 
         ' gwa
         ' 
         gwa.HeaderText = "GWA"
         gwa.MinimumWidth = 6
         gwa.Name = "gwa"
+        gwa.SortMode = DataGridViewColumnSortMode.NotSortable
         ' 
         ' lblScaleTitle
         ' 
