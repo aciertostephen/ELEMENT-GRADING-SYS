@@ -1,8 +1,15 @@
-﻿Imports System.Drawing
+﻿Imports System.ComponentModel
+Imports System.Drawing
+Imports System.Security.Cryptography
 Imports System.Text.RegularExpressions
 Imports System.Windows.Forms
+Imports MySql.Data.MySqlClient
+Imports MySqlConnector
+
+Imports BCryptHasher = BCrypt.Net.BCrypt
 
 Public Class ucUserManagement
+    Inherits UserControl
 
     '========================================
     ' CONSTANTS / TYPES
@@ -18,8 +25,10 @@ Public Class ucUserManagement
         Status = 6
     End Enum
 
+    Private Const EXPECTED_COLUMNS As Integer = 7
+
     Private Const ROLE_STUDENT As String = "Student"
-    Private Const ROLE_PROFESSOR As String = "Professor"
+    Private Const ROLE_PROFESSOR As String = "Teacher"
     Private Const STATUS_ACTIVE As String = "Active"
     Private Const STATUS_INACTIVE As String = "Inactive"
 
@@ -29,13 +38,14 @@ Public Class ucUserManagement
     Private Const FILTER_ACTIVE As String = "Active"
     Private Const FILTER_INACTIVE As String = "Inactive"
 
+    Private Const MYSQL_ERR_FK_PARENT As Integer = 1451
+
     Private Shared ReadOnly EmailRegex As New Regex("^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.Compiled)
     Private Shared ReadOnly PhoneRegex As New Regex("^\d{7,15}$", RegexOptions.Compiled)
 
     '========================================
     ' STATE
     '========================================
-
 
     Public Property CurrentAdminUserId As String = ""
 
@@ -48,19 +58,35 @@ Public Class ucUserManagement
     Private ReadOnly statValueLabels As New Dictionary(Of String, Label)
 
     '========================================
-    ' LOAD / DISPOSE
+    ' CONSTRUCTOR & LOAD / DISPOSE
     '========================================
 
+    Public Sub New()
+        InitializeComponent()
+    End Sub
+
     Private Sub ucUserManagement_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        LoadDummyUsers()
+        If Me.DesignMode OrElse LicenseManager.UsageMode = LicenseUsageMode.Designtime Then Return
+
+        ConfigureGrid()
         BuildStatBoxes()
         InitializeFilterMenu()
-        ApplyFilter()
+        LoadUsersFromDatabase()
     End Sub
 
     Private Sub ucUserManagement_Disposed(sender As Object, e As EventArgs) Handles MyBase.Disposed
         tmrSearch.Dispose()
         cmsFilterMenu.Dispose()
+    End Sub
+
+    Private Sub ConfigureGrid()
+        If dgvUsers Is Nothing Then Return
+
+        dgvUsers.ReadOnly = True
+        dgvUsers.AllowUserToAddRows = False
+        dgvUsers.AllowUserToDeleteRows = False
+        dgvUsers.MultiSelect = False
+        dgvUsers.SelectionMode = DataGridViewSelectionMode.FullRowSelect
     End Sub
 
     '========================================
@@ -86,32 +112,92 @@ Public Class ucUserManagement
     End Function
 
     Private Function IsCurrentAdmin(userId As String) As Boolean
-        Return Not String.IsNullOrEmpty(CurrentAdminUserId) AndAlso SameText(userId, CurrentAdminUserId)
+        Dim activeId As String = If(Not String.IsNullOrEmpty(CurrentAdminUserId), CurrentAdminUserId, Convert.ToString(SessionManager.CurrentUserId))
+        Return Not String.IsNullOrEmpty(activeId) AndAlso SameText(userId, activeId)
     End Function
 
     Private Function GetSelectedUserRow(actionText As String) As DataGridViewRow
         If dgvUsers.SelectedRows.Count = 0 OrElse Not dgvUsers.SelectedRows(0).Visible Then
             MessageBox.Show($"Please select a user account from the table to {actionText}.",
-                            "No User Selected", MessageBoxButtons.OK, MessageBoxIcon.None)
+                            "No User Selected", MessageBoxButtons.OK)
             Return Nothing
         End If
         Return dgvUsers.SelectedRows(0)
     End Function
 
     '========================================
-    ' DATA SETUP
+    ' LIVE DATABASE SYNC
     '========================================
 
-    Private Sub LoadDummyUsers()
-        dgvUsers.Rows.Clear()
-        dgvUsers.Rows.Add("25-00571", "Salceda, Zac Luther L.", ROLE_STUDENT, "name@plpasig.edu.ph", "9673347151", "MM/DD/YYYY", STATUS_ACTIVE)
+    Public Sub LoadUsersFromDatabase()
+        If dgvUsers Is Nothing Then Return
 
-        For i As Integer = 1 To 8
-            dgvUsers.Rows.Add($"25-{571 + i:00000}", "Last Name, First Name", ROLE_STUDENT, "name@plpasig.edu.ph", "9673347151", "MM/DD/YYYY", STATUS_ACTIVE)
-        Next
+        Dim previousUserId As String = Nothing
+        If dgvUsers.CurrentRow IsNot Nothing AndAlso Not dgvUsers.CurrentRow.IsNewRow Then
+            previousUserId = CellText(dgvUsers.CurrentRow, Col.UserId)
+        End If
 
-        For i As Integer = 1 To 10
-            dgvUsers.Rows.Add($"EMP{i:000}", "Last Name, First Name", ROLE_PROFESSOR, "name@plpasig.edu.ph", "9673347151", "MM/DD/YYYY", STATUS_ACTIVE)
+        Dim sql As String =
+            "SELECT u.user_id, u.username, u.role, u.email, u.phone_no, u.status, " &
+            "DATE_FORMAT(u.date_added, '%m/%d/%Y') AS formatted_date, " &
+            "COALESCE(" &
+            "  NULLIF(TRIM(CONCAT_WS(' ', tp.first_name, tp.last_name)), '')," &
+            "  NULLIF(TRIM(CONCAT_WS(' ', sp.first_name, sp.last_name)), '')," &
+            "  u.username) AS full_name " &
+            "FROM users u " &
+            "LEFT JOIN teacher_profile tp ON u.user_id = tp.user_id " &
+            "LEFT JOIN student_profile sp ON u.user_id = sp.user_id " &
+            "ORDER BY u.user_id DESC;"
+
+        Try
+            Dim dt As DataTable = DatabaseHelper.ExecuteQuery(sql)
+
+            dgvUsers.SuspendLayout()
+            dgvUsers.CurrentCell = Nothing
+            dgvUsers.Rows.Clear()
+
+            If dt IsNot Nothing Then
+                For Each row As DataRow In dt.Rows
+                    Dim phoneVal As String = If(IsDBNull(row("phone_no")) OrElse
+                                                String.IsNullOrWhiteSpace(row("phone_no").ToString()),
+                                                "N/A", row("phone_no").ToString())
+                    Dim dateVal As String = If(IsDBNull(row("formatted_date")), "N/A", row("formatted_date").ToString())
+                    Dim emailVal As String = If(IsDBNull(row("email")), "", row("email").ToString())
+
+                    Dim idx As Integer = dgvUsers.Rows.Add(
+                        row("user_id").ToString(),
+                        row("full_name").ToString(),
+                        row("role").ToString(),
+                        emailVal,
+                        phoneVal,
+                        dateVal,
+                        row("status").ToString())
+
+                    Dim statusCell As DataGridViewCell = dgvUsers.Rows(idx).Cells(CInt(Col.Status))
+                    statusCell.Style.ForeColor = If(SameText(row("status").ToString(), STATUS_ACTIVE),
+                                                    Color.SeaGreen, Color.Firebrick)
+                Next
+            End If
+
+            ApplyFilter()
+            RestoreSelection(previousUserId)
+
+        Catch ex As Exception
+            MessageBox.Show("Database Load Error: " & ex.Message, "Database Error", MessageBoxButtons.OK)
+        Finally
+            dgvUsers.ResumeLayout()
+        End Try
+    End Sub
+
+    Private Sub RestoreSelection(userId As String)
+        If String.IsNullOrEmpty(userId) Then Return
+
+        For Each row As DataGridViewRow In dgvUsers.Rows
+            If row.IsNewRow OrElse Not row.Visible Then Continue For
+            If SameText(CellText(row, Col.UserId), userId) Then
+                row.Selected = True
+                Return
+            End If
         Next
     End Sub
 
@@ -120,6 +206,7 @@ Public Class ucUserManagement
     '========================================
 
     Private Sub BuildStatBoxes()
+        If flowStats Is Nothing Then Return
         flowStats.SuspendLayout()
         flowStats.Controls.Clear()
         statValueLabels.Clear()
@@ -162,28 +249,13 @@ Public Class ucUserManagement
     ' FILTERING & SEARCHING
     '========================================
 
-    Private Function MatchesCategory(role As String, status As String) As Boolean
-        Select Case currentFilter
-            Case FILTER_ALL
-                Return True
-            Case FILTER_FACULTY
-                Return IsFaculty(role)
-            Case FILTER_STUDENT
-                Return SameText(role, ROLE_STUDENT)
-            Case FILTER_ACTIVE
-                Return SameText(status, STATUS_ACTIVE)
-            Case FILTER_INACTIVE
-                Return SameText(status, STATUS_INACTIVE)
-            Case Else
-                Return True
-        End Select
-    End Function
-
     Private Sub ApplyFilter()
-        Dim query As String = txtSearch.Text.Trim().ToLower()
+        If dgvUsers Is Nothing Then Return
 
+        Dim query As String = txtSearch.Text.Trim().ToLower()
         Dim total, faculty, students, inactive As Integer
 
+        dgvUsers.CurrentCell = Nothing
         dgvUsers.SuspendLayout()
 
         For Each row As DataGridViewRow In dgvUsers.Rows
@@ -201,15 +273,16 @@ Public Class ucUserManagement
             If SameText(status, STATUS_INACTIVE) Then inactive += 1
 
             Dim matchesSearch As Boolean = String.IsNullOrEmpty(query) OrElse
-                                       CellText(row, Col.UserId).ToLower().Contains(query) OrElse
-                                       CellText(row, Col.FullName).ToLower().Contains(query) OrElse
-                                       CellText(row, Col.Email).ToLower().Contains(query)
+                                           CellText(row, Col.UserId).ToLower().Contains(query) OrElse
+                                           CellText(row, Col.FullName).ToLower().Contains(query) OrElse
+                                           CellText(row, Col.Email).ToLower().Contains(query) OrElse
+                                           CellText(row, Col.Role).ToLower().Contains(query)
 
-            Dim matchesCat As Boolean = (currentFilter = "All") OrElse
-                                    (currentFilter = "Faculty" AndAlso IsFaculty(role)) OrElse
-                                    (currentFilter = "Student" AndAlso SameText(role, ROLE_STUDENT)) OrElse
-                                    (currentFilter = "Active" AndAlso SameText(status, STATUS_ACTIVE)) OrElse
-                                    (currentFilter = "Inactive" AndAlso SameText(status, STATUS_INACTIVE))
+            Dim matchesCat As Boolean = (currentFilter = FILTER_ALL) OrElse
+                                        (currentFilter = FILTER_FACULTY AndAlso IsFaculty(role)) OrElse
+                                        (currentFilter = FILTER_STUDENT AndAlso SameText(role, ROLE_STUDENT)) OrElse
+                                        (currentFilter = FILTER_ACTIVE AndAlso SameText(status, STATUS_ACTIVE)) OrElse
+                                        (currentFilter = FILTER_INACTIVE AndAlso SameText(status, STATUS_INACTIVE))
 
             row.Visible = matchesSearch AndAlso matchesCat
         Next
@@ -245,12 +318,12 @@ Public Class ucUserManagement
         cmsFilterMenu.Items.Clear()
 
         Dim options = {
-        ("Show All Users", "All"),
-        ("Students", "Student"),
-        ("Faculty", "Faculty"),
-        ("Status: Active", "Active"),
-        ("Status: Inactive", "Inactive")
-    }
+            ("Show All Users", FILTER_ALL),
+            ("Students", FILTER_STUDENT),
+            ("Faculty", FILTER_FACULTY),
+            ("Status: Active", FILTER_ACTIVE),
+            ("Status: Inactive", FILTER_INACTIVE)
+        }
 
         For Each opt In options
             Dim item As New ToolStripMenuItem(opt.Item1) With {.Tag = opt.Item2}
@@ -263,20 +336,20 @@ Public Class ucUserManagement
         Dim item = TryCast(sender, ToolStripMenuItem)
         If item IsNot Nothing AndAlso item.Tag IsNot Nothing Then
             currentFilter = item.Tag.ToString()
-
             txtSearch.Clear()
-
             ApplyFilter()
         End If
     End Sub
 
-    Private Sub SetFilter(filterKey As String)
-        currentFilter = filterKey
-        ApplyFilter()
-    End Sub
-
     Private Sub btnFilter_Click(sender As Object, e As EventArgs) Handles btnFilter.Click
-        cmsFilterMenu.Show(btnFilter, New Point(0, btnFilter.Height))
+        ' Reset any global wait cursor state
+        Me.UseWaitCursor = False
+        btnFilter.UseWaitCursor = False
+        Cursor.Current = Cursors.Hand
+
+        If cmsFilterMenu IsNot Nothing Then
+            cmsFilterMenu.Show(btnFilter, New Point(0, btnFilter.Height))
+        End If
     End Sub
 
     '========================================
@@ -288,18 +361,40 @@ Public Class ucUserManagement
         If row Is Nothing Then Return
 
         Dim userId As String = CellText(row, Col.UserId)
+        Dim role As String = CellText(row, Col.Role)
+
         Using dlg As New EditUserDialog(userId, CellText(row, Col.FullName), CellText(row, Col.Email), CellText(row, Col.Phone))
             If dlg.ShowDialog(Me.FindForm()) = DialogResult.OK Then
-                row.Cells(CInt(Col.FullName)).Value = dlg.FullName
-                row.Cells(CInt(Col.Email)).Value = dlg.Email
-                row.Cells(CInt(Col.Phone)).Value = dlg.Phone
+                Try
+                    DatabaseHelper.ExecuteNonQuery(
+                        "UPDATE users SET email = @email, phone_no = @phone WHERE user_id = @uid;",
+                        {
+                            New MySqlParameter("@email", dlg.Email),
+                            New MySqlParameter("@phone", dlg.Phone),
+                            New MySqlParameter("@uid", userId)
+                        })
 
-                txtSearch.Clear()
+                    Dim parts As String() = dlg.FullName.Trim().Split(New Char() {" "c}, 2, StringSplitOptions.RemoveEmptyEntries)
+                    Dim fn As String = If(parts.Length > 0, parts(0), "")
+                    Dim ln As String = If(parts.Length > 1, parts(1), "")
 
-                ApplyFilter()
-                row.Selected = True
+                    Dim profileTable As String = If(IsFaculty(role), "teacher_profile", If(SameText(role, ROLE_STUDENT), "student_profile", Nothing))
+                    If profileTable IsNot Nothing Then
+                        DatabaseHelper.ExecuteNonQuery(
+                            $"UPDATE {profileTable} SET first_name = @fn, last_name = @ln WHERE user_id = @uid;",
+                            {
+                                New MySqlParameter("@fn", fn),
+                                New MySqlParameter("@ln", ln),
+                                New MySqlParameter("@uid", userId)
+                            })
+                    End If
 
-                MessageBox.Show($"Information for User [{userId}] was successfully updated.", "Update Complete", MessageBoxButtons.OK, MessageBoxIcon.None)
+                    LoadUsersFromDatabase()
+                    MessageBox.Show($"Information for User [{userId}] was successfully updated in the database.", "Update Complete", MessageBoxButtons.OK)
+
+                Catch ex As Exception
+                    MessageBox.Show("Failed to update database: " & ex.Message, "Database Error", MessageBoxButtons.OK)
+                End Try
             End If
         End Using
     End Sub
@@ -328,7 +423,7 @@ Public Class ucUserManagement
 
         If deactivating AndAlso IsCurrentAdmin(userId) Then
             MessageBox.Show("You cannot deactivate your own account.", "Action Not Allowed",
-                            MessageBoxButtons.OK, MessageBoxIcon.None)
+                            MessageBoxButtons.OK)
             Return
         End If
 
@@ -343,14 +438,24 @@ Public Class ucUserManagement
                                       $"• New Status: {newStatus}"
 
         If Not ConfirmDialog.Ask(Me.FindForm(), promptMessage,
-                         $"Confirm Account {If(deactivating, "Deactivation", "Activation")}") Then Return
+                                 $"Confirm Account {If(deactivating, "Deactivation", "Activation")}") Then Return
 
-        selectedRow.Cells(CInt(Col.Status)).Value = newStatus
+        Try
+            DatabaseHelper.ExecuteNonQuery(
+                "UPDATE users SET status = @status WHERE user_id = @uid;",
+                {
+                    New MySqlParameter("@status", newStatus),
+                    New MySqlParameter("@uid", userId)
+                })
 
-        ApplyFilter()
-        MessageBox.Show($"Account [{userId} - {fullName}] was {verbPast}.",
-                        $"Account {If(deactivating, "Deactivated", "Activated")}",
-                        MessageBoxButtons.OK, MessageBoxIcon.None)
+            LoadUsersFromDatabase()
+            MessageBox.Show($"Account [{userId} - {fullName}] was {verbPast}.",
+                            $"Account {If(deactivating, "Deactivated", "Activated")}",
+                            MessageBoxButtons.OK)
+
+        Catch ex As Exception
+            MessageBox.Show("Failed to update status in database: " & ex.Message, "Database Error", MessageBoxButtons.OK)
+        End Try
     End Sub
 
     Private Sub linkUserStatus_MouseEnter(sender As Object, e As EventArgs) Handles linkUserStatus.MouseEnter
@@ -374,7 +479,7 @@ Public Class ucUserManagement
 
         If IsCurrentAdmin(userId) Then
             MessageBox.Show("You cannot delete your own account.", "Action Not Allowed",
-                            MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                            MessageBoxButtons.OK)
             Return
         End If
 
@@ -385,10 +490,22 @@ Public Class ucUserManagement
 
         If Not ConfirmDialog.Ask(Me.FindForm(), promptMessage, "Confirm Account Deletion") Then Return
 
-        dgvUsers.Rows.Remove(selectedRow)
+        Try
+            Dim uidParam As MySqlParameter() = {New MySqlParameter("@uid", userId)}
+            DatabaseHelper.ExecuteNonQuery("DELETE FROM teacher_profile WHERE user_id = @uid;", uidParam)
+            DatabaseHelper.ExecuteNonQuery("DELETE FROM student_profile WHERE user_id = @uid;", {New MySqlParameter("@uid", userId)})
+            DatabaseHelper.ExecuteNonQuery("DELETE FROM users WHERE user_id = @uid;", {New MySqlParameter("@uid", userId)})
 
-        MessageBox.Show($"Account [{userId} - {fullName}] was successfully deleted.",
-                        "Account Deleted", MessageBoxButtons.OK, MessageBoxIcon.None)
+            LoadUsersFromDatabase()
+            MessageBox.Show($"Account [{userId} - {fullName}] was successfully deleted.",
+                            "Account Deleted", MessageBoxButtons.OK)
+
+        Catch ex As MySqlException When ex.Number = MYSQL_ERR_FK_PARENT
+            MessageBox.Show("This account is referenced by other records (classes, grades or logs) and cannot be deleted." & vbCrLf & vbCrLf &
+                            "Consider setting the account to Inactive instead.", "Cannot Delete", MessageBoxButtons.OK)
+        Catch ex As Exception
+            MessageBox.Show("Failed to delete user: " & ex.Message, "Database Error", MessageBoxButtons.OK)
+        End Try
     End Sub
 
     '========================================
@@ -473,7 +590,7 @@ Public Class ucUserManagement
     End Class
 
     '========================================
-    ' NESTED EDIT DIALOG (replaces InputBox)
+    ' NESTED EDIT DIALOG
     '========================================
 
     Private NotInheritable Class EditUserDialog
@@ -561,7 +678,7 @@ Public Class ucUserManagement
             End If
 
             If Not EmailRegex.IsMatch(Email) Then
-                errors.SetError(txtEmail, "Enter a valid email address (e.g. name@plpasig.edu.ph).")
+                errors.SetError(txtEmail, "Enter a valid email address.")
                 If firstInvalid Is Nothing Then firstInvalid = txtEmail
             End If
 
