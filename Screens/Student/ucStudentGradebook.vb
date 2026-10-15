@@ -1,4 +1,5 @@
-﻿Public Class ucStudentGradebook
+﻿
+Public Class ucStudentGradebook
 
     Private _isPredictiveMode As Boolean = False
     Private _realGrades As New List(Of Object())   ' backup of the student's actual grades
