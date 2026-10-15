@@ -22,7 +22,7 @@
             Case "Admin"
                 AddNavButton("USER MANAGEMENT", Sub() ShowPage(New ucUserManagement()), isDefault:=True)
                 AddNavButton("ACADEMIC MANAGEMENT", Sub() ShowPage(New ucAcademicManagement()))
-                AddNavButton("GRADING CONFIGURATION", Sub() ShowPage(New ucGradingConfig()))
+                AddNavButton("SEMESTER/GRADING SETTINGS", Sub() ShowPage(New ucGradingConfig()))
 
             Case "Teacher"
             ' no nav links per the mockup — Profile Settings only

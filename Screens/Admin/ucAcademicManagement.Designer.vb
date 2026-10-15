@@ -28,7 +28,6 @@ Partial Class ucAcademicManagement
         pnlFilters = New Panel()
         btnAddSection = New ReaLTaiizor.Controls.Button()
         btnAddCourse = New ReaLTaiizor.Controls.Button()
-        btnAdjustSchedule = New ReaLTaiizor.Controls.Button()
         cboSemester = New ComboBox()
         cboAY = New ComboBox()
         cboSection = New ComboBox()
@@ -83,7 +82,6 @@ Partial Class ucAcademicManagement
         ' 
         pnlFilters.Controls.Add(btnAddSection)
         pnlFilters.Controls.Add(btnAddCourse)
-        pnlFilters.Controls.Add(btnAdjustSchedule)
         pnlFilters.Controls.Add(cboSemester)
         pnlFilters.Controls.Add(cboAY)
         pnlFilters.Controls.Add(cboSection)
@@ -103,17 +101,17 @@ Partial Class ucAcademicManagement
         btnAddSection.Anchor = AnchorStyles.Left Or AnchorStyles.Right
         btnAddSection.BackColor = Color.Transparent
         btnAddSection.BackgroundImageLayout = ImageLayout.Zoom
-        btnAddSection.BorderColor = Color.FromArgb(CByte(32), CByte(34), CByte(37))
-        btnAddSection.EnteredBorderColor = Color.Empty
-        btnAddSection.EnteredColor = Color.FromArgb(CByte(44), CByte(110), CByte(90))
+        btnAddSection.BorderColor = Color.Transparent
+        btnAddSection.EnteredBorderColor = Color.Transparent
+        btnAddSection.EnteredColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
         btnAddSection.Font = New Font("Century Gothic", 7.8F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         btnAddSection.Image = Nothing
         btnAddSection.ImageAlign = ContentAlignment.MiddleLeft
         btnAddSection.InactiveColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
-        btnAddSection.Location = New Point(1686, 17)
+        btnAddSection.Location = New Point(1565, 17)
         btnAddSection.Name = "btnAddSection"
         btnAddSection.PressedBorderColor = Color.Transparent
-        btnAddSection.PressedColor = Color.FromArgb(CByte(25), CByte(70), CByte(57))
+        btnAddSection.PressedColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
         btnAddSection.Size = New Size(145, 35)
         btnAddSection.TabIndex = 11
         btnAddSection.Text = "Add Section"
@@ -125,83 +123,61 @@ Partial Class ucAcademicManagement
         btnAddCourse.Anchor = AnchorStyles.Left Or AnchorStyles.Right
         btnAddCourse.BackColor = Color.Transparent
         btnAddCourse.BackgroundImageLayout = ImageLayout.Zoom
-        btnAddCourse.BorderColor = Color.FromArgb(CByte(32), CByte(34), CByte(37))
-        btnAddCourse.EnteredBorderColor = Color.Empty
-        btnAddCourse.EnteredColor = Color.FromArgb(CByte(44), CByte(110), CByte(90))
+        btnAddCourse.BorderColor = Color.Transparent
+        btnAddCourse.EnteredBorderColor = Color.Transparent
+        btnAddCourse.EnteredColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
         btnAddCourse.Font = New Font("Century Gothic", 7.8F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         btnAddCourse.Image = Nothing
         btnAddCourse.ImageAlign = ContentAlignment.MiddleLeft
         btnAddCourse.InactiveColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
-        btnAddCourse.Location = New Point(1521, 17)
+        btnAddCourse.Location = New Point(1408, 17)
         btnAddCourse.Name = "btnAddCourse"
         btnAddCourse.PressedBorderColor = Color.Transparent
-        btnAddCourse.PressedColor = Color.FromArgb(CByte(25), CByte(70), CByte(57))
+        btnAddCourse.PressedColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
         btnAddCourse.Size = New Size(145, 35)
         btnAddCourse.TabIndex = 10
         btnAddCourse.Text = "Add Course"
         btnAddCourse.TextAlignment = StringAlignment.Center
         btnAddCourse.UseWaitCursor = True
         ' 
-        ' btnAdjustSchedule
-        ' 
-        btnAdjustSchedule.Anchor = AnchorStyles.Left Or AnchorStyles.Right
-        btnAdjustSchedule.BackColor = Color.Transparent
-        btnAdjustSchedule.BackgroundImageLayout = ImageLayout.Zoom
-        btnAdjustSchedule.BorderColor = Color.FromArgb(CByte(32), CByte(34), CByte(37))
-        btnAdjustSchedule.EnteredBorderColor = Color.Empty
-        btnAdjustSchedule.EnteredColor = Color.FromArgb(CByte(44), CByte(110), CByte(90))
-        btnAdjustSchedule.Font = New Font("Century Gothic", 7.8F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        btnAdjustSchedule.Image = Nothing
-        btnAdjustSchedule.ImageAlign = ContentAlignment.MiddleLeft
-        btnAdjustSchedule.InactiveColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
-        btnAdjustSchedule.Location = New Point(1357, 17)
-        btnAdjustSchedule.Name = "btnAdjustSchedule"
-        btnAdjustSchedule.PressedBorderColor = Color.Transparent
-        btnAdjustSchedule.PressedColor = Color.FromArgb(CByte(25), CByte(70), CByte(57))
-        btnAdjustSchedule.Size = New Size(145, 35)
-        btnAdjustSchedule.TabIndex = 9
-        btnAdjustSchedule.Text = "Adjust Schedule"
-        btnAdjustSchedule.TextAlignment = StringAlignment.Center
-        btnAdjustSchedule.UseWaitCursor = True
-        ' 
         ' cboSemester
         ' 
-        cboSemester.Font = New Font("Century Gothic", 16.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        cboSemester.Font = New Font("Century Gothic", 9.5F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         cboSemester.FormattingEnabled = True
         cboSemester.Items.AddRange(New Object() {"1st", "2nd", "Mid Year"})
-        cboSemester.Location = New Point(1119, 14)
+        cboSemester.Location = New Point(1119, 20)
         cboSemester.Name = "cboSemester"
-        cboSemester.Size = New Size(225, 41)
+        cboSemester.Size = New Size(225, 29)
         cboSemester.TabIndex = 8
         ' 
         ' cboAY
         ' 
-        cboAY.Font = New Font("Century Gothic", 16.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        cboAY.Font = New Font("Century Gothic", 9.5F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         cboAY.FormattingEnabled = True
         cboAY.Items.AddRange(New Object() {"2026-2027"})
-        cboAY.Location = New Point(753, 14)
+        cboAY.Location = New Point(753, 20)
         cboAY.Name = "cboAY"
-        cboAY.Size = New Size(225, 41)
+        cboAY.Size = New Size(225, 29)
         cboAY.TabIndex = 7
         ' 
         ' cboSection
         ' 
-        cboSection.Font = New Font("Century Gothic", 16.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        cboSection.Font = New Font("Century Gothic", 9.5F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         cboSection.FormattingEnabled = True
         cboSection.Items.AddRange(New Object() {"BSCS1A", "BSCS2A", "BSCS3A", "BSCS4A"})
-        cboSection.Location = New Point(434, 14)
+        cboSection.Location = New Point(434, 21)
         cboSection.Name = "cboSection"
-        cboSection.Size = New Size(225, 41)
+        cboSection.Size = New Size(225, 29)
         cboSection.TabIndex = 6
         ' 
         ' cboYearLevel
         ' 
-        cboYearLevel.Font = New Font("Century Gothic", 16.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        cboYearLevel.Font = New Font("Century Gothic", 9.5F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         cboYearLevel.FormattingEnabled = True
         cboYearLevel.Items.AddRange(New Object() {"1st Year", "2nd Year", "3rd Year", "4th Year"})
-        cboYearLevel.Location = New Point(91, 14)
+        cboYearLevel.Location = New Point(91, 22)
         cboYearLevel.Name = "cboYearLevel"
-        cboYearLevel.Size = New Size(225, 41)
+        cboYearLevel.Size = New Size(225, 29)
         cboYearLevel.TabIndex = 5
         ' 
         ' lblYear

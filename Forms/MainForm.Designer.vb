@@ -495,14 +495,14 @@ Partial Class MainForm
         btnLogoutAdmin.Anchor = AnchorStyles.Right
         btnLogoutAdmin.BackColor = Color.Transparent
         btnLogoutAdmin.BackgroundImageLayout = ImageLayout.Zoom
-        btnLogoutAdmin.BorderColor = Color.WhiteSmoke
+        btnLogoutAdmin.BorderColor = Color.Transparent
         btnLogoutAdmin.EnteredBorderColor = Color.Empty
         btnLogoutAdmin.EnteredColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
-        btnLogoutAdmin.Font = New Font("Century Gothic", 9F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        btnLogoutAdmin.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         btnLogoutAdmin.Image = Nothing
         btnLogoutAdmin.ImageAlign = ContentAlignment.MiddleLeft
         btnLogoutAdmin.InactiveColor = Color.Transparent
-        btnLogoutAdmin.Location = New Point(1666, 77)
+        btnLogoutAdmin.Location = New Point(1666, 75)
         btnLogoutAdmin.Name = "btnLogoutAdmin"
         btnLogoutAdmin.PressedBorderColor = Color.Transparent
         btnLogoutAdmin.PressedColor = Color.Transparent

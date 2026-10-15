@@ -24,7 +24,6 @@ Partial Class ucProfileSettings
     Private Sub InitializeComponent()
         Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(ucProfileSettings))
         picAvatar = New PictureBox()
-        lblCardSubtitle = New Label()
         pnlInfoCard = New RoundedPanel()
         lblPhone = New Label()
         lblEmail = New Label()
@@ -34,6 +33,7 @@ Partial Class ucProfileSettings
         lblFullName = New Label()
         btnLogOut = New ReaLTaiizor.Controls.Button()
         btnBack = New ReaLTaiizor.Controls.Button()
+        linkProfilePicture = New ReaLTaiizor.Controls.LinkLabelEdit()
         CType(picAvatar, ComponentModel.ISupportInitialize).BeginInit()
         pnlInfoCard.SuspendLayout()
         SuspendLayout()
@@ -48,18 +48,6 @@ Partial Class ucProfileSettings
         picAvatar.Size = New Size(200, 200)
         picAvatar.TabIndex = 0
         picAvatar.TabStop = False
-        ' 
-        ' lblCardSubtitle
-        ' 
-        lblCardSubtitle.AutoSize = True
-        lblCardSubtitle.BackColor = Color.Transparent
-        lblCardSubtitle.Font = New Font("Century Gothic", 10.8F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
-        lblCardSubtitle.ForeColor = Color.FromArgb(CByte(32), CByte(124), CByte(64))
-        lblCardSubtitle.Location = New Point(882, 281)
-        lblCardSubtitle.Name = "lblCardSubtitle"
-        lblCardSubtitle.Size = New Size(159, 22)
-        lblCardSubtitle.TabIndex = 2
-        lblCardSubtitle.Text = "Set Profile Picture"
         ' 
         ' pnlInfoCard
         ' 
@@ -105,8 +93,10 @@ Partial Class ucProfileSettings
         ' 
         ' linkEditInfo
         ' 
+        linkEditInfo.ActiveLinkColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
         linkEditInfo.AutoSize = True
         linkEditInfo.BackColor = Color.Transparent
+        linkEditInfo.DisabledLinkColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
         linkEditInfo.Font = New Font("Century Gothic", 10.8F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
         linkEditInfo.LinkBehavior = LinkBehavior.NeverUnderline
         linkEditInfo.LinkColor = Color.FromArgb(CByte(32), CByte(124), CByte(64))
@@ -156,9 +146,9 @@ Partial Class ucProfileSettings
         ' btnLogOut
         ' 
         btnLogOut.BackColor = Color.Transparent
-        btnLogOut.BorderColor = Color.FromArgb(CByte(32), CByte(34), CByte(37))
-        btnLogOut.EnteredBorderColor = Color.Empty
-        btnLogOut.EnteredColor = Color.FromArgb(CByte(44), CByte(110), CByte(90))
+        btnLogOut.BorderColor = Color.Transparent
+        btnLogOut.EnteredBorderColor = Color.Transparent
+        btnLogOut.EnteredColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
         btnLogOut.Font = New Font("Century Gothic", 10.2F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
         btnLogOut.Image = Nothing
         btnLogOut.ImageAlign = ContentAlignment.MiddleLeft
@@ -166,7 +156,7 @@ Partial Class ucProfileSettings
         btnLogOut.Location = New Point(882, 581)
         btnLogOut.Name = "btnLogOut"
         btnLogOut.PressedBorderColor = Color.Transparent
-        btnLogOut.PressedColor = Color.FromArgb(CByte(25), CByte(70), CByte(57))
+        btnLogOut.PressedColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
         btnLogOut.Size = New Size(159, 48)
         btnLogOut.TabIndex = 4
         btnLogOut.Text = "Log out"
@@ -177,32 +167,50 @@ Partial Class ucProfileSettings
         ' 
         btnBack.BackColor = Color.Transparent
         btnBack.BackgroundImageLayout = ImageLayout.Zoom
-        btnBack.BorderColor = Color.FromArgb(CByte(141), CByte(161), CByte(180))
-        btnBack.EnteredBorderColor = Color.Empty
-        btnBack.EnteredColor = Color.FromArgb(CByte(141), CByte(161), CByte(180))
-        btnBack.Font = New Font("Century Gothic", 9F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        btnBack.BorderColor = Color.Transparent
+        btnBack.EnteredBorderColor = Color.Transparent
+        btnBack.EnteredColor = Color.DarkGray
+        btnBack.Font = New Font("Century Gothic", 10.2F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
         btnBack.Image = Nothing
         btnBack.ImageAlign = ContentAlignment.MiddleLeft
-        btnBack.InactiveColor = Color.FromArgb(CByte(141), CByte(161), CByte(180))
-        btnBack.Location = New Point(1760, 15)
+        btnBack.InactiveColor = Color.LightGray
+        btnBack.Location = New Point(15, 14)
         btnBack.Name = "btnBack"
         btnBack.PressedBorderColor = Color.Transparent
-        btnBack.PressedColor = Color.FromArgb(CByte(141), CByte(161), CByte(180))
+        btnBack.PressedColor = Color.DarkGray
         btnBack.Size = New Size(149, 39)
         btnBack.TabIndex = 9
-        btnBack.Text = "←      Back"
+        btnBack.Text = "←   Back"
         btnBack.TextAlignment = StringAlignment.Center
         btnBack.UseWaitCursor = True
+        ' 
+        ' linkProfilePicture
+        ' 
+        linkProfilePicture.ActiveLinkColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
+        linkProfilePicture.AutoSize = True
+        linkProfilePicture.BackColor = Color.Transparent
+        linkProfilePicture.DisabledLinkColor = Color.FromArgb(CByte(32), CByte(124), CByte(64))
+        linkProfilePicture.Font = New Font("Century Gothic", 10.2F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        linkProfilePicture.ForeColor = Color.FromArgb(CByte(32), CByte(124), CByte(64))
+        linkProfilePicture.LinkBehavior = LinkBehavior.NeverUnderline
+        linkProfilePicture.LinkColor = Color.FromArgb(CByte(32), CByte(124), CByte(64))
+        linkProfilePicture.Location = New Point(892, 277)
+        linkProfilePicture.Name = "linkProfilePicture"
+        linkProfilePicture.Size = New Size(148, 19)
+        linkProfilePicture.TabIndex = 10
+        linkProfilePicture.TabStop = True
+        linkProfilePicture.Text = "Set Profile Picture"
+        linkProfilePicture.VisitedLinkColor = Color.FromArgb(CByte(32), CByte(34), CByte(37))
         ' 
         ' ucProfileSettings
         ' 
         AutoScaleDimensions = New SizeF(8F, 20F)
         AutoScaleMode = AutoScaleMode.Font
         BackColor = Color.White
+        Controls.Add(linkProfilePicture)
         Controls.Add(btnBack)
         Controls.Add(btnLogOut)
         Controls.Add(pnlInfoCard)
-        Controls.Add(lblCardSubtitle)
         Controls.Add(picAvatar)
         Name = "ucProfileSettings"
         Size = New Size(1924, 917)
@@ -227,5 +235,9 @@ Partial Class ucProfileSettings
     Friend WithEvents lblPhone As Label
     Friend WithEvents lblEmail As Label
     Friend WithEvents btnBack As ReaLTaiizor.Controls.Button
+    Friend WithEvents DungeonLinkLabel1 As ReaLTaiizor.Controls.DungeonLinkLabel
+    Friend WithEvents linkSetProfile As ReaLTaiizor.Controls.LinkLabelEdit
+    Friend WithEvents linkSetProfilePicture As ReaLTaiizor.Controls.LinkLabelEdit
+    Friend WithEvents linkProfilePicture As ReaLTaiizor.Controls.LinkLabelEdit
 
 End Class
