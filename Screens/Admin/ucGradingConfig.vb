@@ -3,7 +3,6 @@ Imports System.Windows.Forms
 
 Public Class ucGradingConfig
 
-    ' State variables for active configuration
     Private CurrentSchoolYear As String = "2026-2027"
     Private CurrentTerm As String = "1"
     Private TermStartDate As DateTime = New DateTime(2026, 8, 18)
