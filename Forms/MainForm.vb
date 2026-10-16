@@ -1,4 +1,7 @@
-﻿Public Class MainForm
+﻿Imports System.Drawing
+Imports System.Windows.Forms
+
+Public Class MainForm
 
     Private Sub MainForm_Load(sender As Object, e As EventArgs) Handles MyBase.Load
 
@@ -42,6 +45,26 @@
 
     Private Sub MainForm_Resize(sender As Object, e As EventArgs) Handles MyBase.Resize
         UpdateLayout()
+    End Sub
+
+    '========================================
+    ' ADMIN LOGOUT HANDLER
+    '========================================
+    Private Sub btnLogoutAdmin_Click(sender As Object, e As EventArgs) Handles btnLogoutAdmin.Click
+        SessionManager.EndSession()
+
+        If pnlApp IsNot Nothing Then
+            pnlApp.Visible = False
+        End If
+
+        If pnlLoginCard IsNot Nothing Then
+            pnlLoginCard.Visible = True
+            pnlLoginCard.BringToFront()
+        End If
+
+        If txtUsername IsNot Nothing Then txtUsername.Clear()
+        If txtPassword IsNot Nothing Then txtPassword.Clear()
+        If txtUsername IsNot Nothing Then txtUsername.Focus()
     End Sub
 
     Private Sub StyleWindowButton(b As Button, hoverColor As Color, downColor As Color)

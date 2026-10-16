@@ -19,7 +19,6 @@
         CurrentUsername = String.Empty
         CurrentRole = String.Empty
         CurrentFullName = String.Empty
-        IsLoggedIn = False
     End Sub
 
     Public Shared Function AuthorizeRole(ParamArray allowedRoles As String()) As Boolean

@@ -1,5 +1,6 @@
 ﻿Imports System.Text
 Imports MySqlConnector
+Imports BCrypt.Net ' Added for BCrypt verification
 
 Partial Public Class MainForm
 
@@ -45,6 +46,7 @@ Partial Public Class MainForm
                                 MessageBoxButtons.OK)
                 Return
             End If
+
             Dim storedValue As String
             If TypeOf row("password_hash") Is Byte() Then
                 storedValue = Encoding.UTF8.GetString(CType(row("password_hash"), Byte()))
@@ -53,7 +55,19 @@ Partial Public Class MainForm
             End If
             storedValue = If(storedValue, String.Empty).Trim()
 
-            If Not String.Equals(passwordInput, storedValue, StringComparison.Ordinal) Then
+            ' UPDATED AUTHENTICATION LOGIC:
+            ' Uses BCrypt to verify if the typed password matches the secure database hash
+            Dim isPasswordValid As Boolean = False
+            Try
+                If Not String.IsNullOrWhiteSpace(storedValue) Then
+                    isPasswordValid = BCrypt.Net.BCrypt.Verify(passwordInput, storedValue)
+                End If
+            Catch ex As Exception
+                ' Handles potential malformed hash string exceptions gracefully
+                isPasswordValid = False
+            End Try
+
+            If Not isPasswordValid Then
                 MessageBox.Show("Invalid password.", "Login Failed", MessageBoxButtons.OK)
                 txtPassword.SelectAll()
                 txtPassword.Focus()
