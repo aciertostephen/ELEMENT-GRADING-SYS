@@ -58,7 +58,7 @@ Partial Class ucTranscript
         pnlStudentTranscriptBG.Margin = New Padding(4, 2, 4, 2)
         pnlStudentTranscriptBG.Name = "pnlStudentTranscriptBG"
         pnlStudentTranscriptBG.Radius = 20
-        pnlStudentTranscriptBG.Size = New Size(2039, 824)
+        pnlStudentTranscriptBG.Size = New Size(1867, 897)
         pnlStudentTranscriptBG.TabIndex = 3
         ' 
         ' btnExportStudent
@@ -72,7 +72,7 @@ Partial Class ucTranscript
         btnExportStudent.Image = Nothing
         btnExportStudent.ImageAlign = ContentAlignment.MiddleLeft
         btnExportStudent.InactiveColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
-        btnExportStudent.Location = New Point(319, 656)
+        btnExportStudent.Location = New Point(239, 655)
         btnExportStudent.Margin = New Padding(4, 2, 4, 2)
         btnExportStudent.Name = "btnExportStudent"
         btnExportStudent.PressedBorderColor = Color.Transparent
@@ -88,7 +88,7 @@ Partial Class ucTranscript
         pnlStudentInfo.BackColor = Color.Transparent
         pnlStudentInfo.Controls.Add(dgvTranscript)
         pnlStudentInfo.Controls.Add(pnlTopHead)
-        pnlStudentInfo.Location = New Point(299, 135)
+        pnlStudentInfo.Location = New Point(219, 140)
         pnlStudentInfo.Margin = New Padding(4, 2, 4, 2)
         pnlStudentInfo.Name = "pnlStudentInfo"
         pnlStudentInfo.Size = New Size(1428, 498)
@@ -208,7 +208,7 @@ Partial Class ucTranscript
         lblCardSubtitle.AutoSize = True
         lblCardSubtitle.BackColor = Color.Transparent
         lblCardSubtitle.Font = New Font("Times New Roman", 16.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        lblCardSubtitle.Location = New Point(855, 81)
+        lblCardSubtitle.Location = New Point(776, 81)
         lblCardSubtitle.Margin = New Padding(4, 0, 4, 0)
         lblCardSubtitle.Name = "lblCardSubtitle"
         lblCardSubtitle.Size = New Size(302, 33)
@@ -221,7 +221,7 @@ Partial Class ucTranscript
         lblCardTitle.AutoSize = True
         lblCardTitle.BackColor = Color.Transparent
         lblCardTitle.Font = New Font("Times New Roman", 22.2F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
-        lblCardTitle.Location = New Point(659, 30)
+        lblCardTitle.Location = New Point(590, 30)
         lblCardTitle.Margin = New Padding(4, 0, 4, 0)
         lblCardTitle.Name = "lblCardTitle"
         lblCardTitle.Size = New Size(673, 42)
@@ -236,7 +236,7 @@ Partial Class ucTranscript
         Controls.Add(pnlStudentTranscriptBG)
         Margin = New Padding(4, 2, 4, 2)
         Name = "ucTranscript"
-        Size = New Size(2105, 860)
+        Size = New Size(1924, 917)
         pnlStudentTranscriptBG.ResumeLayout(False)
         pnlStudentTranscriptBG.PerformLayout()
         pnlStudentInfo.ResumeLayout(False)
