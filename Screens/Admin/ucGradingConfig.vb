@@ -1,4 +1,6 @@
-﻿Imports System.Drawing
+﻿Imports System.Data
+Imports System.Drawing
+Imports System.Linq
 Imports System.Windows.Forms
 
 Public Class ucGradingConfig
@@ -12,6 +14,12 @@ Public Class ucGradingConfig
 
     Private Sub ucGradingConfig_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         RefreshUI()
+        SetupGradeScaleGrid()
+        LoadGradeScale()
+
+        ' Only admin (the dean) can see the Edit button for the grading scale.
+        ' If your users table has a separate "dean" role, use: AuthorizeRole("admin", "dean")
+        btnEditScale.Visible = SessionManager.AuthorizeRole("admin")
     End Sub
 
     '========================================
@@ -79,6 +87,79 @@ Public Class ucGradingConfig
 
                 RefreshUI()
                 MessageBox.Show("Grade encoding configuration updated successfully.", "Success", MessageBoxButtons.OK)
+            End If
+        End Using
+    End Sub
+
+    '========================================
+    ' GRADING SCALE AND GWA (DISPLAY)
+    '========================================
+
+    Private Sub SetupGradeScaleGrid()
+        With dgvGradingScale
+            .Columns.Clear()
+            .Columns.Add("colRange", "Percentage Range")
+            .Columns.Add("colGwa", "GWA")
+            .Columns("colRange").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+            .Columns("colGwa").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+            .ReadOnly = True
+            .AllowUserToAddRows = False
+            .AllowUserToDeleteRows = False
+            .RowHeadersVisible = False
+            .SelectionMode = DataGridViewSelectionMode.FullRowSelect
+            .MultiSelect = False
+            .AllowUserToResizeRows = False
+            .AllowUserToResizeColumns = False
+            .BorderStyle = BorderStyle.None
+            .BackgroundColor = Color.White
+            .GridColor = Color.Gainsboro
+            .CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal
+
+            ' Selection looks identical to a normal row (no blue)
+            .DefaultCellStyle.BackColor = Color.White
+            .DefaultCellStyle.ForeColor = Color.Black
+            .DefaultCellStyle.SelectionBackColor = Color.White
+            .DefaultCellStyle.SelectionForeColor = Color.Black
+            .EnableHeadersVisualStyles = False
+            .ColumnHeadersDefaultCellStyle.BackColor = Color.White
+            .ColumnHeadersDefaultCellStyle.ForeColor = Color.Black
+            .ColumnHeadersDefaultCellStyle.SelectionBackColor = Color.White
+            .ColumnHeadersDefaultCellStyle.SelectionForeColor = Color.Black
+        End With
+    End Sub
+
+    Private Sub LoadGradeScale()
+        dgvGradingScale.Rows.Clear()
+
+        Dim dt As DataTable = DatabaseHelper.ExecuteQuery(
+            "SELECT min_percent, max_percent, grade_equivalent " &
+            "FROM grade_scale ORDER BY min_percent DESC")
+
+        If dt Is Nothing Then Return
+
+        For Each r As DataRow In dt.Rows
+            Dim range As String = $"{Convert.ToDecimal(r("min_percent")):0.00} - {Convert.ToDecimal(r("max_percent")):0.00}"
+            Dim gwa As String = Convert.ToDecimal(r("grade_equivalent")).ToString("0.00")
+            dgvGradingScale.Rows.Add(range, gwa)
+        Next
+
+        dgvGradingScale.ClearSelection()
+    End Sub
+
+    '========================================
+    ' EDIT GRADING SCALE (DEAN ONLY)
+    '========================================
+
+    Private Sub btnEditScale_Click(sender As Object, e As EventArgs) Handles btnEditScale.Click
+        If Not SessionManager.AuthorizeRole("admin") Then
+            MessageBox.Show("Only the Dean can edit the grading scale.", "Access Denied", MessageBoxButtons.OK)
+            Return
+        End If
+
+        Using dlg As New GradeScaleDialog()
+            If dlg.ShowDialog(Me.FindForm()) = DialogResult.OK Then
+                LoadGradeScale()
+                MessageBox.Show("Grading scale updated successfully.", "Success", MessageBoxButtons.OK)
             End If
         End Using
     End Sub
@@ -295,6 +376,179 @@ Public Class ucGradingConfig
                 End If
                 btnOk.Enabled = True
             End If
+        End Sub
+    End Class
+
+    '========================================
+    ' NESTED GRADING SCALE DIALOG
+    '========================================
+
+    Private NotInheritable Class GradeScaleDialog
+        Inherits Form
+
+        Private _table As New DataTable()
+        Private ReadOnly dgv As New DataGridView()
+        Private ReadOnly lblWarning As New Label() With {.AutoSize = False, .ForeColor = Color.DimGray}
+        Private ReadOnly btnOk As New Button() With {.Text = "Save", .Size = New Size(90, 32), .BackColor = Color.FromArgb(30, 86, 62), .ForeColor = Color.White, .FlatStyle = FlatStyle.Flat}
+        Private ReadOnly btnCancel As New Button() With {.Text = "Cancel", .Size = New Size(90, 32), .BackColor = Color.Gray, .ForeColor = Color.White, .FlatStyle = FlatStyle.Flat, .DialogResult = DialogResult.Cancel}
+
+        Public Sub New()
+            Text = "Edit Grading Scale and GWA"
+            Font = New Font("Century Gothic", 9, FontStyle.Regular)
+            Size = New Size(520, 540)
+            StartPosition = FormStartPosition.CenterParent
+            FormBorderStyle = FormBorderStyle.FixedDialog
+            MaximizeBox = False
+            MinimizeBox = False
+            ShowInTaskbar = False
+
+            dgv.Location = New Point(20, 15)
+            dgv.Size = New Size(465, 350)
+            dgv.AllowUserToAddRows = False
+            dgv.AllowUserToDeleteRows = False
+            dgv.RowHeadersVisible = False
+            dgv.BackgroundColor = Color.White
+
+            lblWarning.Location = New Point(20, 372)
+            lblWarning.Size = New Size(465, 40)
+            lblWarning.Text = "Ranges must run from 0.00 to 100.00 with no gaps or overlaps (each range starts 0.01 below the one above)."
+
+            btnOk.Location = New Point(290, 425)
+            btnOk.FlatAppearance.BorderSize = 0
+            btnCancel.Location = New Point(390, 425)
+            btnCancel.FlatAppearance.BorderSize = 0
+
+            Controls.Add(dgv)
+            Controls.Add(lblWarning)
+            Controls.Add(btnOk)
+            Controls.Add(btnCancel)
+            CancelButton = btnCancel
+
+            AddHandler btnOk.Click, AddressOf OnSave
+            AddHandler dgv.DataError, AddressOf OnGridError
+            AddHandler Me.Load, AddressOf OnDialogLoad
+        End Sub
+
+        Private Sub OnDialogLoad(sender As Object, e As EventArgs)
+            _table = DatabaseHelper.ExecuteQuery(
+                "SELECT scale_id, min_percent, max_percent, grade_equivalent " &
+                "FROM grade_scale ORDER BY min_percent DESC")
+
+            If _table Is Nothing OrElse _table.Rows.Count = 0 Then
+                MessageBox.Show("No grading scale found to edit.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                DialogResult = DialogResult.Cancel
+                Close()
+                Return
+            End If
+
+            dgv.DataSource = _table
+            dgv.Columns("scale_id").Visible = False
+            dgv.Columns("min_percent").HeaderText = "Min %"
+            dgv.Columns("max_percent").HeaderText = "Max %"
+            dgv.Columns("grade_equivalent").HeaderText = "GWA"
+            For Each c As DataGridViewColumn In dgv.Columns
+                c.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+            Next
+        End Sub
+
+        Private Sub OnGridError(sender As Object, e As DataGridViewDataErrorEventArgs)
+            MessageBox.Show("Please enter a valid number.", "Invalid Input", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            e.ThrowException = False
+        End Sub
+
+        Private Function ValidateScale(ByRef msg As String) As Boolean
+            dgv.EndEdit()
+            Me.BindingContext(_table).EndCurrentEdit()
+
+            Dim rows = _table.Rows.Cast(Of DataRow)().ToList()
+            If rows.Count = 0 Then
+                msg = "The grading scale is empty."
+                Return False
+            End If
+
+            For Each r In rows
+                If IsDBNull(r("min_percent")) OrElse IsDBNull(r("max_percent")) OrElse IsDBNull(r("grade_equivalent")) Then
+                    msg = "All fields must be filled in."
+                    Return False
+                End If
+            Next
+
+            Dim sorted = rows.OrderByDescending(Function(r) Convert.ToDecimal(r("min_percent"))).ToList()
+
+            For i As Integer = 0 To sorted.Count - 1
+                Dim minP As Decimal = Math.Round(Convert.ToDecimal(sorted(i)("min_percent")), 2)
+                Dim maxP As Decimal = Math.Round(Convert.ToDecimal(sorted(i)("max_percent")), 2)
+                Dim gwa As Decimal = Convert.ToDecimal(sorted(i)("grade_equivalent"))
+
+                If minP < 0D OrElse maxP > 100D Then
+                    msg = $"Range {minP:0.00}-{maxP:0.00}: values must be between 0 and 100."
+                    Return False
+                End If
+                If minP > maxP Then
+                    msg = $"Range {minP:0.00}-{maxP:0.00}: Min % cannot be greater than Max %."
+                    Return False
+                End If
+                If gwa <= 0D Then
+                    msg = $"Range {minP:0.00}-{maxP:0.00}: GWA must be greater than 0."
+                    Return False
+                End If
+                If i = 0 AndAlso maxP <> 100D Then
+                    msg = "The highest range must end at 100.00."
+                    Return False
+                End If
+                If i > 0 Then
+                    Dim prevMin As Decimal = Math.Round(Convert.ToDecimal(sorted(i - 1)("min_percent")), 2)
+                    If prevMin - maxP <> 0.01D Then
+                        msg = $"Gap or overlap between {minP:0.00}-{maxP:0.00} and the range above it."
+                        Return False
+                    End If
+                End If
+                If i = sorted.Count - 1 AndAlso minP <> 0D Then
+                    msg = "The lowest range must start at 0.00."
+                    Return False
+                End If
+            Next
+            Return True
+        End Function
+
+        Private Sub OnSave(sender As Object, e As EventArgs)
+            Dim msg As String = ""
+            If Not ValidateScale(msg) Then
+                lblWarning.ForeColor = Color.Red
+                lblWarning.Text = "⚠️ " & msg
+                Return
+            End If
+
+            If MessageBox.Show("Save changes to the grading scale?", "Confirm",
+                               MessageBoxButtons.YesNo, MessageBoxIcon.Question) <> DialogResult.Yes Then
+                Return
+            End If
+
+            Try
+                Using conn = DatabaseHelper.GetConnection()
+                    conn.Open()
+                    Using tx = conn.BeginTransaction()
+                        For Each r As DataRow In _table.Rows
+                            Using cmd = conn.CreateCommand()
+                                cmd.Transaction = tx
+                                cmd.CommandText =
+                                    "UPDATE grade_scale SET min_percent=@min, max_percent=@max, " &
+                                    "grade_equivalent=@gwa WHERE scale_id=@id"
+                                cmd.Parameters.AddWithValue("@min", r("min_percent"))
+                                cmd.Parameters.AddWithValue("@max", r("max_percent"))
+                                cmd.Parameters.AddWithValue("@gwa", r("grade_equivalent"))
+                                cmd.Parameters.AddWithValue("@id", r("scale_id"))
+                                cmd.ExecuteNonQuery()
+                            End Using
+                        Next
+                        tx.Commit()
+                    End Using
+                End Using
+                DialogResult = DialogResult.OK
+                Close()
+            Catch ex As Exception
+                MessageBox.Show("Failed to save: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            End Try
         End Sub
     End Class
 

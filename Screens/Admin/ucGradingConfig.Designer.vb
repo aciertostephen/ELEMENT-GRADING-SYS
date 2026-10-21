@@ -22,8 +22,8 @@ Partial Class ucGradingConfig
     'Do not modify it using the code editor.
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
-        Dim DataGridViewCellStyle3 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle4 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle1 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle2 As DataGridViewCellStyle = New DataGridViewCellStyle()
         tblGrading = New TableLayoutPanel()
         tblConfigCards = New TableLayoutPanel()
         RoundedPanel1 = New RoundedPanel()
@@ -70,7 +70,7 @@ Partial Class ucGradingConfig
         tblGrading.RowCount = 2
         tblGrading.RowStyles.Add(New RowStyle(SizeType.Absolute, 300F))
         tblGrading.RowStyles.Add(New RowStyle(SizeType.Absolute, 400F))
-        tblGrading.Size = New Size(1924, 740)
+        tblGrading.Size = New Size(1924, 917)
         tblGrading.TabIndex = 0
         ' 
         ' tblConfigCards
@@ -91,9 +91,9 @@ Partial Class ucGradingConfig
         ' 
         ' RoundedPanel1
         ' 
-        RoundedPanel1.ActiveBorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
-        RoundedPanel1.BackColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
-        RoundedPanel1.BorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
+        RoundedPanel1.ActiveBorderColor = Color.FromArgb(248, 248, 248)
+        RoundedPanel1.BackColor = Color.FromArgb(248, 248, 248)
+        RoundedPanel1.BorderColor = Color.FromArgb(248, 248, 248)
         RoundedPanel1.BorderThickness = 1
         RoundedPanel1.Controls.Add(lblTermValue)
         RoundedPanel1.Controls.Add(lblSchoolYearValue)
@@ -117,7 +117,7 @@ Partial Class ucGradingConfig
         ' 
         lblTermValue.AutoSize = True
         lblTermValue.BackColor = Color.Transparent
-        lblTermValue.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        lblTermValue.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, 0)
         lblTermValue.ForeColor = Color.Black
         lblTermValue.Location = New Point(379, 92)
         lblTermValue.Name = "lblTermValue"
@@ -129,7 +129,7 @@ Partial Class ucGradingConfig
         ' 
         lblSchoolYearValue.AutoSize = True
         lblSchoolYearValue.BackColor = Color.Transparent
-        lblSchoolYearValue.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        lblSchoolYearValue.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, 0)
         lblSchoolYearValue.ForeColor = Color.Black
         lblSchoolYearValue.Location = New Point(379, 64)
         lblSchoolYearValue.Name = "lblSchoolYearValue"
@@ -141,7 +141,7 @@ Partial Class ucGradingConfig
         ' 
         lblEndDateCaption.AutoSize = True
         lblEndDateCaption.BackColor = Color.Transparent
-        lblEndDateCaption.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        lblEndDateCaption.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, 0)
         lblEndDateCaption.ForeColor = Color.Black
         lblEndDateCaption.Location = New Point(64, 154)
         lblEndDateCaption.Name = "lblEndDateCaption"
@@ -153,7 +153,7 @@ Partial Class ucGradingConfig
         ' 
         lblStartDateCaption.AutoSize = True
         lblStartDateCaption.BackColor = Color.Transparent
-        lblStartDateCaption.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        lblStartDateCaption.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, 0)
         lblStartDateCaption.ForeColor = Color.Black
         lblStartDateCaption.Location = New Point(64, 122)
         lblStartDateCaption.Name = "lblStartDateCaption"
@@ -165,7 +165,7 @@ Partial Class ucGradingConfig
         ' 
         lblStartDateValue.AutoSize = True
         lblStartDateValue.BackColor = Color.Transparent
-        lblStartDateValue.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        lblStartDateValue.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, 0)
         lblStartDateValue.ForeColor = Color.Black
         lblStartDateValue.Location = New Point(379, 122)
         lblStartDateValue.Name = "lblStartDateValue"
@@ -177,7 +177,7 @@ Partial Class ucGradingConfig
         ' 
         lblEndDateValue.AutoSize = True
         lblEndDateValue.BackColor = Color.Transparent
-        lblEndDateValue.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        lblEndDateValue.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, 0)
         lblEndDateValue.ForeColor = Color.Black
         lblEndDateValue.Location = New Point(379, 154)
         lblEndDateValue.Name = "lblEndDateValue"
@@ -189,7 +189,7 @@ Partial Class ucGradingConfig
         ' 
         lblTermCaption.AutoSize = True
         lblTermCaption.BackColor = Color.Transparent
-        lblTermCaption.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        lblTermCaption.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, 0)
         lblTermCaption.ForeColor = Color.Black
         lblTermCaption.Location = New Point(64, 92)
         lblTermCaption.Name = "lblTermCaption"
@@ -201,7 +201,7 @@ Partial Class ucGradingConfig
         ' 
         lblSchoolYearCaption.AutoSize = True
         lblSchoolYearCaption.BackColor = Color.Transparent
-        lblSchoolYearCaption.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        lblSchoolYearCaption.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, 0)
         lblSchoolYearCaption.ForeColor = Color.Black
         lblSchoolYearCaption.Location = New Point(64, 64)
         lblSchoolYearCaption.Name = "lblSchoolYearCaption"
@@ -213,8 +213,8 @@ Partial Class ucGradingConfig
         ' 
         lblSemesterTitle.AutoSize = True
         lblSemesterTitle.BackColor = Color.Transparent
-        lblSemesterTitle.Font = New Font("Century Gothic", 10.8F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
-        lblSemesterTitle.ForeColor = Color.FromArgb(CByte(126), CByte(126), CByte(126))
+        lblSemesterTitle.Font = New Font("Century Gothic", 10.8F, FontStyle.Bold, GraphicsUnit.Point, 0)
+        lblSemesterTitle.ForeColor = Color.FromArgb(126, 126, 126)
         lblSemesterTitle.Location = New Point(36, 18)
         lblSemesterTitle.Name = "lblSemesterTitle"
         lblSemesterTitle.Size = New Size(307, 22)
@@ -227,15 +227,15 @@ Partial Class ucGradingConfig
         btnEditSemester.BackgroundImageLayout = ImageLayout.Zoom
         btnEditSemester.BorderColor = Color.Transparent
         btnEditSemester.EnteredBorderColor = Color.Transparent
-        btnEditSemester.EnteredColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
-        btnEditSemester.Font = New Font("Century Gothic", 9F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        btnEditSemester.EnteredColor = Color.FromArgb(23, 61, 50)
+        btnEditSemester.Font = New Font("Century Gothic", 9F, FontStyle.Bold, GraphicsUnit.Point, 0)
         btnEditSemester.Image = Nothing
         btnEditSemester.ImageAlign = ContentAlignment.MiddleLeft
-        btnEditSemester.InactiveColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
+        btnEditSemester.InactiveColor = Color.FromArgb(34, 90, 74)
         btnEditSemester.Location = New Point(36, 232)
         btnEditSemester.Name = "btnEditSemester"
         btnEditSemester.PressedBorderColor = Color.Transparent
-        btnEditSemester.PressedColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
+        btnEditSemester.PressedColor = Color.FromArgb(23, 61, 50)
         btnEditSemester.Size = New Size(195, 39)
         btnEditSemester.TabIndex = 5
         btnEditSemester.Text = "Edit"
@@ -244,9 +244,9 @@ Partial Class ucGradingConfig
         ' 
         ' RoundedPanel2
         ' 
-        RoundedPanel2.ActiveBorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
-        RoundedPanel2.BackColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
-        RoundedPanel2.BorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
+        RoundedPanel2.ActiveBorderColor = Color.FromArgb(248, 248, 248)
+        RoundedPanel2.BackColor = Color.FromArgb(248, 248, 248)
+        RoundedPanel2.BorderColor = Color.FromArgb(248, 248, 248)
         RoundedPanel2.BorderThickness = 1
         RoundedPanel2.Controls.Add(btnEditEncoding)
         RoundedPanel2.Controls.Add(lblDeadlineValue)
@@ -268,15 +268,15 @@ Partial Class ucGradingConfig
         btnEditEncoding.BackgroundImageLayout = ImageLayout.Zoom
         btnEditEncoding.BorderColor = Color.Transparent
         btnEditEncoding.EnteredBorderColor = Color.Transparent
-        btnEditEncoding.EnteredColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
-        btnEditEncoding.Font = New Font("Century Gothic", 9F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        btnEditEncoding.EnteredColor = Color.FromArgb(23, 61, 50)
+        btnEditEncoding.Font = New Font("Century Gothic", 9F, FontStyle.Bold, GraphicsUnit.Point, 0)
         btnEditEncoding.Image = Nothing
         btnEditEncoding.ImageAlign = ContentAlignment.MiddleLeft
-        btnEditEncoding.InactiveColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
+        btnEditEncoding.InactiveColor = Color.FromArgb(34, 90, 74)
         btnEditEncoding.Location = New Point(49, 232)
         btnEditEncoding.Name = "btnEditEncoding"
         btnEditEncoding.PressedBorderColor = Color.Transparent
-        btnEditEncoding.PressedColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
+        btnEditEncoding.PressedColor = Color.FromArgb(23, 61, 50)
         btnEditEncoding.Size = New Size(195, 39)
         btnEditEncoding.TabIndex = 19
         btnEditEncoding.Text = "Edit"
@@ -287,7 +287,7 @@ Partial Class ucGradingConfig
         ' 
         lblDeadlineValue.AutoSize = True
         lblDeadlineValue.BackColor = Color.Transparent
-        lblDeadlineValue.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        lblDeadlineValue.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, 0)
         lblDeadlineValue.ForeColor = Color.Black
         lblDeadlineValue.Location = New Point(374, 64)
         lblDeadlineValue.Name = "lblDeadlineValue"
@@ -299,8 +299,8 @@ Partial Class ucGradingConfig
         ' 
         lblLockStatusValue.AutoSize = True
         lblLockStatusValue.BackColor = Color.Transparent
-        lblLockStatusValue.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        lblLockStatusValue.ForeColor = Color.FromArgb(CByte(32), CByte(124), CByte(64))
+        lblLockStatusValue.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, 0)
+        lblLockStatusValue.ForeColor = Color.FromArgb(32, 124, 64)
         lblLockStatusValue.Location = New Point(374, 92)
         lblLockStatusValue.Name = "lblLockStatusValue"
         lblLockStatusValue.Size = New Size(204, 21)
@@ -311,7 +311,7 @@ Partial Class ucGradingConfig
         ' 
         lblLockStatusCaption.AutoSize = True
         lblLockStatusCaption.BackColor = Color.Transparent
-        lblLockStatusCaption.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        lblLockStatusCaption.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, 0)
         lblLockStatusCaption.ForeColor = Color.Black
         lblLockStatusCaption.Location = New Point(49, 92)
         lblLockStatusCaption.Name = "lblLockStatusCaption"
@@ -323,7 +323,7 @@ Partial Class ucGradingConfig
         ' 
         lblDeadlineCaption.AutoSize = True
         lblDeadlineCaption.BackColor = Color.Transparent
-        lblDeadlineCaption.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        lblDeadlineCaption.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, 0)
         lblDeadlineCaption.ForeColor = Color.Black
         lblDeadlineCaption.Location = New Point(49, 64)
         lblDeadlineCaption.Name = "lblDeadlineCaption"
@@ -335,8 +335,8 @@ Partial Class ucGradingConfig
         ' 
         lblEncodingTitle.AutoSize = True
         lblEncodingTitle.BackColor = Color.Transparent
-        lblEncodingTitle.Font = New Font("Century Gothic", 10.8F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
-        lblEncodingTitle.ForeColor = Color.FromArgb(CByte(126), CByte(126), CByte(126))
+        lblEncodingTitle.Font = New Font("Century Gothic", 10.8F, FontStyle.Bold, GraphicsUnit.Point, 0)
+        lblEncodingTitle.ForeColor = Color.FromArgb(126, 126, 126)
         lblEncodingTitle.Location = New Point(49, 18)
         lblEncodingTitle.Name = "lblEncodingTitle"
         lblEncodingTitle.Size = New Size(324, 22)
@@ -345,9 +345,9 @@ Partial Class ucGradingConfig
         ' 
         ' pnlGradingScale
         ' 
-        pnlGradingScale.ActiveBorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
-        pnlGradingScale.BackColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
-        pnlGradingScale.BorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
+        pnlGradingScale.ActiveBorderColor = Color.FromArgb(248, 248, 248)
+        pnlGradingScale.BackColor = Color.FromArgb(248, 248, 248)
+        pnlGradingScale.BorderColor = Color.FromArgb(248, 248, 248)
         pnlGradingScale.BorderThickness = 1
         pnlGradingScale.Controls.Add(btnEditScale)
         pnlGradingScale.Controls.Add(dgvGradingScale)
@@ -357,7 +357,7 @@ Partial Class ucGradingConfig
         pnlGradingScale.Margin = New Padding(0, 20, 0, 0)
         pnlGradingScale.Name = "pnlGradingScale"
         pnlGradingScale.Radius = 12
-        pnlGradingScale.Size = New Size(1884, 380)
+        pnlGradingScale.Size = New Size(1884, 557)
         pnlGradingScale.TabIndex = 1
         ' 
         ' btnEditScale
@@ -366,15 +366,15 @@ Partial Class ucGradingConfig
         btnEditScale.BackgroundImageLayout = ImageLayout.Zoom
         btnEditScale.BorderColor = Color.Transparent
         btnEditScale.EnteredBorderColor = Color.Transparent
-        btnEditScale.EnteredColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
-        btnEditScale.Font = New Font("Century Gothic", 9F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        btnEditScale.EnteredColor = Color.FromArgb(23, 61, 50)
+        btnEditScale.Font = New Font("Century Gothic", 9F, FontStyle.Bold, GraphicsUnit.Point, 0)
         btnEditScale.Image = Nothing
         btnEditScale.ImageAlign = ContentAlignment.MiddleLeft
-        btnEditScale.InactiveColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
-        btnEditScale.Location = New Point(39, 314)
+        btnEditScale.InactiveColor = Color.FromArgb(34, 90, 74)
+        btnEditScale.Location = New Point(39, 495)
         btnEditScale.Name = "btnEditScale"
         btnEditScale.PressedBorderColor = Color.Transparent
-        btnEditScale.PressedColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
+        btnEditScale.PressedColor = Color.FromArgb(23, 61, 50)
         btnEditScale.Size = New Size(195, 39)
         btnEditScale.TabIndex = 9
         btnEditScale.Text = "Edit"
@@ -387,29 +387,29 @@ Partial Class ucGradingConfig
         dgvGradingScale.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
         dgvGradingScale.BackgroundColor = Color.White
         dgvGradingScale.BorderStyle = BorderStyle.None
-        DataGridViewCellStyle3.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle3.BackColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
-        DataGridViewCellStyle3.Font = New Font("Century Gothic", 12F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        DataGridViewCellStyle3.ForeColor = SystemColors.WindowText
-        DataGridViewCellStyle3.SelectionBackColor = SystemColors.Highlight
-        DataGridViewCellStyle3.SelectionForeColor = SystemColors.HighlightText
-        DataGridViewCellStyle3.WrapMode = DataGridViewTriState.True
-        dgvGradingScale.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle3
+        DataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle1.BackColor = Color.FromArgb(34, 90, 74)
+        DataGridViewCellStyle1.Font = New Font("Century Gothic", 12F, FontStyle.Regular, GraphicsUnit.Point, 0)
+        DataGridViewCellStyle1.ForeColor = SystemColors.WindowText
+        DataGridViewCellStyle1.SelectionBackColor = SystemColors.Highlight
+        DataGridViewCellStyle1.SelectionForeColor = SystemColors.HighlightText
+        DataGridViewCellStyle1.WrapMode = DataGridViewTriState.True
+        dgvGradingScale.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle1
         dgvGradingScale.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize
         dgvGradingScale.Columns.AddRange(New DataGridViewColumn() {percentage, gwa})
-        DataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle4.BackColor = SystemColors.Window
-        DataGridViewCellStyle4.Font = New Font("Century Gothic", 12F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        DataGridViewCellStyle4.ForeColor = SystemColors.ControlText
-        DataGridViewCellStyle4.SelectionBackColor = SystemColors.Highlight
-        DataGridViewCellStyle4.SelectionForeColor = SystemColors.HighlightText
-        DataGridViewCellStyle4.WrapMode = DataGridViewTriState.False
-        dgvGradingScale.DefaultCellStyle = DataGridViewCellStyle4
-        dgvGradingScale.Location = New Point(65, 65)
+        DataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle2.BackColor = SystemColors.Window
+        DataGridViewCellStyle2.Font = New Font("Century Gothic", 12F, FontStyle.Regular, GraphicsUnit.Point, 0)
+        DataGridViewCellStyle2.ForeColor = SystemColors.ControlText
+        DataGridViewCellStyle2.SelectionBackColor = SystemColors.Highlight
+        DataGridViewCellStyle2.SelectionForeColor = SystemColors.HighlightText
+        DataGridViewCellStyle2.WrapMode = DataGridViewTriState.False
+        dgvGradingScale.DefaultCellStyle = DataGridViewCellStyle2
+        dgvGradingScale.Location = New Point(67, 64)
         dgvGradingScale.Name = "dgvGradingScale"
         dgvGradingScale.RowHeadersVisible = False
         dgvGradingScale.RowHeadersWidth = 51
-        dgvGradingScale.Size = New Size(1730, 180)
+        dgvGradingScale.Size = New Size(1074, 410)
         dgvGradingScale.TabIndex = 8
         ' 
         ' percentage
@@ -430,8 +430,8 @@ Partial Class ucGradingConfig
         ' 
         lblScaleTitle.AutoSize = True
         lblScaleTitle.BackColor = Color.Transparent
-        lblScaleTitle.Font = New Font("Century Gothic", 10.8F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
-        lblScaleTitle.ForeColor = Color.FromArgb(CByte(126), CByte(126), CByte(126))
+        lblScaleTitle.Font = New Font("Century Gothic", 10.8F, FontStyle.Bold, GraphicsUnit.Point, 0)
+        lblScaleTitle.ForeColor = Color.FromArgb(126, 126, 126)
         lblScaleTitle.Location = New Point(39, 29)
         lblScaleTitle.Name = "lblScaleTitle"
         lblScaleTitle.Size = New Size(245, 22)

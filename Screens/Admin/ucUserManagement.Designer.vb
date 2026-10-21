@@ -41,7 +41,6 @@ Partial Class ucUserManagement
         pnlStats = New Panel()
         flowStats = New FlowLayoutPanel()
         pnlMainBG = New RoundedPanel()
-        btnDeleteBTN = New ReaLTaiizor.Controls.Button()
         linkResetPass = New LinkLabel()
         linkUserStatus = New LinkLabel()
         linkEditInfo = New LinkLabel()
@@ -245,7 +244,6 @@ Partial Class ucUserManagement
         pnlMainBG.BackColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
         pnlMainBG.BorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
         pnlMainBG.BorderThickness = 1
-        pnlMainBG.Controls.Add(btnDeleteBTN)
         pnlMainBG.Controls.Add(linkResetPass)
         pnlMainBG.Controls.Add(linkUserStatus)
         pnlMainBG.Controls.Add(linkEditInfo)
@@ -255,27 +253,6 @@ Partial Class ucUserManagement
         pnlMainBG.Radius = 20
         pnlMainBG.Size = New Size(410, 891)
         pnlMainBG.TabIndex = 0
-        ' 
-        ' btnDeleteBTN
-        ' 
-        btnDeleteBTN.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
-        btnDeleteBTN.BackColor = Color.Transparent
-        btnDeleteBTN.BorderColor = Color.Transparent
-        btnDeleteBTN.EnteredBorderColor = Color.Transparent
-        btnDeleteBTN.EnteredColor = Color.DarkRed
-        btnDeleteBTN.Font = New Font("Century Gothic", 9F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        btnDeleteBTN.Image = Nothing
-        btnDeleteBTN.ImageAlign = ContentAlignment.MiddleLeft
-        btnDeleteBTN.InactiveColor = Color.Crimson
-        btnDeleteBTN.Location = New Point(90, 807)
-        btnDeleteBTN.Name = "btnDeleteBTN"
-        btnDeleteBTN.PressedBorderColor = Color.Transparent
-        btnDeleteBTN.PressedColor = Color.DarkRed
-        btnDeleteBTN.Size = New Size(235, 36)
-        btnDeleteBTN.TabIndex = 9
-        btnDeleteBTN.Text = "Delete Account"
-        btnDeleteBTN.TextAlignment = StringAlignment.Center
-        btnDeleteBTN.UseWaitCursor = True
         ' 
         ' linkResetPass
         ' 
@@ -385,6 +362,5 @@ Partial Class ucUserManagement
     Friend WithEvents linkEditInfo As LinkLabel
     Friend WithEvents linkResetPass As LinkLabel
     Friend WithEvents linkUserStatus As LinkLabel
-    Friend WithEvents btnDeleteBTN As ReaLTaiizor.Controls.Button
 
 End Class

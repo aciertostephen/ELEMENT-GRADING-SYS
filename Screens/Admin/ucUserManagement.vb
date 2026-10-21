@@ -3,7 +3,6 @@ Imports System.Drawing
 Imports System.Security.Cryptography
 Imports System.Text.RegularExpressions
 Imports System.Windows.Forms
-Imports MySql.Data.MySqlClient
 Imports MySqlConnector
 
 Imports BCryptHasher = BCrypt.Net.BCrypt
@@ -467,48 +466,6 @@ Public Class ucUserManagement
     End Sub
 
     '========================================
-    ' DELETE ACCOUNT WORKFLOW
-    '========================================
-
-    Private Sub btnDeleteBTN_Click(sender As Object, e As EventArgs) Handles btnDeleteBTN.Click
-        Dim selectedRow As DataGridViewRow = GetSelectedUserRow("delete")
-        If selectedRow Is Nothing Then Return
-
-        Dim userId As String = CellText(selectedRow, Col.UserId)
-        Dim fullName As String = CellText(selectedRow, Col.FullName)
-
-        If IsCurrentAdmin(userId) Then
-            MessageBox.Show("You cannot delete your own account.", "Action Not Allowed",
-                            MessageBoxButtons.OK)
-            Return
-        End If
-
-        Dim promptMessage As String = "Are you sure you want to permanently delete this user?" & vbCrLf & vbCrLf &
-                                      $"• User ID: {userId}" & vbCrLf &
-                                      $"• Name: {fullName}" & vbCrLf & vbCrLf &
-                                      "This action cannot be undone."
-
-        If Not ConfirmDialog.Ask(Me.FindForm(), promptMessage, "Confirm Account Deletion") Then Return
-
-        Try
-            Dim uidParam As MySqlParameter() = {New MySqlParameter("@uid", userId)}
-            DatabaseHelper.ExecuteNonQuery("DELETE FROM teacher_profile WHERE user_id = @uid;", uidParam)
-            DatabaseHelper.ExecuteNonQuery("DELETE FROM student_profile WHERE user_id = @uid;", {New MySqlParameter("@uid", userId)})
-            DatabaseHelper.ExecuteNonQuery("DELETE FROM users WHERE user_id = @uid;", {New MySqlParameter("@uid", userId)})
-
-            LoadUsersFromDatabase()
-            MessageBox.Show($"Account [{userId} - {fullName}] was successfully deleted.",
-                            "Account Deleted", MessageBoxButtons.OK)
-
-        Catch ex As MySqlException When ex.Number = MYSQL_ERR_FK_PARENT
-            MessageBox.Show("This account is referenced by other records (classes, grades or logs) and cannot be deleted." & vbCrLf & vbCrLf &
-                            "Consider setting the account to Inactive instead.", "Cannot Delete", MessageBoxButtons.OK)
-        Catch ex As Exception
-            MessageBox.Show("Failed to delete user: " & ex.Message, "Database Error", MessageBoxButtons.OK)
-        End Try
-    End Sub
-
-    '========================================
     ' NESTED RENDERER FOR MATCHING BLUE HOVER
     '========================================
 
@@ -689,6 +646,604 @@ Public Class ucUserManagement
 
             If firstInvalid IsNot Nothing Then
                 firstInvalid.Focus()
+                Return
+            End If
+
+            DialogResult = DialogResult.OK
+        End Sub
+
+        Protected Overrides Sub Dispose(disposing As Boolean)
+            If disposing Then errors.Dispose()
+            MyBase.Dispose(disposing)
+        End Sub
+    End Class
+
+    '========================================
+    ' CREATE NEW USER WORKFLOW
+    '========================================
+
+    Private Sub btnCreateUser_Click(sender As Object, e As EventArgs) Handles btnCreateUser.Click
+        Using dlg As New CreateUserDialog()
+            If dlg.ShowDialog(Me.FindForm()) <> DialogResult.OK Then Return
+
+            Try
+                Dim hash As String = BCryptHasher.HashPassword(dlg.Password, 11)
+                Dim newId As Integer
+                Dim isTeacher As Boolean = IsFaculty(dlg.Role)
+
+                Using conn = DatabaseHelper.GetConnection()
+                    conn.Open()
+                    Using tx = conn.BeginTransaction()
+                        Using cmd = conn.CreateCommand()
+                            cmd.Transaction = tx
+
+                            ' 1) users row
+                            cmd.CommandText =
+                                "INSERT INTO users (username, email, password_hash, role, status, phone_no, date_added) " &
+                                "VALUES (@u, @e, @h, @r, 'Active', @p, NOW());"
+                            cmd.Parameters.AddWithValue("@u", dlg.Username)
+                            cmd.Parameters.AddWithValue("@e", dlg.Email)
+                            cmd.Parameters.AddWithValue("@h", hash)
+                            cmd.Parameters.AddWithValue("@r", dlg.Role)
+                            cmd.Parameters.AddWithValue("@p",
+                                If(String.IsNullOrEmpty(dlg.Phone), CType(DBNull.Value, Object), dlg.Phone))
+                            cmd.ExecuteNonQuery()
+
+                            ' 2) get the new user_id
+                            cmd.Parameters.Clear()
+                            cmd.CommandText = "SELECT LAST_INSERT_ID();"
+                            newId = Convert.ToInt32(cmd.ExecuteScalar())
+
+                            ' 3) profile row
+                            cmd.Parameters.Clear()
+                            If isTeacher Then
+                                cmd.CommandText =
+                                    "INSERT INTO teacher_profile (teacher_id, user_id, first_name, middle_name, last_name, department) " &
+                                    "VALUES (@pid, @id, @fn, @mn, @ln, @dept);"
+                                cmd.Parameters.AddWithValue("@dept", dlg.Department)
+                            Else
+                                cmd.CommandText =
+                                    "INSERT INTO student_profile (student_id, user_id, first_name, middle_name, last_name, section_id, year_level) " &
+                                    "VALUES (@pid, @id, @fn, @mn, @ln, @sec, @yr);"
+                                cmd.Parameters.AddWithValue("@sec", dlg.SectionId)
+                                cmd.Parameters.AddWithValue("@yr", dlg.YearLevel)
+                            End If
+                            cmd.Parameters.AddWithValue("@pid", dlg.IdNumber)
+                            cmd.Parameters.AddWithValue("@id", newId)
+                            cmd.Parameters.AddWithValue("@fn", dlg.FirstName)
+                            cmd.Parameters.AddWithValue("@mn", dlg.MiddleName)
+                            cmd.Parameters.AddWithValue("@ln", dlg.LastName)
+                            cmd.ExecuteNonQuery()
+                        End Using
+                        tx.Commit()
+                    End Using
+                End Using
+
+                ' Show everything again so the new user is visible at the top
+                currentFilter = FILTER_ALL
+                txtSearch.Clear()
+                LoadUsersFromDatabase()
+
+                MessageBox.Show("Account created successfully." & vbCrLf & vbCrLf &
+                                $"• User ID: {newId}" & vbCrLf &
+                                $"• {If(isTeacher, "Teacher", "Student")} No.: {dlg.IdNumber}" & vbCrLf &
+                                $"• Name: {dlg.FirstName} {dlg.LastName}" & vbCrLf &
+                                $"• Username: {dlg.Username}" & vbCrLf & vbCrLf &
+                                "Please give the initial password to the user securely.",
+                                "User Created", MessageBoxButtons.OK)
+
+            Catch ex As MySqlException When ex.Number = 1062
+                MessageBox.Show("That username, email or ID number is already in use.", "Duplicate Account", MessageBoxButtons.OK)
+            Catch ex As Exception
+                MessageBox.Show("Failed to create user: " & ex.Message, "Database Error", MessageBoxButtons.OK)
+            End Try
+        End Using
+    End Sub
+
+    '========================================
+    ' NESTED CREATE USER DIALOG
+    '========================================
+
+    Private NotInheritable Class CreateUserDialog
+        Inherits Form
+
+        Private Const MIN_LENGTH As Integer = 8
+
+        Private Shared ReadOnly StudentNoRegex As New Regex("^\d{2}-\d{5}$", RegexOptions.Compiled)
+        Private Shared ReadOnly TeacherNoRegex As New Regex("^tc-\d{2}-\d{5}$", RegexOptions.Compiled Or RegexOptions.IgnoreCase)
+
+        ' Left column
+        Private ReadOnly cboRole As New ComboBox() With {.DropDownStyle = ComboBoxStyle.DropDownList}
+        Private ReadOnly txtFirst As New TextBox()
+        Private ReadOnly txtMiddle As New TextBox()
+        Private ReadOnly txtLast As New TextBox()
+
+        ' Student-only / teacher-only panels (same spot, one visible at a time)
+        Private ReadOnly pnlStudent As New Panel()
+        Private ReadOnly pnlTeacher As New Panel()
+        Private ReadOnly txtStudentNo As New TextBox()
+        Private ReadOnly cboSection As New ComboBox() With {.DropDownStyle = ComboBoxStyle.DropDownList}
+        Private ReadOnly cboYear As New ComboBox() With {.DropDownStyle = ComboBoxStyle.DropDownList}
+        Private ReadOnly txtTeacherNo As New TextBox()
+        Private ReadOnly cboDept As New ComboBox() With {.DropDownStyle = ComboBoxStyle.DropDown}
+
+        ' Right column
+        Private ReadOnly txtUsername As New TextBox()
+        Private ReadOnly txtEmail As New TextBox()
+        Private ReadOnly txtPhone As New TextBox()
+        Private ReadOnly txtPassword As New TextBox()
+        Private ReadOnly txtConfirm As New TextBox()
+        Private ReadOnly chkShow As New CheckBox()
+
+        Private ReadOnly btnSave As New Button()
+        Private ReadOnly btnCancel As New Button()
+        Private ReadOnly errors As New ErrorProvider()
+
+        Private ReadOnly Property IsStudent As Boolean
+            Get
+                Return SameText(Role, ROLE_STUDENT)
+            End Get
+        End Property
+
+        Public ReadOnly Property Role As String
+            Get
+                Return If(cboRole.SelectedItem?.ToString(), ROLE_STUDENT)
+            End Get
+        End Property
+
+        ' Student names are stored in uppercase to match your existing records
+        Public ReadOnly Property FirstName As String
+            Get
+                Return NormalizeName(txtFirst.Text)
+            End Get
+        End Property
+
+        Public ReadOnly Property MiddleName As String
+            Get
+                Return NormalizeName(txtMiddle.Text)
+            End Get
+        End Property
+
+        Public ReadOnly Property LastName As String
+            Get
+                Return NormalizeName(txtLast.Text)
+            End Get
+        End Property
+
+        ' Student number or teacher number, depending on role
+        Public ReadOnly Property IdNumber As String
+            Get
+                Return If(IsStudent, txtStudentNo.Text.Trim(), txtTeacherNo.Text.Trim().ToLower())
+            End Get
+        End Property
+
+        Public ReadOnly Property SectionId As Object
+            Get
+                Return cboSection.SelectedValue
+            End Get
+        End Property
+
+        Public ReadOnly Property YearLevel As Integer
+            Get
+                Return Convert.ToInt32(cboYear.SelectedItem)
+            End Get
+        End Property
+
+        Public ReadOnly Property Department As String
+            Get
+                Return cboDept.Text.Trim()
+            End Get
+        End Property
+
+        Public ReadOnly Property Username As String
+            Get
+                Return txtUsername.Text.Trim()
+            End Get
+        End Property
+
+        Public ReadOnly Property Email As String
+            Get
+                Return txtEmail.Text.Trim()
+            End Get
+        End Property
+
+        Public ReadOnly Property Phone As String
+            Get
+                Return txtPhone.Text.Trim()
+            End Get
+        End Property
+
+        Public ReadOnly Property Password As String
+            Get
+                Return txtPassword.Text
+            End Get
+        End Property
+
+        Private Function NormalizeName(value As String) As String
+            Dim v As String = value.Trim()
+            Return If(IsStudent, v.ToUpper(), v)
+        End Function
+
+        Public Sub New()
+            Text = "Create New User"
+            Font = New Font("Century Gothic", 9, FontStyle.Regular)
+            FormBorderStyle = FormBorderStyle.FixedDialog
+            StartPosition = FormStartPosition.CenterParent
+            MaximizeBox = False
+            MinimizeBox = False
+            ShowInTaskbar = False
+            ClientSize = New Size(780, 470)
+
+            errors.ContainerControl = Me
+            errors.BlinkStyle = ErrorBlinkStyle.NeverBlink
+
+            cboRole.Items.AddRange({ROLE_STUDENT, ROLE_PROFESSOR})
+            cboYear.Items.AddRange({"1", "2", "3", "4"})
+            cboYear.SelectedIndex = 0
+            LoadSections()
+            LoadDepartments()
+
+            ' ---------- left column ----------
+            AddRow(Me, "Role:", cboRole, 20, 15, 340)
+            AddRow(Me, "First Name:", txtFirst, 20, 70, 340)
+            AddRow(Me, "Middle Name / Initial (optional):", txtMiddle, 20, 125, 340)
+            AddRow(Me, "Last Name:", txtLast, 20, 180, 340)
+
+            pnlStudent.SetBounds(0, 235, 390, 165)
+            AddRow(pnlStudent, "Student Number (e.g. 25-00547):", txtStudentNo, 20, 0, 340)
+            AddRow(pnlStudent, "Section:", cboSection, 20, 55, 340)
+            AddRow(pnlStudent, "Year Level:", cboYear, 20, 110, 340)
+
+            pnlTeacher.SetBounds(0, 235, 390, 165)
+            AddRow(pnlTeacher, "Teacher Number (e.g. tc-25-01196):", txtTeacherNo, 20, 0, 340)
+            AddRow(pnlTeacher, "Department:", cboDept, 20, 55, 340)
+
+            Controls.Add(pnlStudent)
+            Controls.Add(pnlTeacher)
+
+            ' ---------- right column ----------
+            AddRow(Me, "Username:", txtUsername, 400, 15, 360)
+            AddRow(Me, "Email Address:", txtEmail, 400, 70, 360)
+            AddRow(Me, "Phone Number (optional):", txtPhone, 400, 125, 360)
+            AddRow(Me, "Initial Password:", txtPassword, 400, 180, 360)
+            AddRow(Me, "Confirm Password:", txtConfirm, 400, 235, 360)
+            txtPassword.UseSystemPasswordChar = True
+            txtConfirm.UseSystemPasswordChar = True
+
+            chkShow.Text = "Show password"
+            chkShow.AutoSize = True
+            chkShow.Location = New Point(400, 295)
+            Controls.Add(chkShow)
+
+            btnSave.Text = "Create"
+            btnSave.Size = New Size(90, 30)
+            btnSave.Location = New Point(570, 420)
+
+            btnCancel.Text = "Cancel"
+            btnCancel.Size = New Size(90, 30)
+            btnCancel.Location = New Point(670, 420)
+            btnCancel.DialogResult = DialogResult.Cancel
+
+            Controls.Add(btnSave)
+            Controls.Add(btnCancel)
+
+            AddHandler btnSave.Click, AddressOf OnSaveClicked
+            AddHandler chkShow.CheckedChanged, AddressOf OnShowChanged
+            AddHandler cboRole.SelectedIndexChanged, AddressOf OnRoleChanged
+
+            AcceptButton = btnSave
+            CancelButton = btnCancel
+
+            cboRole.SelectedIndex = 0
+            OnRoleChanged(Nothing, EventArgs.Empty)
+        End Sub
+
+        Private Sub AddRow(parent As Control, caption As String, ctl As Control, left As Integer, top As Integer, width As Integer)
+            Dim lbl As New Label() With {.Text = caption, .AutoSize = True, .Location = New Point(left, top)}
+            ctl.Location = New Point(left, top + 20)
+            ctl.Width = width
+            parent.Controls.Add(lbl)
+            parent.Controls.Add(ctl)
+        End Sub
+
+        '----- load dropdown data -----
+
+        Private Sub LoadSections()
+            Dim dt As DataTable = DatabaseHelper.ExecuteQuery("SELECT * FROM section")
+            If dt Is Nothing OrElse dt.Columns.Count = 0 Then Return
+
+            Dim valueCol As String = If(dt.Columns.Contains("section_id"), "section_id", dt.Columns(0).ColumnName)
+
+            ' Pick a readable label column; falls back to the 2nd column of the table
+            Dim displayCol As String = Nothing
+            For Each cand As String In {"section_name", "section_code", "section", "name", "code"}
+                If dt.Columns.Contains(cand) Then
+                    displayCol = cand
+                    Exit For
+                End If
+            Next
+            If displayCol Is Nothing Then
+                displayCol = If(dt.Columns.Count > 1, dt.Columns(1).ColumnName, valueCol)
+            End If
+
+            cboSection.DisplayMember = displayCol
+            cboSection.ValueMember = valueCol
+            cboSection.DataSource = dt
+        End Sub
+
+        Private Sub LoadDepartments()
+            Dim dt As DataTable = DatabaseHelper.ExecuteQuery(
+                "SELECT DISTINCT department FROM teacher_profile WHERE department IS NOT NULL AND department <> '' ORDER BY department;")
+            If dt Is Nothing Then Return
+            For Each r As DataRow In dt.Rows
+                cboDept.Items.Add(r("department").ToString())
+            Next
+            If cboDept.Items.Count > 0 Then cboDept.SelectedIndex = 0
+        End Sub
+
+        '----- events -----
+
+        Private Sub OnRoleChanged(sender As Object, e As EventArgs)
+            pnlStudent.Visible = IsStudent
+            pnlTeacher.Visible = Not IsStudent
+            errors.Clear()
+        End Sub
+
+        Private Sub OnShowChanged(sender As Object, e As EventArgs)
+            txtPassword.UseSystemPasswordChar = Not chkShow.Checked
+            txtConfirm.UseSystemPasswordChar = Not chkShow.Checked
+        End Sub
+
+        Private Shared Function IsTaken(tableName As String, columnName As String, value As String) As Boolean
+            Dim result As Object = DatabaseHelper.ExecuteScalar(
+                $"SELECT COUNT(*) FROM {tableName} WHERE {columnName} = @v;",
+                {New MySqlParameter("@v", value)})
+            Return Convert.ToInt32(If(result, 0)) > 0
+        End Function
+
+        Private Sub OnSaveClicked(sender As Object, e As EventArgs)
+            errors.Clear()
+            Dim firstInvalid As Control = Nothing
+
+            ' ---- names ----
+            If FirstName.Length = 0 Then
+                errors.SetError(txtFirst, "First name is required.")
+                If firstInvalid Is Nothing Then firstInvalid = txtFirst
+            End If
+
+            If LastName.Length = 0 Then
+                errors.SetError(txtLast, "Last name is required.")
+                If firstInvalid Is Nothing Then firstInvalid = txtLast
+            End If
+
+            ' ---- role-specific ----
+            If IsStudent Then
+                If Not StudentNoRegex.IsMatch(IdNumber) Then
+                    errors.SetError(txtStudentNo, "Use the format 25-00547.")
+                    If firstInvalid Is Nothing Then firstInvalid = txtStudentNo
+                ElseIf IsTaken("student_profile", "student_id", IdNumber) Then
+                    errors.SetError(txtStudentNo, "This student number already exists.")
+                    If firstInvalid Is Nothing Then firstInvalid = txtStudentNo
+                End If
+
+                If cboSection.SelectedValue Is Nothing Then
+                    errors.SetError(cboSection, "Select a section.")
+                    If firstInvalid Is Nothing Then firstInvalid = cboSection
+                End If
+            Else
+                If Not TeacherNoRegex.IsMatch(IdNumber) Then
+                    errors.SetError(txtTeacherNo, "Use the format tc-25-01196.")
+                    If firstInvalid Is Nothing Then firstInvalid = txtTeacherNo
+                ElseIf IsTaken("teacher_profile", "teacher_id", IdNumber) Then
+                    errors.SetError(txtTeacherNo, "This teacher number already exists.")
+                    If firstInvalid Is Nothing Then firstInvalid = txtTeacherNo
+                End If
+
+                If Department.Length = 0 Then
+                    errors.SetError(cboDept, "Department is required.")
+                    If firstInvalid Is Nothing Then firstInvalid = cboDept
+                End If
+            End If
+
+            ' ---- account ----
+            If Username.Length = 0 Then
+                errors.SetError(txtUsername, "Username is required.")
+                If firstInvalid Is Nothing Then firstInvalid = txtUsername
+            ElseIf Username.Contains(" ") Then
+                errors.SetError(txtUsername, "Username cannot contain spaces.")
+                If firstInvalid Is Nothing Then firstInvalid = txtUsername
+            ElseIf IsTaken("users", "username", Username) Then
+                errors.SetError(txtUsername, "This username is already taken.")
+                If firstInvalid Is Nothing Then firstInvalid = txtUsername
+            End If
+
+            If Not EmailRegex.IsMatch(Email) Then
+                errors.SetError(txtEmail, "Enter a valid email address.")
+                If firstInvalid Is Nothing Then firstInvalid = txtEmail
+            ElseIf IsTaken("users", "email", Email) Then
+                errors.SetError(txtEmail, "This email is already registered.")
+                If firstInvalid Is Nothing Then firstInvalid = txtEmail
+            End If
+
+            If Phone.Length > 0 AndAlso Not PhoneRegex.IsMatch(Phone) Then
+                errors.SetError(txtPhone, "Phone must contain digits only (7 to 15 digits).")
+                If firstInvalid Is Nothing Then firstInvalid = txtPhone
+            End If
+
+            Dim pwd As String = txtPassword.Text
+            If pwd.Length < MIN_LENGTH Then
+                errors.SetError(txtPassword, $"Password must be at least {MIN_LENGTH} characters.")
+                If firstInvalid Is Nothing Then firstInvalid = txtPassword
+            ElseIf pwd.Contains(" ") Then
+                errors.SetError(txtPassword, "Password cannot contain spaces.")
+                If firstInvalid Is Nothing Then firstInvalid = txtPassword
+            ElseIf Not String.Equals(pwd, txtConfirm.Text, StringComparison.Ordinal) Then
+                errors.SetError(txtConfirm, "Passwords do not match.")
+                If firstInvalid Is Nothing Then firstInvalid = txtConfirm
+            End If
+
+            If firstInvalid IsNot Nothing Then
+                firstInvalid.Focus()
+                Return
+            End If
+
+            DialogResult = DialogResult.OK
+        End Sub
+
+        Protected Overrides Sub Dispose(disposing As Boolean)
+            If disposing Then errors.Dispose()
+            MyBase.Dispose(disposing)
+        End Sub
+    End Class
+
+    '========================================
+    ' RESET PASSWORD WORKFLOW
+    '========================================
+
+    Private Sub linkResetPass_Click(sender As Object, e As EventArgs) Handles linkResetPass.Click
+        Dim row As DataGridViewRow = GetSelectedUserRow("reset the password for")
+        If row Is Nothing Then Return
+
+        Dim userId As String = CellText(row, Col.UserId)
+        Dim fullName As String = CellText(row, Col.FullName)
+
+        Dim newPassword As String
+        Using dlg As New ResetPasswordDialog(userId, fullName)
+            If dlg.ShowDialog(Me.FindForm()) <> DialogResult.OK Then Return
+            newPassword = dlg.NewPassword
+        End Using
+
+        Dim promptMessage As String = "Are you sure you want to reset the password for this account?" & vbCrLf & vbCrLf &
+                                      $"• User ID: {userId}" & vbCrLf &
+                                      $"• Name: {fullName}" & vbCrLf & vbCrLf &
+                                      "The old password will stop working immediately."
+
+        If Not ConfirmDialog.Ask(Me.FindForm(), promptMessage, "Confirm Password Reset") Then Return
+
+        Try
+            Dim newHash As String = BCryptHasher.HashPassword(newPassword, 11)
+
+            DatabaseHelper.ExecuteNonQuery(
+                "UPDATE users SET password_hash = @hash WHERE user_id = @uid;",
+                {
+                    New MySqlParameter("@hash", newHash),
+                    New MySqlParameter("@uid", userId)
+                })
+
+            MessageBox.Show($"The password for [{userId} - {fullName}] was reset successfully." & vbCrLf & vbCrLf &
+                            "Please give the new password to the user securely.",
+                            "Password Reset", MessageBoxButtons.OK)
+
+        Catch ex As Exception
+            MessageBox.Show("Failed to reset password: " & ex.Message, "Database Error", MessageBoxButtons.OK)
+        End Try
+    End Sub
+
+    '========================================
+    ' NESTED RESET PASSWORD DIALOG
+    '========================================
+
+    Private NotInheritable Class ResetPasswordDialog
+        Inherits Form
+
+        Private Const MIN_LENGTH As Integer = 8
+
+        Private ReadOnly txtNew As New TextBox()
+        Private ReadOnly txtConfirm As New TextBox()
+        Private ReadOnly chkShow As New CheckBox()
+        Private ReadOnly btnSave As New Button()
+        Private ReadOnly btnCancel As New Button()
+        Private ReadOnly errors As New ErrorProvider()
+
+        Public ReadOnly Property NewPassword As String
+            Get
+                Return txtNew.Text
+            End Get
+        End Property
+
+        Public Sub New(userId As String, fullName As String)
+            Text = $"Reset Password - {userId}"
+            Font = New Font("Century Gothic", 9, FontStyle.Regular)
+            FormBorderStyle = FormBorderStyle.FixedDialog
+            StartPosition = FormStartPosition.CenterParent
+            MaximizeBox = False
+            MinimizeBox = False
+            ShowInTaskbar = False
+            ClientSize = New Size(400, 235)
+
+            errors.ContainerControl = Me
+            errors.BlinkStyle = ErrorBlinkStyle.NeverBlink
+
+            Dim lblUser As New Label() With {
+                .Text = $"Resetting password for: {fullName}",
+                .AutoSize = True,
+                .Location = New Point(20, 15)
+            }
+            Controls.Add(lblUser)
+
+            AddField("New Password:", txtNew, 45)
+            AddField("Confirm Password:", txtConfirm, 95)
+
+            chkShow.Text = "Show password"
+            chkShow.AutoSize = True
+            chkShow.Location = New Point(20, 150)
+            AddHandler chkShow.CheckedChanged, AddressOf OnShowChanged
+
+            btnSave.Text = "Reset"
+            btnSave.Size = New Size(90, 30)
+            btnSave.Location = New Point(200, 190)
+            AddHandler btnSave.Click, AddressOf OnSaveClicked
+
+            btnCancel.Text = "Cancel"
+            btnCancel.Size = New Size(90, 30)
+            btnCancel.Location = New Point(300, 190)
+            btnCancel.DialogResult = DialogResult.Cancel
+
+            Controls.Add(chkShow)
+            Controls.Add(btnSave)
+            Controls.Add(btnCancel)
+
+            AcceptButton = btnSave
+            CancelButton = btnCancel
+        End Sub
+
+        Private Sub AddField(caption As String, box As TextBox, top As Integer)
+            Dim lbl As New Label() With {
+                .Text = caption,
+                .AutoSize = True,
+                .Location = New Point(20, top)
+            }
+            box.Location = New Point(20, top + 20)
+            box.Width = 360
+            box.UseSystemPasswordChar = True
+            Controls.Add(lbl)
+            Controls.Add(box)
+        End Sub
+
+        Private Sub OnShowChanged(sender As Object, e As EventArgs)
+            txtNew.UseSystemPasswordChar = Not chkShow.Checked
+            txtConfirm.UseSystemPasswordChar = Not chkShow.Checked
+        End Sub
+
+        Private Sub OnSaveClicked(sender As Object, e As EventArgs)
+            errors.Clear()
+            Dim pwd As String = txtNew.Text
+
+            If pwd.Length < MIN_LENGTH Then
+                errors.SetError(txtNew, $"Password must be at least {MIN_LENGTH} characters.")
+                txtNew.Focus()
+                Return
+            End If
+
+            If pwd <> pwd.Trim() OrElse pwd.Contains(" ") Then
+                errors.SetError(txtNew, "Password cannot contain spaces.")
+                txtNew.Focus()
+                Return
+            End If
+
+            If Not String.Equals(pwd, txtConfirm.Text, StringComparison.Ordinal) Then
+                errors.SetError(txtConfirm, "Passwords do not match.")
+                txtConfirm.Focus()
                 Return
             End If
 
