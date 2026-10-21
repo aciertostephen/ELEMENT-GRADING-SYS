@@ -22,8 +22,8 @@ Partial Class ucGradebook
     'Do not modify it using the code editor.
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
-        Dim DataGridViewCellStyle3 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle4 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle1 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle2 As DataGridViewCellStyle = New DataGridViewCellStyle()
         pnlTop = New RoundedPanel()
         btnBack = New ReaLTaiizor.Controls.Button()
         lblGradebook = New Label()
@@ -53,11 +53,12 @@ Partial Class ucGradebook
         GRAexam = New DataGridViewTextBoxColumn()
         majorexam = New DataGridViewTextBoxColumn()
         grademajorexam = New DataGridViewTextBoxColumn()
-        pnlTopGradeBook = New Label()
-        btnSaveConfig = New ReaLTaiizor.Controls.Button()
-        btnAddColumn = New ReaLTaiizor.Controls.Button()
         pnlTopRubricBG = New RoundedPanel()
+        Weights = New ComboBox()
         btnConfigureWeights = New Button()
+        btnAddColumn = New ReaLTaiizor.Controls.Button()
+        btnSaveConfig = New ReaLTaiizor.Controls.Button()
+        pnlTopGradeBook = New Label()
         pnlTop.SuspendLayout()
         tblMainGBook.SuspendLayout()
         pnlRubric.SuspendLayout()
@@ -246,24 +247,24 @@ Partial Class ucGradebook
         dgvGradebook.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
         dgvGradebook.BackgroundColor = Color.White
         dgvGradebook.BorderStyle = BorderStyle.None
-        DataGridViewCellStyle3.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle3.BackColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
-        DataGridViewCellStyle3.Font = New Font("Century Gothic", 9F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        DataGridViewCellStyle3.ForeColor = Color.White
-        DataGridViewCellStyle3.SelectionBackColor = SystemColors.Highlight
-        DataGridViewCellStyle3.SelectionForeColor = Color.White
-        DataGridViewCellStyle3.WrapMode = DataGridViewTriState.True
-        dgvGradebook.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle3
+        DataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle1.BackColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
+        DataGridViewCellStyle1.Font = New Font("Century Gothic", 9F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        DataGridViewCellStyle1.ForeColor = Color.White
+        DataGridViewCellStyle1.SelectionBackColor = SystemColors.Highlight
+        DataGridViewCellStyle1.SelectionForeColor = Color.White
+        DataGridViewCellStyle1.WrapMode = DataGridViewTriState.True
+        dgvGradebook.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle1
         dgvGradebook.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize
         dgvGradebook.Columns.AddRange(New DataGridViewColumn() {number, studname, status, part, gra, EXTRA, Seatwork, quiz1, GRAQ1, quiz2, GRAQ2, quizp, project, graproject, exam, GRAexam, majorexam, grademajorexam})
-        DataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle4.BackColor = Color.White
-        DataGridViewCellStyle4.Font = New Font("Segoe UI", 9F)
-        DataGridViewCellStyle4.ForeColor = SystemColors.ControlText
-        DataGridViewCellStyle4.SelectionBackColor = SystemColors.Highlight
-        DataGridViewCellStyle4.SelectionForeColor = SystemColors.HighlightText
-        DataGridViewCellStyle4.WrapMode = DataGridViewTriState.False
-        dgvGradebook.DefaultCellStyle = DataGridViewCellStyle4
+        DataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle2.BackColor = Color.White
+        DataGridViewCellStyle2.Font = New Font("Segoe UI", 9F)
+        DataGridViewCellStyle2.ForeColor = SystemColors.ControlText
+        DataGridViewCellStyle2.SelectionBackColor = SystemColors.Highlight
+        DataGridViewCellStyle2.SelectionForeColor = SystemColors.HighlightText
+        DataGridViewCellStyle2.WrapMode = DataGridViewTriState.False
+        dgvGradebook.DefaultCellStyle = DataGridViewCellStyle2
         dgvGradebook.Dock = DockStyle.Fill
         dgvGradebook.GridColor = Color.White
         dgvGradebook.Location = New Point(20, 125)
@@ -419,38 +420,41 @@ Partial Class ucGradebook
         grademajorexam.Name = "grademajorexam"
         grademajorexam.Width = 90
         ' 
-        ' pnlTopGradeBook
+        ' pnlTopRubricBG
         ' 
-        pnlTopGradeBook.AutoSize = True
-        pnlTopGradeBook.BackColor = Color.Transparent
-        pnlTopGradeBook.Font = New Font("Century Gothic", 12F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        pnlTopGradeBook.ForeColor = Color.FromArgb(CByte(126), CByte(126), CByte(126))
-        pnlTopGradeBook.Location = New Point(22, 31)
-        pnlTopGradeBook.Name = "pnlTopGradeBook"
-        pnlTopGradeBook.Size = New Size(205, 23)
-        pnlTopGradeBook.TabIndex = 9
-        pnlTopGradeBook.Text = "Active Gradebook :"
+        pnlTopRubricBG.ActiveBorderColor = Color.White
+        pnlTopRubricBG.BackColor = Color.White
+        pnlTopRubricBG.BorderColor = Color.White
+        pnlTopRubricBG.BorderThickness = 1
+        pnlTopRubricBG.Controls.Add(Weights)
+        pnlTopRubricBG.Controls.Add(btnConfigureWeights)
+        pnlTopRubricBG.Controls.Add(btnAddColumn)
+        pnlTopRubricBG.Controls.Add(btnSaveConfig)
+        pnlTopRubricBG.Controls.Add(pnlTopGradeBook)
+        pnlTopRubricBG.Dock = DockStyle.Fill
+        pnlTopRubricBG.Location = New Point(20, 20)
+        pnlTopRubricBG.Margin = New Padding(20)
+        pnlTopRubricBG.Name = "pnlTopRubricBG"
+        pnlTopRubricBG.Radius = 20
+        pnlTopRubricBG.Size = New Size(1834, 85)
+        pnlTopRubricBG.TabIndex = 0
         ' 
-        ' btnSaveConfig
+        ' Weights
         ' 
-        btnSaveConfig.BackColor = Color.Transparent
-        btnSaveConfig.BackgroundImageLayout = ImageLayout.Zoom
-        btnSaveConfig.BorderColor = Color.FromArgb(CByte(32), CByte(34), CByte(37))
-        btnSaveConfig.EnteredBorderColor = Color.Empty
-        btnSaveConfig.EnteredColor = Color.FromArgb(CByte(44), CByte(110), CByte(90))
-        btnSaveConfig.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        btnSaveConfig.Image = Nothing
-        btnSaveConfig.ImageAlign = ContentAlignment.MiddleLeft
-        btnSaveConfig.InactiveColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
-        btnSaveConfig.Location = New Point(1626, 24)
-        btnSaveConfig.Name = "btnSaveConfig"
-        btnSaveConfig.PressedBorderColor = Color.Transparent
-        btnSaveConfig.PressedColor = Color.FromArgb(CByte(25), CByte(70), CByte(57))
-        btnSaveConfig.Size = New Size(184, 40)
-        btnSaveConfig.TabIndex = 16
-        btnSaveConfig.Text = "Save Gradebook"
-        btnSaveConfig.TextAlignment = StringAlignment.Center
-        btnSaveConfig.UseWaitCursor = True
+        Weights.FormattingEnabled = True
+        Weights.Location = New Point(442, 31)
+        Weights.Name = "Weights"
+        Weights.Size = New Size(253, 28)
+        Weights.TabIndex = 19
+        ' 
+        ' btnConfigureWeights
+        ' 
+        btnConfigureWeights.Location = New Point(233, 30)
+        btnConfigureWeights.Name = "btnConfigureWeights"
+        btnConfigureWeights.Size = New Size(162, 29)
+        btnConfigureWeights.TabIndex = 18
+        btnConfigureWeights.Text = "Set Weights"
+        btnConfigureWeights.UseVisualStyleBackColor = True
         ' 
         ' btnAddColumn
         ' 
@@ -473,32 +477,38 @@ Partial Class ucGradebook
         btnAddColumn.TextAlignment = StringAlignment.Center
         btnAddColumn.UseWaitCursor = True
         ' 
-        ' pnlTopRubricBG
+        ' btnSaveConfig
         ' 
-        pnlTopRubricBG.ActiveBorderColor = Color.White
-        pnlTopRubricBG.BackColor = Color.White
-        pnlTopRubricBG.BorderColor = Color.White
-        pnlTopRubricBG.BorderThickness = 1
-        pnlTopRubricBG.Controls.Add(btnConfigureWeights)
-        pnlTopRubricBG.Controls.Add(btnAddColumn)
-        pnlTopRubricBG.Controls.Add(btnSaveConfig)
-        pnlTopRubricBG.Controls.Add(pnlTopGradeBook)
-        pnlTopRubricBG.Dock = DockStyle.Fill
-        pnlTopRubricBG.Location = New Point(20, 20)
-        pnlTopRubricBG.Margin = New Padding(20)
-        pnlTopRubricBG.Name = "pnlTopRubricBG"
-        pnlTopRubricBG.Radius = 20
-        pnlTopRubricBG.Size = New Size(1834, 85)
-        pnlTopRubricBG.TabIndex = 0
+        btnSaveConfig.BackColor = Color.Transparent
+        btnSaveConfig.BackgroundImageLayout = ImageLayout.Zoom
+        btnSaveConfig.BorderColor = Color.FromArgb(CByte(32), CByte(34), CByte(37))
+        btnSaveConfig.EnteredBorderColor = Color.Empty
+        btnSaveConfig.EnteredColor = Color.FromArgb(CByte(44), CByte(110), CByte(90))
+        btnSaveConfig.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        btnSaveConfig.Image = Nothing
+        btnSaveConfig.ImageAlign = ContentAlignment.MiddleLeft
+        btnSaveConfig.InactiveColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
+        btnSaveConfig.Location = New Point(1626, 24)
+        btnSaveConfig.Name = "btnSaveConfig"
+        btnSaveConfig.PressedBorderColor = Color.Transparent
+        btnSaveConfig.PressedColor = Color.FromArgb(CByte(25), CByte(70), CByte(57))
+        btnSaveConfig.Size = New Size(184, 40)
+        btnSaveConfig.TabIndex = 16
+        btnSaveConfig.Text = "Save Gradebook"
+        btnSaveConfig.TextAlignment = StringAlignment.Center
+        btnSaveConfig.UseWaitCursor = True
         ' 
-        ' btnConfigureWeights
+        ' pnlTopGradeBook
         ' 
-        btnConfigureWeights.Location = New Point(233, 30)
-        btnConfigureWeights.Name = "btnConfigureWeights"
-        btnConfigureWeights.Size = New Size(162, 29)
-        btnConfigureWeights.TabIndex = 18
-        btnConfigureWeights.Text = "Set Weights"
-        btnConfigureWeights.UseVisualStyleBackColor = True
+        pnlTopGradeBook.AutoSize = True
+        pnlTopGradeBook.BackColor = Color.Transparent
+        pnlTopGradeBook.Font = New Font("Century Gothic", 12F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        pnlTopGradeBook.ForeColor = Color.FromArgb(CByte(126), CByte(126), CByte(126))
+        pnlTopGradeBook.Location = New Point(22, 31)
+        pnlTopGradeBook.Name = "pnlTopGradeBook"
+        pnlTopGradeBook.Size = New Size(205, 23)
+        pnlTopGradeBook.TabIndex = 9
+        pnlTopGradeBook.Text = "Active Gradebook :"
         ' 
         ' ucGradebook
         ' 
@@ -526,11 +536,16 @@ Partial Class ucGradebook
     Friend WithEvents btnBack As ReaLTaiizor.Controls.Button
     Friend WithEvents pnlRubric As RoundedPanel
     Friend WithEvents tblMainRubric As TableLayoutPanel
-    Friend WithEvents dgvGradebook As DataGridView
     Friend WithEvents pnlBottomActions As Panel
     Friend WithEvents btnSaveChanges As ReaLTaiizor.Controls.Button
     Friend WithEvents btnSubmit As ReaLTaiizor.Controls.Button
     Friend WithEvents btnExportExcel As ReaLTaiizor.Controls.Button
+    Friend WithEvents pnlTopRubricBG As RoundedPanel
+    Friend WithEvents btnConfigureWeights As Button
+    Friend WithEvents btnAddColumn As ReaLTaiizor.Controls.Button
+    Friend WithEvents btnSaveConfig As ReaLTaiizor.Controls.Button
+    Friend WithEvents pnlTopGradeBook As Label
+    Friend WithEvents dgvGradebook As DataGridView
     Friend WithEvents number As DataGridViewTextBoxColumn
     Friend WithEvents studname As DataGridViewTextBoxColumn
     Friend WithEvents status As DataGridViewTextBoxColumn
@@ -549,10 +564,6 @@ Partial Class ucGradebook
     Friend WithEvents GRAexam As DataGridViewTextBoxColumn
     Friend WithEvents majorexam As DataGridViewTextBoxColumn
     Friend WithEvents grademajorexam As DataGridViewTextBoxColumn
-    Friend WithEvents pnlTopRubricBG As RoundedPanel
-    Friend WithEvents btnConfigureWeights As Button
-    Friend WithEvents btnAddColumn As ReaLTaiizor.Controls.Button
-    Friend WithEvents btnSaveConfig As ReaLTaiizor.Controls.Button
-    Friend WithEvents pnlTopGradeBook As Label
+    Friend WithEvents Weights As ComboBox
 
 End Class

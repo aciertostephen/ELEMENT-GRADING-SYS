@@ -1,20 +1,20 @@
 ﻿Imports System.Data
-Imports MySql.Data.MySqlClient
 Imports MySqlConnector
 
-Public Module DatabaseHelper
+Public Class DatabaseHelper
 
-    Private ReadOnly ConnectionString As String = "Server=127.0.0.1;Database=grading_sys;Uid=root;Pwd=;Charset=utf8mb4;"
+    ' Connection string must be Shared so Shared methods can access it
+    Private Shared ReadOnly ConnectionString As String = "Server=127.0.0.1;Database=grading_sys;Uid=root;Pwd=;CharSet=utf8mb4;"
 
-    Public Function GetConnection() As MySqlConnection
+    Public Shared Function GetConnection() As MySqlConnection
         Return New MySqlConnection(ConnectionString)
     End Function
 
-    Public Function ExecuteQuery(sql As String, Optional params As MySqlParameter() = Nothing) As DataTable
+    Public Shared Function ExecuteQuery(query As String, Optional params As MySqlParameter() = Nothing) As DataTable
         Dim dt As New DataTable()
         Try
             Using conn As MySqlConnection = GetConnection()
-                Using cmd As New MySqlCommand(sql, conn)
+                Using cmd As New MySqlCommand(query, conn)
                     If params IsNot Nothing Then cmd.Parameters.AddRange(params)
                     Using adapter As New MySqlDataAdapter(cmd)
                         adapter.Fill(dt)
@@ -27,12 +27,12 @@ Public Module DatabaseHelper
         Return dt
     End Function
 
-    Public Function ExecuteNonQuery(sql As String, Optional params As MySqlParameter() = Nothing) As Integer
+    Public Shared Function ExecuteNonQuery(query As String, Optional params As MySqlParameter() = Nothing) As Integer
         Dim rowsAffected As Integer = 0
         Try
             Using conn As MySqlConnection = GetConnection()
                 conn.Open()
-                Using cmd As New MySqlCommand(sql, conn)
+                Using cmd As New MySqlCommand(query, conn)
                     If params IsNot Nothing Then cmd.Parameters.AddRange(params)
                     rowsAffected = cmd.ExecuteNonQuery()
                 End Using
@@ -43,12 +43,12 @@ Public Module DatabaseHelper
         Return rowsAffected
     End Function
 
-    Public Function ExecuteScalar(sql As String, Optional params As MySqlParameter() = Nothing) As Object
+    Public Shared Function ExecuteScalar(query As String, Optional params As MySqlParameter() = Nothing) As Object
         Dim result As Object = Nothing
         Try
             Using conn As MySqlConnection = GetConnection()
                 conn.Open()
-                Using cmd As New MySqlCommand(sql, conn)
+                Using cmd As New MySqlCommand(query, conn)
                     If params IsNot Nothing Then cmd.Parameters.AddRange(params)
                     result = cmd.ExecuteScalar()
                 End Using
@@ -59,4 +59,4 @@ Public Module DatabaseHelper
         Return result
     End Function
 
-End Module
+End Class
