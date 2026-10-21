@@ -51,7 +51,7 @@ Partial Public Class MainForm
 
     Public Sub ShowTeacherDashboard()
         SetupNavForRole("Teacher")
-        ShowPage(New ucGradebook())
+        ShowPage(New ucTeacherDashboard())   ' dashboard first
     End Sub
 
     Public Sub ShowStudentDashboard()
@@ -128,9 +128,6 @@ Partial Public Class MainForm
                 AddNavButton("ACADEMIC MANAGEMENT", Sub() ShowPage(New ucAcademicManagement()))
                 AddNavButton("SEMESTER/GRADING SETTINGS", Sub() ShowPage(New ucGradingConfig()))
                 LoadNotifications()
-
-            Case isTeacher
-                AddNavButton("GRADEBOOK", Sub() ShowPage(New ucGradebook()), isDefault:=True)
 
             Case isStudent
                 AddNavButton("MAIN DASHBOARD", Sub() ShowPage(New ucStudentDashboard()), isDefault:=True)

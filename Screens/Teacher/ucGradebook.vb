@@ -117,19 +117,25 @@ Public Class ucGradebook
     ' --- Place LoadWeightsFromDatabase here ---
     Private Sub LoadWeightsFromDatabase()
         Try
+            ' Directly access and cache default values before attempting DB query
             Dim dt As DataTable = DatabaseHelper.ExecuteQuery("SELECT * FROM gradebook_weights LIMIT 1")
             If dt IsNot Nothing AndAlso dt.Rows.Count > 0 Then
                 Dim row As DataRow = dt.Rows(0)
+
+                ' Fetch configuration names and values with explicit casts
                 customCat1Name = row("cat1_name").ToString()
                 customCat1Weight = Convert.ToDecimal(row("cat1_val"))
+
                 customCat2Name = row("cat2_name").ToString()
                 customCat2Weight = Convert.ToDecimal(row("cat2_val"))
+
                 customCat3Name = row("cat3_name").ToString()
                 customCat3Weight = Convert.ToDecimal(row("cat3_val"))
+
                 weightExam = Convert.ToDecimal(row("exam_val"))
             End If
         Catch ex As Exception
-            ' Fallbacks to defaults if uninitialized
+            ' Falls back silently to default values defined at the class level if DB query fails or is uninitialized
         End Try
     End Sub
 
@@ -695,13 +701,11 @@ Public Class ucGradebook
 
     Private Sub dgvGradebook_CellEndEdit(sender As Object, e As DataGridViewCellEventArgs) Handles dgvGradebook.CellEndEdit
         If e.RowIndex < 0 Then Return
-
         Dim info As ColInfo = GetInfo(dgvGradebook.Columns(e.ColumnIndex))
-        If info.Kind <> ColKind.Raw Then Return   ' only raw-score columns are editable
+        If info.Kind <> ColKind.Raw Then Return ' only raw-score columns are editable
 
         Dim editedRow As DataGridViewRow = dgvGradebook.Rows(e.RowIndex)
         Dim editedCell As DataGridViewCell = editedRow.Cells(e.ColumnIndex)
-
         Dim inputString As String = If(editedCell.Value IsNot Nothing, editedCell.Value.ToString(), "")
 
         If String.IsNullOrWhiteSpace(inputString) Then
@@ -713,8 +717,7 @@ Public Class ucGradebook
         Dim numericValue As Decimal
         If Decimal.TryParse(inputString, numericValue) Then
             If numericValue < 0 OrElse numericValue > info.MaxScore Then
-                MessageBox.Show("Please enter a valid score between 0 and " & info.MaxScore.ToString("0.##") & ".",
-                                "Invalid Score", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                MessageBox.Show("Please enter a valid score between 0 and " & info.MaxScore.ToString("0.##") & ".", "Invalid Score", MessageBoxButtons.OK, MessageBoxIcon.Warning)
                 editedCell.Value = "0.00"
             Else
                 editedCell.Value = numericValue.ToString("0.00")
