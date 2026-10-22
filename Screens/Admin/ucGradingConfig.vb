@@ -389,8 +389,9 @@ Public Class ucGradingConfig
         Private _table As New DataTable()
         Private ReadOnly dgv As New DataGridView()
         Private ReadOnly lblWarning As New Label() With {.AutoSize = False, .ForeColor = Color.DimGray}
-        Private ReadOnly btnOk As New Button() With {.Text = "Save", .Size = New Size(90, 32), .BackColor = Color.FromArgb(30, 86, 62), .ForeColor = Color.White, .FlatStyle = FlatStyle.Flat}
-        Private ReadOnly btnCancel As New Button() With {.Text = "Cancel", .Size = New Size(90, 32), .BackColor = Color.Gray, .ForeColor = Color.White, .FlatStyle = FlatStyle.Flat, .DialogResult = DialogResult.Cancel}
+        ' Standard Windows buttons (same look as a normal message box)
+        Private ReadOnly btnOk As New Button() With {.Text = "Save", .Size = New Size(110, 38), .FlatStyle = FlatStyle.System, .UseVisualStyleBackColor = True, .Font = New Font("Segoe UI", 10, FontStyle.Regular)}
+        Private ReadOnly btnCancel As New Button() With {.Text = "Cancel", .Size = New Size(110, 38), .FlatStyle = FlatStyle.System, .UseVisualStyleBackColor = True, .Font = New Font("Segoe UI", 10, FontStyle.Regular), .DialogResult = DialogResult.Cancel}
 
         Public Sub New()
             Text = "Edit Grading Scale and GWA"
@@ -413,10 +414,9 @@ Public Class ucGradingConfig
             lblWarning.Size = New Size(465, 40)
             lblWarning.Text = "Ranges must run from 0.00 to 100.00 with no gaps or overlaps (each range starts 0.01 below the one above)."
 
-            btnOk.Location = New Point(290, 425)
-            btnOk.FlatAppearance.BorderSize = 0
-            btnCancel.Location = New Point(390, 425)
-            btnCancel.FlatAppearance.BorderSize = 0
+            ' Right-aligned with the grid, like a standard dialog
+            btnCancel.Location = New Point(dgv.Right - btnCancel.Width, 428)
+            btnOk.Location = New Point(btnCancel.Left - 14 - btnOk.Width, 428)
 
             Controls.Add(dgv)
             Controls.Add(lblWarning)
