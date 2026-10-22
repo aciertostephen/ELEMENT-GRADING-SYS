@@ -6,7 +6,7 @@ Public Class ucTranscript
 
     Public Sub New()
         InitializeComponent()
-        _userId = 14 ' Default fallback user ID (e.g., Julius San Gaspar from your database dump)
+        _userId = SessionManager.CurrentUserId ' the logged-in user (no hardcoded student)
     End Sub
 
     Public Sub New(userId As Integer)

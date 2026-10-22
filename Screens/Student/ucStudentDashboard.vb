@@ -9,10 +9,10 @@ Public Class ucStudentDashboard
         _loggedInUserId = userId
     End Sub
 
-    ' Parameterless fallback constructor
+    ' Parameterless constructor: uses whoever is logged in (no hardcoded student)
     Public Sub New()
         InitializeComponent()
-        _loggedInUserId = 14 ' Default fallback user ID (e.g., Julius San Gaspar from your DB dump)
+        _loggedInUserId = SessionManager.CurrentUserId
     End Sub
 
     Private Sub ucStudentDashboard_Load(sender As Object, e As EventArgs) Handles MyBase.Load
@@ -71,17 +71,18 @@ Public Class ucStudentDashboard
     End Sub
 
     Private Sub OnCourseCardClicked(sender As Object, e As EventArgs)
-        Dim card As ucCourseCard = TryCast(sender, ucCourseCard)
-        If card IsNot Nothing AndAlso card.Tag IsNot Nothing Then
-            Dim ids = DirectCast(card.Tag, Tuple(Of Integer, String))
-            Dim classId As Integer = ids.Item1
-            Dim enrollmentId As String = ids.Item2
+        ' sender may be the card itself or one of its inner controls, so walk up to the card
+        Dim ctrl As Control = TryCast(sender, Control)
+        While ctrl IsNot Nothing AndAlso Not TypeOf ctrl Is ucCourseCard
+            ctrl = ctrl.Parent
+        End While
+        If ctrl Is Nothing OrElse ctrl.Tag Is Nothing Then Return
 
-            Dim mainForm As MainForm = TryCast(Me.FindForm(), MainForm)
-            If mainForm IsNot Nothing Then
-                ' Pass the selected class and enrollment context into the student gradebook view
-                mainForm.ShowPage(New ucStudentGradebook(classId, enrollmentId))
-            End If
+        Dim ids = DirectCast(ctrl.Tag, Tuple(Of Integer, String))
+        Dim mainForm As MainForm = TryCast(Me.FindForm(), MainForm)
+        If mainForm IsNot Nothing Then
+            ' Pass the selected class and enrollment context into the student gradebook view
+            mainForm.ShowPage(New ucStudentGradebook(ids.Item1, ids.Item2))
         End If
     End Sub
 
