@@ -250,11 +250,12 @@ Partial Class MainForm
         ' pnlUser
         ' 
         pnlUser.ActiveBorderColor = Color.Transparent
+        pnlUser.Anchor = AnchorStyles.None
         pnlUser.BackColor = Color.WhiteSmoke
         pnlUser.BorderColor = Color.Transparent
         pnlUser.BorderThickness = 1
         pnlUser.Controls.Add(txtUsername)
-        pnlUser.Location = New Point(188, 453)
+        pnlUser.Location = New Point(188, 483)
         pnlUser.Name = "pnlUser"
         pnlUser.Radius = 8
         pnlUser.Size = New Size(393, 51)
@@ -273,11 +274,12 @@ Partial Class MainForm
         ' pnlPass
         ' 
         pnlPass.ActiveBorderColor = Color.Transparent
+        pnlPass.Anchor = AnchorStyles.None
         pnlPass.BackColor = Color.WhiteSmoke
         pnlPass.BorderColor = Color.Transparent
         pnlPass.BorderThickness = 1
         pnlPass.Controls.Add(txtPassword)
-        pnlPass.Location = New Point(188, 551)
+        pnlPass.Location = New Point(188, 581)
         pnlPass.Name = "pnlPass"
         pnlPass.Radius = 8
         pnlPass.Size = New Size(393, 51)
@@ -295,6 +297,7 @@ Partial Class MainForm
         ' 
         ' btnLogin
         ' 
+        btnLogin.Anchor = AnchorStyles.None
         btnLogin.BackColor = Color.Transparent
         btnLogin.BorderColor = Color.Transparent
         btnLogin.EnteredBorderColor = Color.Transparent
@@ -303,7 +306,7 @@ Partial Class MainForm
         btnLogin.Image = Nothing
         btnLogin.ImageAlign = ContentAlignment.MiddleLeft
         btnLogin.InactiveColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
-        btnLogin.Location = New Point(188, 695)
+        btnLogin.Location = New Point(188, 725)
         btnLogin.Name = "btnLogin"
         btnLogin.PressedBorderColor = Color.Transparent
         btnLogin.PressedColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
@@ -315,9 +318,10 @@ Partial Class MainForm
         ' 
         ' lblAccounttext
         ' 
+        lblAccounttext.Anchor = AnchorStyles.None
         lblAccounttext.BackColor = Color.Transparent
         lblAccounttext.Font = New Font("Century Gothic", 19.8000011F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
-        lblAccounttext.Location = New Point(298, 284)
+        lblAccounttext.Location = New Point(298, 314)
         lblAccounttext.Name = "lblAccounttext"
         lblAccounttext.Size = New Size(187, 43)
         lblAccounttext.TabIndex = 0
@@ -326,9 +330,10 @@ Partial Class MainForm
         ' 
         ' lblLogintext
         ' 
+        lblLogintext.Anchor = AnchorStyles.None
         lblLogintext.BackColor = Color.Transparent
         lblLogintext.Font = New Font("Century Gothic", 19.8000011F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
-        lblLogintext.Location = New Point(244, 239)
+        lblLogintext.Location = New Point(244, 269)
         lblLogintext.Name = "lblLogintext"
         lblLogintext.Size = New Size(290, 45)
         lblLogintext.TabIndex = 0
@@ -336,10 +341,11 @@ Partial Class MainForm
         ' 
         ' lblUsername
         ' 
+        lblUsername.Anchor = AnchorStyles.None
         lblUsername.BackColor = Color.Transparent
         lblUsername.Font = New Font("Century Gothic", 12.0F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         lblUsername.ForeColor = Color.Gray
-        lblUsername.Location = New Point(188, 420)
+        lblUsername.Location = New Point(188, 450)
         lblUsername.Name = "lblUsername"
         lblUsername.Size = New Size(171, 28)
         lblUsername.TabIndex = 0
@@ -347,10 +353,11 @@ Partial Class MainForm
         ' 
         ' lblPassword
         ' 
+        lblPassword.Anchor = AnchorStyles.None
         lblPassword.BackColor = Color.Transparent
         lblPassword.Font = New Font("Century Gothic", 12.0F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         lblPassword.ForeColor = Color.Gray
-        lblPassword.Location = New Point(188, 519)
+        lblPassword.Location = New Point(188, 549)
         lblPassword.Name = "lblPassword"
         lblPassword.Size = New Size(107, 28)
         lblPassword.TabIndex = 0
@@ -359,11 +366,12 @@ Partial Class MainForm
         ' 
         ' linkForgot
         ' 
+        linkForgot.Anchor = AnchorStyles.None
         linkForgot.BackColor = Color.Transparent
         linkForgot.Font = New Font("Century Gothic", 9.0F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         linkForgot.LinkBehavior = LinkBehavior.NeverUnderline
         linkForgot.LinkColor = Color.FromArgb(CByte(126), CByte(126), CByte(126))
-        linkForgot.Location = New Point(442, 759)
+        linkForgot.Location = New Point(442, 789)
         linkForgot.Name = "linkForgot"
         linkForgot.Size = New Size(139, 20)
         linkForgot.TabIndex = 3
