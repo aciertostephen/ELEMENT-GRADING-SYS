@@ -1,11 +1,21 @@
 ﻿Imports System.Text
 Imports MySqlConnector
-Imports BCrypt.Net ' Added for BCrypt verification
+Imports BCrypt.Net
 
 Partial Public Class MainForm
 
     Private Sub btnLogin_Click(sender As Object, e As EventArgs) Handles btnLogin.Click
         PerformLogin()
+    End Sub
+
+    Private Sub frmLogin_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+    End Sub
+
+    Private Sub txtInput_KeyDown(sender As Object, e As KeyEventArgs) Handles txtUsername.KeyDown, txtPassword.KeyDown
+        If e.KeyCode = Keys.Enter Then
+            e.SuppressKeyPress = True ' Prevents Windows notification beep
+            PerformLogin()            ' Triggers login directly
+        End If
     End Sub
 
     Private Sub PerformLogin()
@@ -55,15 +65,12 @@ Partial Public Class MainForm
             End If
             storedValue = If(storedValue, String.Empty).Trim()
 
-            ' UPDATED AUTHENTICATION LOGIC:
-            ' Uses BCrypt to verify if the typed password matches the secure database hash
             Dim isPasswordValid As Boolean = False
             Try
                 If Not String.IsNullOrWhiteSpace(storedValue) Then
                     isPasswordValid = BCrypt.Net.BCrypt.Verify(passwordInput, storedValue)
                 End If
             Catch ex As Exception
-                ' Handles potential malformed hash string exceptions gracefully
                 isPasswordValid = False
             End Try
 
