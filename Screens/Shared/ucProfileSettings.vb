@@ -65,6 +65,7 @@ Public Class ucProfileSettings
                             End If
 
                             picAvatar.Image = circularImg
+                            ProfileService.SavePicture(SessionManager.CurrentUserId, circularImg)
                         End Using
                     End Using
 
@@ -135,19 +136,26 @@ Public Class ucProfileSettings
     End Sub
 
     Private Sub btnLogOut_Click(sender As Object, e As EventArgs) Handles btnLogOut.Click
-        SessionManager.EndSession()
+        ' Show confirmation dialog
+        Dim result As DialogResult = MessageBox.Show(
+        "Are you sure you want to log out?",
+        "Confirm Logout",
+        MessageBoxButtons.YesNo)
 
+        ' Cancel if not confirmed
+        If result <> DialogResult.Yes Then Return
+
+        ' Proceed with session cleanup
+        SessionManager.EndSession()
         Dim mainForm As MainForm = TryCast(Me.FindForm(), MainForm)
         If mainForm IsNot Nothing Then
             If mainForm.pnlApp IsNot Nothing Then
                 mainForm.pnlApp.Visible = False
             End If
-
             If mainForm.pnlLoginCard IsNot Nothing Then
                 mainForm.pnlLoginCard.Visible = True
                 mainForm.pnlLoginCard.BringToFront()
             End If
-
             If mainForm.txtPassword IsNot Nothing Then
                 mainForm.txtPassword.Clear()
             End If

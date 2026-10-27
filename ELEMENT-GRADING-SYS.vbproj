@@ -48,8 +48,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Helpers\" />
     <Folder Include="Models\" />
+    <Folder Include="My Project\NewFolder\" />
   </ItemGroup>
 
   <ItemGroup>

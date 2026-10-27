@@ -8,6 +8,10 @@ Public Class ucGradebook
 
     Public Sub New()
         InitializeComponent()
+
+        ' Selected row = very light gray (replaces the default blue highlight)
+        dgvGradebook.DefaultCellStyle.SelectionBackColor = Color.FromArgb(236, 236, 236)
+        dgvGradebook.DefaultCellStyle.SelectionForeColor = Color.Black
     End Sub
 
     Public Sub New(classId As Integer)
@@ -31,6 +35,7 @@ Public Class ucGradebook
         Public Kind As ColKind
         Public MaxScore As Decimal      ' Raw columns only
         Public ItemName As String       ' grade_item.item_name (Raw columns only)
+        Public ItemId As Integer        ' grade_item.item_id (Raw columns only)
         Public PairName As String       ' For a GrA column: name of its Raw column
     End Class
 
@@ -46,8 +51,37 @@ Public Class ucGradebook
         ("Final Exam", "exam", 4, 50D)
     }
 
-    ' grade_item.item_name -> DataGridView column Name (built from defaultItems)
-    Private ReadOnly itemToColumn As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+    ' grade_item.item_id -> DataGridView column Name (built from the database)
+    Private ReadOnly itemIdToColumn As New Dictionary(Of Integer, String)
+
+    ' grading_rubric.rubric_id for each category 1..4 of this class (index 0 unused)
+    Private rubricIdByCat(4) As Integer
+
+    ' EmbeddedMode: hosted inside another screen (Back button hidden, the host handles it)
+    ' ViewOnly:     look but don't touch (admin view). Set both BEFORE adding the control to a form.
+    Private _embedded As Boolean = False
+    Private _viewOnly As Boolean = False
+
+    Public Property EmbeddedMode As Boolean
+        Get
+            Return _embedded
+        End Get
+        Set(value As Boolean)
+            _embedded = value
+        End Set
+    End Property
+
+    Public Property ViewOnly As Boolean
+        Get
+            Return _viewOnly
+        End Get
+        Set(value As Boolean)
+            _viewOnly = value
+        End Set
+    End Property
+
+    ' Value of the cell before the user started editing (used to undo a failed save)
+    Private _oldCellValue As Object = Nothing
 
     ' Custom Categories & Weights (Exam is permanently locked at 40%)
     Private customCat1Name As String = "Class Participation"
@@ -81,15 +115,19 @@ Public Class ucGradebook
         Return 0D
     End Function
 
+    ' Header palette: one hue (grayish blue), different shades
+    Private ReadOnly HdrFixed As Color = Color.LightGray
+    Private ReadOnly HdrSubRow As Color = Color.LightGray
+
     Private Function CategoryColor(cat As Integer) As Color
-        Select Case cat
-            Case 1 : Return Color.Yellow
-            Case 2 : Return Color.LightGreen
-            Case 3 : Return Color.Khaki
-            Case 4 : Return Color.LightGreen
-        End Select
         Return Color.LightGray
     End Function
+
+    ' Header colours (same green family as the title bar and buttons)
+    Private ReadOnly HdrDark As Color = Color.FromArgb(33, 89, 76)
+    Private ReadOnly HdrDark2 As Color = Color.FromArgb(52, 112, 96)
+    Private ReadOnly HdrLight As Color = Color.FromArgb(228, 237, 233)
+    Private ReadOnly HdrAccent As Color = Color.FromArgb(240, 224, 120)
 
     Private Function GetInfo(col As DataGridViewColumn) As ColInfo
         Dim info As ColInfo = TryCast(col.Tag, ColInfo)
@@ -108,67 +146,164 @@ Public Class ucGradebook
     End Sub
 
     Private Sub ucGradebook_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        If Not _viewOnly AndAlso Not ClassService.TeacherOwnsClass(_classId, SessionManager.CurrentUserId) Then
+            Msg.Warn("You are not the teacher of this class.")
+            Me.Enabled = False
+            Return
+        End If
+        EnsureClassRubric()
         LoadWeightsFromDatabase()
         BuildGrid()
         LoadStudents()
         RecalculateAll()
+        ApplyViewMode()
     End Sub
 
-    ' --- Place LoadWeightsFromDatabase here ---
-    Private Sub LoadWeightsFromDatabase()
+    Private Sub ApplyViewMode()
+        btnBack.Visible = Not _embedded
+        If _viewOnly Then
+            dgvGradebook.ReadOnly = True
+            HideEditControls(Me)
+        End If
+    End Sub
+
+    ' Read-only view: remove every control that changes data (Add Column, Set Weights, Save ...).
+    ' Checks ALL controls (not just standard Buttons, since the green ones may be custom controls),
+    ' by name and by caption. Export Excel is kept because it only reads.
+    Private Sub HideEditControls(parent As Control)
+        For Each c As Control In parent.Controls
+            Dim caption As String = If(c.Text, "").Trim().ToLower()
+            If c Is btnAddColumn OrElse c Is btnConfigureWeights OrElse c Is btnSaveConfig OrElse c Is btnImport _
+               OrElse caption.Contains("save") OrElse caption.Contains("add column") OrElse caption.Contains("weights") Then
+                c.Visible = False
+            ElseIf c.HasChildren Then
+                HideEditControls(c)
+            End If
+        Next
+    End Sub
+
+    ' A class always has 4 grading_rubric rows (3 custom + the fixed Final Exam).
+    ' If it has none (e.g. created before sp_create_class existed) create them, and give an
+    ' empty class the starter assessment columns. Teachers only: the admin view never writes.
+    Private Sub EnsureClassRubric()
+        If _classId <= 0 OrElse _viewOnly Then Return
         Try
-            ' Directly access and cache default values before attempting DB query
-            Dim dt As DataTable = DatabaseHelper.ExecuteQuery("SELECT * FROM gradebook_weights LIMIT 1")
-            If dt IsNot Nothing AndAlso dt.Rows.Count > 0 Then
-                Dim row As DataRow = dt.Rows(0)
+            Dim dtR As DataTable = DatabaseHelper.ExecuteQuery(
+                "SELECT COUNT(*) FROM grading_rubric WHERE class_id = @cid",
+                {New MySqlParameter("@cid", _classId)})
+            If dtR Is Nothing OrElse dtR.Rows.Count = 0 Then Return
 
-                ' Fetch configuration names and values with explicit casts
-                customCat1Name = row("cat1_name").ToString()
-                customCat1Weight = Convert.ToDecimal(row("cat1_val"))
+            If Convert.ToInt32(dtR.Rows(0)(0)) = 0 Then
+                DatabaseHelper.ExecuteNonQuery(
+                    "INSERT INTO grading_rubric (class_id, component_name, weight_percent, is_fixed) VALUES " &
+                    "(@cid, 'Participation', 10, 0), (@cid, 'Quizzes', 20, 0), (@cid, 'Projects', 30, 0), (@cid, 'Final Exam', 40, 1)",
+                    {New MySqlParameter("@cid", _classId)})
+            End If
 
-                customCat2Name = row("cat2_name").ToString()
-                customCat2Weight = Convert.ToDecimal(row("cat2_val"))
+            LoadWeightsFromDatabase()
 
-                customCat3Name = row("cat3_name").ToString()
-                customCat3Weight = Convert.ToDecimal(row("cat3_val"))
-
-                weightExam = Convert.ToDecimal(row("exam_val"))
+            Dim dtI As DataTable = DatabaseHelper.ExecuteQuery(
+                "SELECT COUNT(*) FROM grade_item gi INNER JOIN grading_rubric r ON r.rubric_id = gi.rubric_id WHERE r.class_id = @cid",
+                {New MySqlParameter("@cid", _classId)})
+            If dtI IsNot Nothing AndAlso dtI.Rows.Count > 0 AndAlso Convert.ToInt32(dtI.Rows(0)(0)) = 0 Then
+                For Each it In defaultItems
+                    Dim rid As Integer = rubricIdByCat(it.Category)
+                    If rid > 0 Then
+                        DatabaseHelper.ExecuteNonQuery(
+                            "INSERT INTO grade_item (rubric_id, item_name, max_score) VALUES (@r, @n, @m)",
+                            {New MySqlParameter("@r", rid),
+                             New MySqlParameter("@n", it.ItemName),
+                             New MySqlParameter("@m", it.MaxScore)})
+                    End If
+                Next
             End If
         Catch ex As Exception
-            ' Falls back silently to default values defined at the class level if DB query fails or is uninitialized
+            ' Leave the grid empty rather than blocking the screen
         End Try
     End Sub
 
-    ' --- Place SaveActiveWeightsToDatabase here ---
+    ' Category names and weights live in grading_rubric (per class).
+    ' Categories 1..3 = the non-fixed components in creation order, category 4 = the fixed Final Exam.
+    Private Sub LoadWeightsFromDatabase()
+        Array.Clear(rubricIdByCat, 0, rubricIdByCat.Length)
+        If _classId <= 0 Then Return
+
+        Try
+            Dim dt As DataTable = DatabaseHelper.ExecuteQuery(
+                "SELECT rubric_id, component_name, weight_percent, is_fixed FROM grading_rubric " &
+                "WHERE class_id = @cid ORDER BY is_fixed ASC, rubric_id ASC",
+                {New MySqlParameter("@cid", _classId)})
+            If dt Is Nothing Then Return
+
+            Dim custom As Integer = 0
+            For Each row As DataRow In dt.Rows
+                Dim cat As Integer
+                If Convert.ToInt32(row("is_fixed")) = 1 Then
+                    cat = 4
+                Else
+                    custom += 1
+                    If custom > 3 Then Continue For
+                    cat = custom
+                End If
+
+                rubricIdByCat(cat) = Convert.ToInt32(row("rubric_id"))
+                Dim nm As String = row("component_name").ToString()
+                Dim w As Decimal = Convert.ToDecimal(row("weight_percent"))
+
+                Select Case cat
+                    Case 1 : customCat1Name = nm : customCat1Weight = w
+                    Case 2 : customCat2Name = nm : customCat2Weight = w
+                    Case 3 : customCat3Name = nm : customCat3Weight = w
+                    Case 4 : weightExam = w
+                End Select
+            Next
+        Catch ex As Exception
+            ' Falls back silently to the defaults defined at the class level
+        End Try
+    End Sub
+
+    ' Saves the category names/weights back into this class's grading_rubric rows
     Private Sub SaveActiveWeightsToDatabase(cat1Name As String, cat1Val As Decimal, cat2Name As String, cat2Val As Decimal, cat3Name As String, cat3Val As Decimal, examVal As Decimal)
         Try
-            Dim query As String = "INSERT INTO gradebook_weights (id, cat1_name, cat1_val, cat2_name, cat2_val, cat3_name, cat3_val, exam_val) VALUES (1, @c1n, @c1v, @c2n, @c2v, @c3n, @c3v, @ev) " &
-                                  "ON DUPLICATE KEY UPDATE cat1_name=@c1n, cat1_val=@c1v, cat2_name=@c2n, cat2_val=@c2v, cat3_name=@c3n, cat3_val=@c3v, exam_val=@ev"
+            Dim names() As String = {"", cat1Name, cat2Name, cat3Name, "Final Exam"}
+            Dim vals() As Decimal = {0D, cat1Val, cat2Val, cat3Val, examVal}
 
-            Dim params As MySqlParameter() = {
-                New MySqlParameter("@c1n", cat1Name),
-                New MySqlParameter("@c1v", cat1Val),
-                New MySqlParameter("@c2n", cat2Name),
-                New MySqlParameter("@c2v", cat2Val),
-                New MySqlParameter("@c3n", cat3Name),
-                New MySqlParameter("@c3v", cat3Val),
-                New MySqlParameter("@ev", examVal)
-            }
-
-            DatabaseHelper.ExecuteNonQuery(query, params)
+            For cat As Integer = 1 To 4
+                If rubricIdByCat(cat) <= 0 Then Continue For
+                DatabaseHelper.ExecuteNonQuery(
+                    "UPDATE grading_rubric SET component_name = @n, weight_percent = @w WHERE rubric_id = @id",
+                    {New MySqlParameter("@n", names(cat)),
+                     New MySqlParameter("@w", vals(cat)),
+                     New MySqlParameter("@id", rubricIdByCat(cat))})
+            Next
         Catch ex As Exception
-            MessageBox.Show("Error saving weights to database: " & ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            MessageBox.Show("Error saving weights to database: " & ex.Message, "Database Error", MessageBoxButtons.OK)
         End Try
     End Sub
+
+    ' grade_item rows of one category, in creation order
+    Private Function LoadItemsForCategory(cat As Integer) As List(Of (ItemId As Integer, ItemName As String, ColumnName As String, MaxScore As Decimal))
+        Dim items As New List(Of (ItemId As Integer, ItemName As String, ColumnName As String, MaxScore As Decimal))
+        If cat < 1 OrElse cat > 4 OrElse rubricIdByCat(cat) <= 0 Then Return items
+
+        Dim dt As DataTable = DatabaseHelper.ExecuteQuery(
+            "SELECT item_id, item_name, max_score FROM grade_item WHERE rubric_id = @rid ORDER BY item_id",
+            {New MySqlParameter("@rid", rubricIdByCat(cat))})
+        If dt Is Nothing Then Return items
+
+        For Each r As DataRow In dt.Rows
+            Dim id As Integer = Convert.ToInt32(r("item_id"))
+            Dim nm As String = r("item_name").ToString()
+            items.Add((id, nm, "col_" & Regex.Replace(nm, "[^A-Za-z0-9]", "_") & "_" & id, Convert.ToDecimal(r("max_score"))))
+        Next
+        Return items
+    End Function
 
     ' ==========================================
     ' 1. GRID LAYOUT (replaces designer columns)
     ' ==========================================
     Private Sub BuildGrid()
-        itemToColumn.Clear()
-        For Each it In defaultItems
-            itemToColumn(it.ItemName) = it.ColName
-        Next
+        itemIdToColumn.Clear()
 
         With dgvGradebook
             .Columns.Clear()
@@ -189,7 +324,7 @@ Public Class ucGradebook
             .DefaultCellStyle.WrapMode = DataGridViewTriState.False
 
             .ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
-            .ColumnHeadersDefaultCellStyle.BackColor = Color.LightGray
+            .ColumnHeadersDefaultCellStyle.BackColor = HdrFixed
             .ColumnHeadersDefaultCellStyle.ForeColor = Color.Black
             .DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
@@ -204,10 +339,11 @@ Public Class ucGradebook
 
         ' Categories 1..4, each: [Raw, GrA]... then a weighted total
         For cat As Integer = 1 To 4
-            For Each it In defaultItems.Where(Function(x) x.Category = cat)
-                Dim pair = CreateAssessmentColumns(it.ItemName, it.ColName, cat, it.MaxScore)
+            For Each it In LoadItemsForCategory(cat)
+                Dim pair = CreateAssessmentColumns(it.ItemName, it.ColumnName, cat, it.MaxScore, it.ItemId)
                 dgvGradebook.Columns.Add(pair.Raw)
                 dgvGradebook.Columns.Add(pair.GrA)
+                itemIdToColumn(it.ItemId) = it.ColumnName
             Next
 
             Dim total As New DataGridViewTextBoxColumn()
@@ -232,13 +368,14 @@ Public Class ucGradebook
 
     ' Creates the Raw column and its GrA column (not yet added to the grid)
     Private Function CreateAssessmentColumns(itemName As String, colName As String,
-                                             cat As Integer, maxScore As Decimal) As (Raw As DataGridViewTextBoxColumn, GrA As DataGridViewTextBoxColumn)
+                                             cat As Integer, maxScore As Decimal,
+                                             Optional itemId As Integer = 0) As (Raw As DataGridViewTextBoxColumn, GrA As DataGridViewTextBoxColumn)
         Dim raw As New DataGridViewTextBoxColumn()
         raw.Name = colName
         raw.HeaderText = (itemName & " (" & maxScore.ToString("0.##") & ")").ToUpper()
         raw.Width = 80
         raw.ReadOnly = False
-        raw.Tag = New ColInfo() With {.Category = cat, .Kind = ColKind.Raw, .MaxScore = maxScore, .ItemName = itemName}
+        raw.Tag = New ColInfo() With {.Category = cat, .Kind = ColKind.Raw, .MaxScore = maxScore, .ItemName = itemName, .ItemId = itemId}
 
         Dim gra As New DataGridViewTextBoxColumn()
         gra.Name = colName & "_gra"
@@ -278,14 +415,22 @@ Public Class ucGradebook
         Dim cat As Integer = GetInfo(col).Category
         Dim baseFont As Font = If(e.CellStyle.Font, dgvGradebook.Font)
         Dim txtFlags As TextFormatFlags = TextFormatFlags.HorizontalCenter Or TextFormatFlags.VerticalCenter Or TextFormatFlags.WordBreak
+        Dim cellText As String = CStr(e.FormattedValue)
 
-        ' Columns without a category: one tall cell
+        ' Columns without a category (NO., NAME, DRP, GRADE): one tall dark cell
         If cat = 0 Then
-            Using br As New SolidBrush(Color.LightGray)
+            Using br As New SolidBrush(HdrDark)
                 g.FillRectangle(br, b)
             End Using
-            g.DrawRectangle(Pens.Black, b.X, b.Y, b.Width - 1, b.Height - 1)
-            TextRenderer.DrawText(g, CStr(e.FormattedValue), baseFont, b, Color.Black, txtFlags)
+            Using pen As New Pen(Color.White)
+                g.DrawLine(pen, b.Right - 1, b.Top, b.Right - 1, b.Bottom - 1)
+            End Using
+            Using bold As New Font(baseFont, FontStyle.Bold)
+                TextRenderer.DrawText(g, cellText, bold, b, Color.White, txtFlags)
+            End Using
+            Using br As New SolidBrush(HdrAccent)
+                g.FillRectangle(br, b.X, b.Bottom - 2, b.Width, 2)
+            End Using
             Return
         End If
 
@@ -293,26 +438,34 @@ Public Class ucGradebook
         Dim bandRect As New Rectangle(b.X, b.Y, b.Width, h)
         Dim lowRect As New Rectangle(b.X, b.Y + h, b.Width, b.Height - h)
 
-        ' Bottom half: normal header text
-        Using br As New SolidBrush(Color.LightGray)
+        ' Bottom half: pale mint, dark green text
+        Using br As New SolidBrush(HdrLight)
             g.FillRectangle(br, lowRect)
         End Using
-        g.DrawRectangle(Pens.Black, lowRect.X, lowRect.Y, lowRect.Width - 1, lowRect.Height - 1)
-        TextRenderer.DrawText(g, CStr(e.FormattedValue), baseFont, lowRect, Color.Black, txtFlags)
+        Using pen As New Pen(Color.FromArgb(196, 212, 205))
+            g.DrawLine(pen, b.Right - 1, lowRect.Top, b.Right - 1, lowRect.Bottom - 1)
+        End Using
+        TextRenderer.DrawText(g, cellText, baseFont, lowRect, HdrDark, txtFlags)
 
-        ' Top half: merged band across the category's run of columns
+        ' Top half: merged band across the category's columns
         Dim first, last As Integer
         GetCategoryRun(e.ColumnIndex, first, last)
 
-        Using br As New SolidBrush(CategoryColor(cat))
+        Using br As New SolidBrush(If(cat Mod 2 = 1, HdrDark, HdrDark2))
             g.FillRectangle(br, bandRect)
         End Using
-        g.DrawLine(Pens.Black, b.Left, b.Top, b.Right - 1, b.Top)                 ' top
-        g.DrawLine(Pens.Black, b.Left, b.Top + h, b.Right - 1, b.Top + h)         ' bottom of band
-        If e.ColumnIndex = first Then g.DrawLine(Pens.Black, b.Left, b.Top, b.Left, b.Top + h)
-        If e.ColumnIndex = last Then g.DrawLine(Pens.Black, b.Right - 1, b.Top, b.Right - 1, b.Top + h)
+        If e.ColumnIndex = last Then
+            Using pen As New Pen(Color.White)
+                g.DrawLine(pen, b.Right - 1, b.Top, b.Right - 1, b.Top + h)
+            End Using
+        End If
 
-        ' Band text: centered across the whole span, clipped to this cell (so it also works while scrolling)
+        ' Gold line along the bottom of the header
+        Using br As New SolidBrush(HdrAccent)
+            g.FillRectangle(br, b.X, b.Bottom - 2, b.Width, 2)
+        End Using
+
+        ' Band text: centered across the whole span, clipped to this cell
         Dim spanLeft As Integer = b.Left
         For i As Integer = first To e.ColumnIndex - 1
             spanLeft -= dgvGradebook.Columns(i).Width
@@ -327,7 +480,7 @@ Public Class ucGradebook
         Dim state As Drawing2D.GraphicsState = g.Save()
         g.IntersectClip(bandRect)
         Using bold As New Font(baseFont, FontStyle.Bold)
-            TextRenderer.DrawText(g, bandText, bold, spanRect, Color.Black,
+            TextRenderer.DrawText(g, bandText, bold, spanRect, Color.White,
                                   TextFormatFlags.HorizontalCenter Or TextFormatFlags.VerticalCenter Or TextFormatFlags.EndEllipsis)
         End Using
         g.Restore(state)
@@ -345,7 +498,7 @@ Public Class ucGradebook
 
         Dim sql As String =
         "SELECT e.enrollment_id, sp.last_name, sp.first_name, sp.middle_name, e.status, " &
-        "       gi.item_name, ge.score " &
+        "       gi.item_id, gi.item_name, ge.score " &
         "FROM enrollment e " &
         "JOIN student_profile sp ON sp.student_id = e.student_id " &
         "LEFT JOIN grade_entry ge ON ge.enrollment_id = e.enrollment_id " &
@@ -354,6 +507,7 @@ Public Class ucGradebook
         "ORDER BY sp.last_name, sp.first_name"
 
         Dim dt As DataTable = DatabaseHelper.ExecuteQuery(sql, {New MySqlParameter("@cid", _classId)})
+        If dt Is Nothing Then Return
 
         Dim rowsByEnrollment As New Dictionary(Of String, DataGridViewRow)
         Dim n As Integer = 0
@@ -376,10 +530,10 @@ Public Class ucGradebook
                 rowsByEnrollment(enrId) = row
             End If
 
-            If Not IsDBNull(r("item_name")) AndAlso Not IsDBNull(r("score")) Then
+            If Not IsDBNull(r("item_id")) AndAlso Not IsDBNull(r("score")) Then
                 Dim colName As String = Nothing
-                If itemToColumn.TryGetValue(r("item_name").ToString(), colName) _
-               AndAlso dgvGradebook.Columns.Contains(colName) Then
+                If itemIdToColumn.TryGetValue(Convert.ToInt32(r("item_id")), colName) _
+                   AndAlso dgvGradebook.Columns.Contains(colName) Then
                     rowsByEnrollment(enrId).Cells(colName).Value =
                     Convert.ToDecimal(r("score")).ToString("0.00")
                 End If
@@ -427,17 +581,29 @@ Public Class ucGradebook
     Private Function GetExportHeaderInfo() As ExportHeaderInfo
         Dim info As New ExportHeaderInfo()
 
-        ' Example only - change table/column names to your schema, then uncomment:
-        ' Dim dt As DataTable = DatabaseHelper.ExecuteQuery(
-        '     "SELECT school_year, semester, section, program, professor_name FROM class WHERE class_id = @cid",
-        '     {New MySqlParameter("@cid", _classId)})
-        ' If dt IsNot Nothing AndAlso dt.Rows.Count > 0 Then
-        '     info.SchoolYear = dt.Rows(0)("school_year").ToString()
-        '     info.Semester = dt.Rows(0)("semester").ToString()
-        '     info.Section = dt.Rows(0)("section").ToString()
-        '     info.Program = dt.Rows(0)("program").ToString()
-        '     info.Professor = dt.Rows(0)("professor_name").ToString()
-        ' End If
+        Try
+            Dim dt As DataTable = DatabaseHelper.ExecuteQuery(
+                "SELECT t.school_year, t.semester, s.section_code, co.course_code, co.course_name, " &
+                "       UPPER(CONCAT(tp.last_name, ', ', tp.first_name, " &
+                "            IF(tp.middle_name IS NULL OR tp.middle_name = '', '', CONCAT(' ', tp.middle_name)))) AS professor_name " &
+                "FROM classes c " &
+                "INNER JOIN academic_term t ON t.term_id = c.term_id " &
+                "INNER JOIN section s ON s.section_id = c.section_id " &
+                "INNER JOIN course co ON co.course_id = c.course_id " &
+                "INNER JOIN teacher_profile tp ON tp.teacher_id = c.teacher_id " &
+                "WHERE c.class_id = @cid",
+                {New MySqlParameter("@cid", _classId)})
+
+            If dt IsNot Nothing AndAlso dt.Rows.Count > 0 Then
+                info.SchoolYear = dt.Rows(0)("school_year").ToString()
+                info.Semester = dt.Rows(0)("semester").ToString()
+                info.Section = dt.Rows(0)("section_code").ToString()
+                info.Program = (dt.Rows(0)("course_code").ToString() & " " & dt.Rows(0)("course_name").ToString()).ToUpper()   ' template C2 = Course
+                info.Professor = dt.Rows(0)("professor_name").ToString()
+            End If
+        Catch ex As Exception
+            ' Blank header values keep the template's existing text
+        End Try
 
         Return info
     End Function
@@ -465,7 +631,7 @@ Public Class ucGradebook
                 Case "3", "semestral" : Return "Semestral"
             End Select
 
-            MessageBox.Show("Please enter 1, 2, 3 or the name of the grading period.", "Invalid Grading Period", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            MessageBox.Show("Please enter 1, 2, 3 or the name of the grading period.", "Invalid Grading Period", MessageBoxButtons.OK)
         Loop
     End Function
 
@@ -489,7 +655,7 @@ Public Class ucGradebook
         If period = "Semestral" Then
             MessageBox.Show("The Semestral sheet is fully calculated from the Midterm and Final sheets." & vbCrLf &
                         "Export the Midterm and Final periods instead.",
-                        "Semestral Not Exportable", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                        "Semestral Not Exportable", MessageBoxButtons.OK)
             Return
         End If
 
@@ -497,7 +663,7 @@ Public Class ucGradebook
         Dim templatePath As String = System.IO.Path.Combine(Application.StartupPath, "Templates", TemplateFileName)
         If Not System.IO.File.Exists(templatePath) Then
             MessageBox.Show("The Excel template was not found:" & vbCrLf & templatePath,
-                        "Template Missing", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                        "Template Missing", MessageBoxButtons.OK)
             Return
         End If
 
@@ -509,7 +675,7 @@ Public Class ucGradebook
         If students.Count > capacity Then
             MessageBox.Show($"The template holds at most {capacity} students (rows {FirstStudentRow}-{LastStudentRow}), " &
                         $"but this class has {students.Count}.",
-                        "Too Many Students", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                        "Too Many Students", MessageBoxButtons.OK)
             Return
         End If
 
@@ -529,13 +695,13 @@ Public Class ucGradebook
                 ' --- Worksheet lookups ---
                 Dim wsTarget As IXLWorksheet = Nothing
                 If Not wb.Worksheets.TryGetWorksheet(period, wsTarget) Then
-                    MessageBox.Show($"The template has no worksheet named '{period}'.", "Worksheet Not Found", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                    MessageBox.Show($"The template has no worksheet named '{period}'.", "Worksheet Not Found", MessageBoxButtons.OK)
                     Return
                 End If
 
                 Dim wsRoster As IXLWorksheet = Nothing
                 If Not wb.Worksheets.TryGetWorksheet(RosterSheetName, wsRoster) Then
-                    MessageBox.Show($"The template has no worksheet named '{RosterSheetName}'.", "Worksheet Not Found", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                    MessageBox.Show($"The template has no worksheet named '{RosterSheetName}'.", "Worksheet Not Found", MessageBoxButtons.OK)
                     Return
                 End If
 
@@ -552,6 +718,20 @@ Public Class ucGradebook
                 If quizCols.Count >= 1 Then SetNumber(wsTarget, "I12", GetInfo(quizCols(0)).MaxScore)
                 If quizCols.Count >= 2 Then SetNumber(wsTarget, "K12", GetInfo(quizCols(1)).MaxScore)
                 If examCols.Count >= 1 Then SetNumber(wsTarget, "Q12", GetInfo(examCols(0)).MaxScore)
+
+                ' --- 2b. The period that is NOT exported still holds the template's sample scores: clear them ---
+                For Each otherName As String In New String() {"Midterm", "Final"}
+                    Dim wsOther As IXLWorksheet = Nothing
+                    If Not String.Equals(otherName, period, StringComparison.OrdinalIgnoreCase) AndAlso
+                       wb.Worksheets.TryGetWorksheet(otherName, wsOther) Then
+                        For rowNo As Integer = FirstStudentRow To LastStudentRow
+                            For Each colLetter As String In New String() {ColDrp, ColAbsences, ColExtra, ColCW, ColQuiz1Raw, ColQuiz2Raw, ColProject, ColExamRaw}
+                                Dim sample As IXLCell = wsOther.Cell(colLetter & rowNo)
+                                If Not sample.HasFormula Then sample.Clear(XLClearOptions.Contents)
+                            Next
+                        Next
+                    End If
+                Next
 
                 ' --- 3. Student rows (15..59). Unused rows are cleared of template sample data ---
                 For i As Integer = 0 To capacity - 1
@@ -584,7 +764,7 @@ Public Class ucGradebook
                             Dim mx As Decimal = GetInfo(pc).MaxScore
                             If v.HasValue AndAlso mx > 0 Then pcts.Add(v.Value / mx * 100D)
                         Next
-                        If pcts.Count > 0 Then projectPct = Math.Round(pcts.Average(), 2)
+                        If pcts.Count > 0 Then projectPct = Math.Round(pcts.Average(), 2, MidpointRounding.AwayFromZero)
                     End If
                     SetNumber(wsTarget, ColProject & r, projectPct)
 
@@ -602,13 +782,13 @@ Public Class ucGradebook
             If notes.Count > 0 Then
                 msg &= vbCrLf & vbCrLf & "Not exported (no matching template column):" & vbCrLf & "• " & String.Join(vbCrLf & "• ", notes)
             End If
-            MessageBox.Show(msg, "Export Complete", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            MessageBox.Show(msg, "Export Complete", MessageBoxButtons.OK)
 
         Catch ex As System.IO.IOException
             MessageBox.Show("The file could not be saved. If it is open in Excel, close it and try again." & vbCrLf & vbCrLf & ex.Message,
-                        "Export Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                        "Export Error", MessageBoxButtons.OK)
         Catch ex As Exception
-            MessageBox.Show("An error occurred while exporting: " & ex.Message, "Export Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            MessageBox.Show("An error occurred while exporting: " & ex.Message, "Export Error", MessageBoxButtons.OK)
         End Try
     End Sub
 
@@ -670,12 +850,52 @@ Public Class ucGradebook
     End Sub
 
     ' ==========================================
+    ' IMPORT CLASS LIST (Excel -> this class's list of students)
+    ' ==========================================
+    ' The Excel parsing lives in ClassListExcelReader, the database work in ClassListImportService
+    ' and the pop-up in ImportClassListDialog; this screen only starts it and refreshes the grid.
+    Private Sub btnImport_Click(sender As Object, e As EventArgs) Handles btnImport.Click
+        If _viewOnly OrElse _classId <= 0 Then Return
+
+        Dim path As String
+        Using ofd As New OpenFileDialog() With {
+            .Title = "Select the class list (Excel)",
+            .Filter = "Excel workbook (*.xlsx;*.xlsm)|*.xlsx;*.xlsm"}
+            If ofd.ShowDialog(Me.FindForm()) <> DialogResult.OK Then Return
+            path = ofd.FileName
+        End Using
+
+        Try
+            Cursor.Current = Cursors.WaitCursor
+            Using reader As ClassListExcelReader = ClassListExcelReader.Open(path)
+                If reader.Sheets.Count = 0 Then
+                    Msg.Warn("No class list sheet was found in this file." & vbCrLf &
+                             "Sheet names must look like: BSIT 2A 2026-2027")
+                    Return
+                End If
+
+                Using dlg As New ImportClassListDialog(_classId, reader)
+                    If dlg.ShowDialog(Me.FindForm()) = DialogResult.OK Then
+                        LoadStudents()
+                        RecalculateAll()
+                    End If
+                End Using
+            End Using
+        Catch ex As Exception
+            Msg.Fail("import the class list", ex)
+        End Try
+    End Sub
+
+    ' ==========================================
     ' 5. GRADING INPUT, VALIDATION & CALCULATION
     ' ==========================================
 
     ' Click-to-Toggle for DRP Column with Confirmation Prompt
     Private Sub dgvGradebook_CellClick(sender As Object, e As DataGridViewCellEventArgs) Handles dgvGradebook.CellClick
+        If _viewOnly Then Return
+
         If e.RowIndex >= 0 AndAlso dgvGradebook.Columns(e.ColumnIndex).Name = "status" Then
+            If GradebookFrozen() Then Return
             Dim cell As DataGridViewCell = dgvGradebook.Rows(e.RowIndex).Cells(e.ColumnIndex)
             Dim currentVal As String = If(cell.Value IsNot Nothing, cell.Value.ToString(), "")
 
@@ -683,20 +903,26 @@ Public Class ucGradebook
                 Dim result As DialogResult = MessageBox.Show(
                     "Are you sure you want to mark this student as Dropped?",
                     "Confirm Student Drop",
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Question
-                )
+                    MessageBoxButtons.YesNo)
 
                 If result = DialogResult.Yes Then
-                    cell.Value = "Dropped"
+                    If SaveEnrollmentStatus(dgvGradebook.Rows(e.RowIndex), "Dropped") Then
+                        cell.Value = "Dropped"
+                    End If
                 End If
             Else
-                cell.Value = ""
+                If SaveEnrollmentStatus(dgvGradebook.Rows(e.RowIndex), "Enrolled") Then
+                    cell.Value = ""
+                End If
             End If
 
             RecalculateRow(dgvGradebook.Rows(e.RowIndex))
             dgvGradebook.InvalidateRow(e.RowIndex)
         End If
+    End Sub
+
+    Private Sub dgvGradebook_CellBeginEdit(sender As Object, e As DataGridViewCellCancelEventArgs) Handles dgvGradebook.CellBeginEdit
+        If e.RowIndex >= 0 Then _oldCellValue = dgvGradebook.Rows(e.RowIndex).Cells(e.ColumnIndex).Value
     End Sub
 
     Private Sub dgvGradebook_CellEndEdit(sender As Object, e As DataGridViewCellEventArgs) Handles dgvGradebook.CellEndEdit
@@ -710,40 +936,140 @@ Public Class ucGradebook
 
         If String.IsNullOrWhiteSpace(inputString) Then
             editedCell.Value = Nothing
-            RecalculateRow(editedRow)
-            Return
+        Else
+            Dim numericValue As Decimal
+            If Decimal.TryParse(inputString, numericValue) Then
+                If numericValue < 0 OrElse numericValue > info.MaxScore Then
+                    MessageBox.Show("Please enter a valid score between 0 and " & info.MaxScore.ToString("0.##") & ".", "Invalid Score", MessageBoxButtons.OK)
+                    editedCell.Value = _oldCellValue          ' keep the previous score (it used to be overwritten with 0.00)
+                    RecalculateRow(editedRow)
+                    Return
+                Else
+                    editedCell.Value = numericValue.ToString("0.00")
+                End If
+            Else
+                MessageBox.Show("Please enter a numeric value.", "Invalid Input", MessageBoxButtons.OK)
+                editedCell.Value = _oldCellValue              ' keep the previous score (it used to be overwritten with 0.00)
+                RecalculateRow(editedRow)
+                Return
+            End If
         End If
 
-        Dim numericValue As Decimal
-        If Decimal.TryParse(inputString, numericValue) Then
-            If numericValue < 0 OrElse numericValue > info.MaxScore Then
-                MessageBox.Show("Please enter a valid score between 0 and " & info.MaxScore.ToString("0.##") & ".", "Invalid Score", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-                editedCell.Value = "0.00"
-            Else
-                editedCell.Value = numericValue.ToString("0.00")
-            End If
-        Else
-            MessageBox.Show("Please enter a numeric value.", "Invalid Input", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-            editedCell.Value = "0.00"
+        ' Write the score to grade_entry; if the database refuses it (encoding closed, term locked,
+        ' score above the maximum) put the old value back
+        If Not SaveScoreToDatabase(editedRow, info, editedCell.Value) Then
+            editedCell.Value = _oldCellValue
         End If
 
         RecalculateRow(editedRow)
     End Sub
 
+    ' ---------- Database writes ----------
+
+    ' Upsert one score into grade_entry. The table triggers enforce the encoding window,
+    ' the term lock and the item's maximum score. The saved value is read back to confirm it.
+    Private Function SaveScoreToDatabase(row As DataGridViewRow, info As ColInfo, value As Object) As Boolean
+        Dim enrId As String = TryCast(row.Tag, String)
+        If String.IsNullOrEmpty(enrId) OrElse info.ItemId <= 0 Then Return True
+
+        Dim scoreValue As Object = DBNull.Value
+        Dim d As Decimal
+        If value IsNot Nothing AndAlso Decimal.TryParse(value.ToString(), d) Then scoreValue = d
+
+        Try
+            DatabaseHelper.ExecuteNonQuery(
+                "INSERT INTO grade_entry (enrollment_id, item_id, score) VALUES (@e, @i, @s) " &
+                "ON DUPLICATE KEY UPDATE score = @s",
+                {New MySqlParameter("@e", enrId),
+                 New MySqlParameter("@i", info.ItemId),
+                 New MySqlParameter("@s", scoreValue)})
+        Catch ex As Exception
+            MessageBox.Show("The score was not saved: " & ex.Message, "Save Failed", MessageBoxButtons.OK)
+            Return False
+        End Try
+
+        Dim chk As DataTable = DatabaseHelper.ExecuteQuery(
+            "SELECT score FROM grade_entry WHERE enrollment_id = @e AND item_id = @i",
+            {New MySqlParameter("@e", enrId), New MySqlParameter("@i", info.ItemId)})
+
+        Dim saved As Boolean = False
+        If chk IsNot Nothing Then
+            If scoreValue Is DBNull.Value Then
+                saved = (chk.Rows.Count = 0) OrElse IsDBNull(chk.Rows(0)(0))
+            Else
+                saved = chk.Rows.Count > 0 AndAlso Not IsDBNull(chk.Rows(0)(0)) AndAlso Convert.ToDecimal(chk.Rows(0)(0)) = d
+            End If
+        End If
+
+        If Not saved Then
+            MessageBox.Show("The score was not saved. Encoding may be closed or the term locked.", "Save Failed", MessageBoxButtons.OK)
+        End If
+        Return saved
+    End Function
+
+    Private Function SaveEnrollmentStatus(row As DataGridViewRow, newStatus As String) As Boolean
+        Dim enrId As String = TryCast(row.Tag, String)
+        If String.IsNullOrEmpty(enrId) Then Return True
+        Try
+            DatabaseHelper.ExecuteNonQuery(
+                "UPDATE enrollment SET status = @s, " &
+                "  final_grade = IF(@s = 'Dropped', NULL, final_grade), " &
+                "  grade_equivalent = IF(@s = 'Dropped', NULL, grade_equivalent) WHERE enrollment_id = @e",
+                {New MySqlParameter("@s", newStatus), New MySqlParameter("@e", enrId)})
+            Return True
+        Catch ex As Exception
+            MessageBox.Show("Could not update the student's status: " & ex.Message, "Database Error", MessageBoxButtons.OK)
+            Return False
+        End Try
+    End Function
+
+    ' Creates the grade_item row for a new column and returns its item_id (0 on failure)
+    Private Function InsertGradeItem(rubricId As Integer, itemName As String, maxScore As Decimal) As Integer
+        Try
+            DatabaseHelper.ExecuteNonQuery(
+                "INSERT INTO grade_item (rubric_id, item_name, max_score) VALUES (@r, @n, @m)",
+                {New MySqlParameter("@r", rubricId),
+                 New MySqlParameter("@n", itemName),
+                 New MySqlParameter("@m", maxScore)})
+
+            Dim dt As DataTable = DatabaseHelper.ExecuteQuery(
+                "SELECT item_id FROM grade_item WHERE rubric_id = @r AND item_name = @n",
+                {New MySqlParameter("@r", rubricId), New MySqlParameter("@n", itemName)})
+            If dt IsNot Nothing AndAlso dt.Rows.Count > 0 Then Return Convert.ToInt32(dt.Rows(0)(0))
+        Catch ex As Exception
+            MessageBox.Show("Could not add the column: " & ex.Message, "Database Error", MessageBoxButtons.OK)
+        End Try
+        Return 0
+    End Function
+
+    ' Deleting a grade_item also removes its scores (ON DELETE CASCADE)
+    Private Function DeleteGradeItem(itemId As Integer) As Boolean
+        Try
+            DatabaseHelper.ExecuteNonQuery(
+                "DELETE FROM grade_item WHERE item_id = @id",
+                {New MySqlParameter("@id", itemId)})
+            Return True
+        Catch ex As Exception
+            MessageBox.Show("Could not delete the column: " & ex.Message, "Database Error", MessageBoxButtons.OK)
+            Return False
+        End Try
+    End Function
+
     Private Function ToGrA(raw As Decimal, maxScore As Decimal) As Decimal
-        If maxScore <= 0 Then Return 0D
-        Return Math.Round(raw / maxScore * (100D - GrABase) + GrABase, 2)
+        Return GradeCalculator.ToGrA(raw, maxScore)
     End Function
 
     Private Sub RecalculateAll()
         For Each row As DataGridViewRow In dgvGradebook.Rows
-            RecalculateRow(row)
+            Dim fg As Decimal? = RecalculateRow(row)
+            SaveFinalGrade(row, fg)
         Next
     End Sub
 
     ' Per row:  GrA per assessment -> category average -> x weight -> category total -> final grade
-    Private Sub RecalculateRow(row As DataGridViewRow)
-        If row.IsNewRow Then Return
+    ' Returns the final grade, or Nothing when the student is dropped / has no scores yet
+    Private Function RecalculateRow(row As DataGridViewRow) As Decimal?
+        If row.IsNewRow Then Return Nothing
 
         Dim sums(4) As Decimal
         Dim counts(4) As Integer
@@ -767,13 +1093,14 @@ Public Class ucGradebook
         Next
 
         Dim finalGrade As Decimal = 0D
+        Dim anyScore As Boolean = False
         For cat As Integer = 1 To 4
             Dim totalCol As String = "cat" & cat & "_total"
             If Not dgvGradebook.Columns.Contains(totalCol) Then Continue For
 
             If counts(cat) > 0 Then
-                Dim avg As Decimal = sums(cat) / counts(cat)
-                Dim weighted As Decimal = Math.Round(avg * CategoryWeight(cat) / 100D, 2)
+                anyScore = True
+                Dim weighted As Decimal = GradeCalculator.CategoryTotal(sums(cat), counts(cat), CategoryWeight(cat))
                 row.Cells(totalCol).Value = weighted.ToString("0.00")
                 finalGrade += weighted
             Else
@@ -782,29 +1109,24 @@ Public Class ucGradebook
         Next
 
         Dim status As String = If(row.Cells("status").Value IsNot Nothing, row.Cells("status").Value.ToString(), "")
-        row.Cells("grade").Value = If(status.Equals("Dropped", StringComparison.OrdinalIgnoreCase),
-                                      "DRP", finalGrade.ToString("0.00"))
-    End Sub
+        Dim isDropped As Boolean = status.Equals("Dropped", StringComparison.OrdinalIgnoreCase)
+        row.Cells("grade").Value = If(isDropped, "DRP", finalGrade.ToString("0.00"))
 
-    ' Highlight the DRP cell in red when marked as "Dropped"
-    Private Sub dgvGradebook_CellFormatting(sender As Object, e As DataGridViewCellFormattingEventArgs) Handles dgvGradebook.CellFormatting
-        If e.RowIndex >= 0 AndAlso dgvGradebook.Columns(e.ColumnIndex).Name = "status" Then
-            If e.Value IsNot Nothing AndAlso e.Value.ToString().Equals("Dropped", StringComparison.OrdinalIgnoreCase) Then
-                e.CellStyle.BackColor = Color.LightCoral
-                e.CellStyle.ForeColor = Color.DarkRed
-                e.CellStyle.SelectionBackColor = Color.IndianRed
-                e.CellStyle.SelectionForeColor = Color.White
-            Else
-                e.CellStyle.BackColor = Color.White
-                e.CellStyle.ForeColor = Color.Black
-            End If
-        End If
+        If isDropped OrElse Not anyScore Then Return Nothing
+        Return Math.Min(100D, finalGrade)
+    End Function
+
+    ' Writes final_grade and grade_equivalent (looked up in grade_scale) to the enrollment row.
+    ' Teachers only: the admin's view-only gradebook never writes.
+    Private Sub SaveFinalGrade(row As DataGridViewRow, finalGrade As Decimal?)
+        Return
     End Sub
 
     ' ==========================================
     ' 6. CUSTOM CATEGORY & WEIGHT CONFIGURATION WORKFLOW
     ' ==========================================
     Private Sub btnConfigureWeights_Click(sender As Object, e As EventArgs) Handles btnConfigureWeights.Click
+        If GradebookFrozen() Then Return
         Try
             ' 1. Custom Category 1 (Name & Weight)
             Dim name1 As String = Microsoft.VisualBasic.InputBox(
@@ -821,7 +1143,7 @@ Public Class ucGradebook
 
             Dim w1 As Decimal
             If Not Decimal.TryParse(weight1Input.Trim(), w1) OrElse w1 < 0 Then
-                MessageBox.Show("Please enter a valid non-negative number for " & name1 & ".", "Invalid Input", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                MessageBox.Show("Please enter a valid non-negative number for " & name1 & ".", "Invalid Input", MessageBoxButtons.OK)
                 Return
             End If
 
@@ -840,7 +1162,7 @@ Public Class ucGradebook
 
             Dim w2 As Decimal
             If Not Decimal.TryParse(weight2Input.Trim(), w2) OrElse w2 < 0 Then
-                MessageBox.Show("Please enter a valid non-negative number for " & name2 & ".", "Invalid Input", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                MessageBox.Show("Please enter a valid non-negative number for " & name2 & ".", "Invalid Input", MessageBoxButtons.OK)
                 Return
             End If
 
@@ -859,7 +1181,7 @@ Public Class ucGradebook
 
             Dim w3 As Decimal
             If Not Decimal.TryParse(weight3Input.Trim(), w3) OrElse w3 < 0 Then
-                MessageBox.Show("Please enter a valid non-negative number for " & name3 & ".", "Invalid Input", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                MessageBox.Show("Please enter a valid non-negative number for " & name3 & ".", "Invalid Input", MessageBoxButtons.OK)
                 Return
             End If
 
@@ -873,8 +1195,7 @@ Public Class ucGradebook
                 MessageBox.Show($"The total distribution must equal exactly 100%. Your current total is {totalSum}%." & vbCrLf & vbCrLf &
                                "Note: Major Exam is fixed at 40%, meaning your custom categories must combine to equal 60%.",
                                "Weight Distribution Mismatch",
-                               MessageBoxButtons.OK,
-                               MessageBoxIcon.Warning)
+                               MessageBoxButtons.OK)
                 Return
             End If
 
@@ -903,11 +1224,10 @@ Public Class ucGradebook
                             $"• Major Exam: {weightExam}% (Locked)" & vbCrLf &
                             $"Total Gradebook Weight: {totalSum}%",
                             "Custom Gradebook Configured",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Information)
+                            MessageBoxButtons.OK)
 
         Catch ex As Exception
-            MessageBox.Show("An unexpected error occurred while configuring weights: " & ex.Message, "System Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            MessageBox.Show("An unexpected error occurred while configuring weights: " & ex.Message, "System Error", MessageBoxButtons.OK)
         End Try
     End Sub
 
@@ -928,6 +1248,40 @@ Public Class ucGradebook
 
 
 
+    ' True (and tells the teacher why) when the gradebook is frozen: past school year, locked term or
+    ' encoding closed. Scores are already protected by database triggers; columns, weights and
+    ' drop / un-drop were not.
+    Private Function GradebookFrozen() As Boolean
+        If _viewOnly OrElse _classId <= 0 Then Return False
+        Dim reason As String = Nothing
+        Try
+            reason = FrozenReason()
+        Catch
+            Return False
+        End Try
+        If reason Is Nothing Then Return False
+        Msg.Warn(reason)
+        Return True
+    End Function
+
+    Private Function FrozenReason() As String
+        Dim info As ClassService.ClassInfo = ClassService.GetInfo(_classId)
+        If info Is Nothing Then Return "Class not found."
+        If Not AcademicContext.IsEditableYear(info.SchoolYear) Then
+            Return "School year " & info.SchoolYear & " is past history and is read-only."
+        End If
+        Dim dt As DataTable = DatabaseHelper.ExecuteQuery(
+            "SELECT is_locked, (NOW() < encoding_start) AS not_open, (NOW() > encoding_deadline) AS is_closed " &
+            "FROM academic_term WHERE term_id = @t",
+            {New MySqlParameter("@t", info.TermId)})
+        If dt IsNot Nothing AndAlso dt.Rows.Count > 0 Then
+            If Convert.ToInt32(dt.Rows(0)("is_locked")) = 1 Then Return "This term is locked, so the gradebook can no longer change."
+            If Convert.ToInt32(dt.Rows(0)("not_open")) = 1 Then Return "Grade encoding for this term has not opened yet."
+            If Convert.ToInt32(dt.Rows(0)("is_closed")) = 1 Then Return "The grade encoding deadline has passed."
+        End If
+        Return Nothing
+    End Function
+
     ' ==========================================
     ' 7. CATEGORY-AWARE DYNAMIC COLUMN ADDITION
     ' ==========================================
@@ -943,6 +1297,7 @@ Public Class ucGradebook
     End Function
 
     Private Sub btnAddColumn_Click(sender As Object, e As EventArgs) Handles btnAddColumn.Click
+        If GradebookFrozen() Then Return
         Dim categoryChoice As String = Microsoft.VisualBasic.InputBox(
             "Select the category for this column:" & vbCrLf &
             "1. " & customCat1Name & vbCrLf &
@@ -956,7 +1311,7 @@ Public Class ucGradebook
 
         Dim cat As Integer = ParseCategory(categoryChoice)
         If cat = 0 Then
-            MessageBox.Show("Please enter 1, 2, 3, 4 or the category name.", "Invalid Category", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            MessageBox.Show("Please enter 1, 2, 3, 4 or the category name.", "Invalid Category", MessageBoxButtons.OK)
             Return
         End If
 
@@ -976,21 +1331,36 @@ Public Class ucGradebook
 
         Dim maxScore As Decimal
         If Not Decimal.TryParse(maxInput.Trim(), maxScore) OrElse maxScore <= 0 Then
-            MessageBox.Show("Please enter a number greater than 0.", "Invalid Score", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            MessageBox.Show("Please enter a number greater than 0.", "Invalid Score", MessageBoxButtons.OK)
             Return
         End If
 
-        Dim internalName As String = "col_" & Regex.Replace(columnName, "[^A-Za-z0-9]", "_")
-        If dgvGradebook.Columns.Contains(internalName) Then
-            MessageBox.Show("A column with that name already exists.", "Duplicate Column", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+        ' The same assessment name can't be used twice in one gradebook
+        For Each c As DataGridViewColumn In dgvGradebook.Columns
+            Dim ci As ColInfo = GetInfo(c)
+            If ci.Kind = ColKind.Raw AndAlso String.Equals(ci.ItemName, columnName, StringComparison.OrdinalIgnoreCase) Then
+                MessageBox.Show("A column with that name already exists.", "Duplicate Column", MessageBoxButtons.OK)
+                Return
+            End If
+        Next
+
+        Dim rubricId As Integer = rubricIdByCat(cat)
+        If rubricId <= 0 Then
+            MessageBox.Show("This class has no grading component for '" & CategoryName(cat) & "'.", "Cannot Add Column", MessageBoxButtons.OK)
             Return
         End If
+
+        Dim newItemId As Integer = InsertGradeItem(rubricId, columnName, maxScore)
+        If newItemId <= 0 Then Return
+
+        Dim internalName As String = "col_" & Regex.Replace(columnName, "[^A-Za-z0-9]", "_") & "_" & newItemId
+        itemIdToColumn(newItemId) = internalName
 
         ' Insert [Raw][GrA] just before the category's TOTAL column
         Dim totalName As String = "cat" & cat & "_total"
         Dim insertAt As Integer = dgvGradebook.Columns(totalName).Index
 
-        Dim pair = CreateAssessmentColumns(columnName, internalName, cat, maxScore)
+        Dim pair = CreateAssessmentColumns(columnName, internalName, cat, maxScore, newItemId)
         dgvGradebook.Columns.Insert(insertAt, pair.Raw)
         dgvGradebook.Columns.Insert(insertAt + 1, pair.GrA)
 
@@ -998,7 +1368,7 @@ Public Class ucGradebook
         dgvGradebook.Invalidate()
 
         MessageBox.Show("Column '" & columnName.ToUpper() & "' added successfully under " & CategoryName(cat).ToUpper() & "!",
-                        "Column Added", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                        "Column Added", MessageBoxButtons.OK)
     End Sub
 
     ' ==========================================
@@ -1007,6 +1377,8 @@ Public Class ucGradebook
     Private clickedRawColumnName As String = Nothing
 
     Private Sub dgvGradebook_ColumnHeaderMouseClick(sender As Object, e As DataGridViewCellMouseEventArgs) Handles dgvGradebook.ColumnHeaderMouseClick
+        If _viewOnly Then Return
+
         If e.Button = MouseButtons.Right AndAlso e.RowIndex = -1 Then
             Dim col As DataGridViewColumn = dgvGradebook.Columns(e.ColumnIndex)
             Dim info As ColInfo = GetInfo(col)
@@ -1028,17 +1400,23 @@ Public Class ucGradebook
 
     Private Sub DeleteSelectedColumn_Click(sender As Object, e As EventArgs)
         If clickedRawColumnName Is Nothing OrElse Not dgvGradebook.Columns.Contains(clickedRawColumnName) Then Return
+        If GradebookFrozen() Then Return
 
         Dim label As String = dgvGradebook.Columns(clickedRawColumnName).HeaderText
 
         Dim result As DialogResult = MessageBox.Show(
             "Are you sure you want to delete the column '" & label & "'? All entered grades in this column will be lost.",
             "Confirm Column Deletion",
-            MessageBoxButtons.YesNo,
-            MessageBoxIcon.Warning
-        )
+            MessageBoxButtons.YesNo)
 
         If result = DialogResult.Yes Then
+            ' Remove the grade_item (and its scores) from the database first
+            Dim itemId As Integer = GetInfo(dgvGradebook.Columns(clickedRawColumnName)).ItemId
+            If itemId > 0 Then
+                If Not DeleteGradeItem(itemId) Then Return
+                itemIdToColumn.Remove(itemId)
+            End If
+
             ' Remove the GrA column and its raw column together
             Dim graName As String = clickedRawColumnName & "_gra"
             If dgvGradebook.Columns.Contains(graName) Then dgvGradebook.Columns.Remove(graName)
@@ -1047,38 +1425,36 @@ Public Class ucGradebook
 
             RecalculateAll()
             dgvGradebook.Invalidate()
-            MessageBox.Show("Column deleted successfully.", "Column Removed", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            MessageBox.Show("Column deleted successfully.", "Column Removed", MessageBoxButtons.OK)
         End If
     End Sub
 
     Private Sub btnSaveConfig_Click(sender As Object, e As EventArgs) Handles btnSaveConfig.Click
+        If GradebookFrozen() Then Return
         Try
-            ' 1. Prompt or read the current category names and weights from your UI/inputs
-            ' (If you are using InputBoxes like before, keep them here; otherwise, read from your configuration controls)
-
-            ' Example validation for 100% total (Major Exam locked at 40%)
             Dim totalSum As Decimal = customCat1Weight + customCat2Weight + customCat3Weight + weightExam
 
             If totalSum <> 100D Then
-                MessageBox.Show($"The total distribution must equal exactly 100%. Your current total is {totalSum}%." & vbCrLf & vbCrLf &
-                           "Note: Major Exam is fixed at 40%, meaning your custom categories must combine to equal 60%.",
-                           "Weight Distribution Mismatch",
-                           MessageBoxButtons.OK,
-                           MessageBoxIcon.Warning)
+                Msg.Warn($"The total distribution must equal exactly 100%. Your current total is {totalSum}%." & vbCrLf & vbCrLf &
+                     "Note: Major Exam is fixed at 40%, so your custom categories must combine to equal 60%.",
+                     "Weight Distribution Mismatch")
                 Return
             End If
 
-            ' 2. Save the active configuration to the MySQL database
-            SaveActiveWeightsToDatabase(customCat1Name, customCat1Weight, customCat2Name, customCat2Weight, customCat3Name, customCat3Weight, weightExam)
+            If Not Msg.Confirm("Saving the gradebook computes the final grades and makes them visible to the students." & vbCrLf &
+                               "The admin is notified, and the class list can no longer be changed (no more importing)." & vbCrLf & vbCrLf &
+                               "Save and release the grades now?", "Save and release grades") Then Return
 
-            ' 3. Refresh grid header bands and recalculate grades
+            SaveActiveWeightsToDatabase(customCat1Name, customCat1Weight, customCat2Name, customCat2Weight,
+                                    customCat3Name, customCat3Weight, weightExam)
+
             dgvGradebook.Invalidate()
-            RecalculateAll()
+            RecalculateAll()   ' only refreshes the grid on screen now
 
-            MessageBox.Show("Gradebook configuration saved successfully and persisted!", "Configuration Saved", MessageBoxButtons.OK, MessageBoxIcon.Information)
-
+            Dim n As Integer = GradeReleaseService.SaveAndRelease(_classId)
+            Msg.Info("Saved. " & n & " student(s) can now see their final grades. The admin was notified.")
         Catch ex As Exception
-            MessageBox.Show("An error occurred while saving configuration: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            Msg.Fail("save the gradebook", ex)
         End Try
     End Sub
 

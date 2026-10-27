@@ -9,6 +9,9 @@ Public Class ucStudentGradebook
     Private _isPredictiveMode As Boolean = False
     Private _realGrades As New List(Of Object())
 
+    ' grading_rubric.rubric_id for each category 1..4 of this class (index 0 unused)
+    Private rubricIdByCat(4) As Integer
+
     Public Sub New()
         InitializeComponent()
     End Sub
@@ -34,6 +37,7 @@ Public Class ucStudentGradebook
         Public Kind As ColKind
         Public MaxScore As Decimal
         Public ItemName As String
+        Public ItemId As Integer
         Public PairName As String
     End Class
 
@@ -68,13 +72,12 @@ Public Class ucStudentGradebook
         Return 0D
     End Function
 
+    ' Header palette: one hue (grayish blue), different shades
+    ' Header palette: everything is the same light gray (matches the STUDENT NAME header)
+    Private ReadOnly HdrFixed As Color = Color.LightGray
+    Private ReadOnly HdrSubRow As Color = Color.LightGray
+
     Private Function CategoryColor(cat As Integer) As Color
-        Select Case cat
-            Case 1 : Return Color.Yellow
-            Case 2 : Return Color.LightGreen
-            Case 3 : Return Color.Khaki
-            Case 4 : Return Color.LightGreen
-        End Select
         Return Color.LightGray
     End Function
 
@@ -102,19 +105,41 @@ Public Class ucStudentGradebook
         SetGridReadOnly(True)
     End Sub
 
+    ' Category names and weights live in grading_rubric (per class).
+    ' Categories 1..3 = the non-fixed components in creation order, category 4 = the fixed Final Exam.
     Private Sub LoadWeightsFromDatabase()
+        Array.Clear(rubricIdByCat, 0, rubricIdByCat.Length)
+        If _classId <= 0 Then Return
+
         Try
-            Dim dt As DataTable = DatabaseHelper.ExecuteQuery("SELECT * FROM gradebook_weights LIMIT 1")
-            If dt IsNot Nothing AndAlso dt.Rows.Count > 0 Then
-                Dim row As DataRow = dt.Rows(0)
-                customCat1Name = row("cat1_name").ToString()
-                customCat1Weight = Convert.ToDecimal(row("cat1_val"))
-                customCat2Name = row("cat2_name").ToString()
-                customCat2Weight = Convert.ToDecimal(row("cat2_val"))
-                customCat3Name = row("cat3_name").ToString()
-                customCat3Weight = Convert.ToDecimal(row("cat3_val"))
-                weightExam = Convert.ToDecimal(row("exam_val"))
-            End If
+            Dim dt As DataTable = DatabaseHelper.ExecuteQuery(
+                "SELECT rubric_id, component_name, weight_percent, is_fixed FROM grading_rubric " &
+                "WHERE class_id = @cid ORDER BY is_fixed ASC, rubric_id ASC",
+                {New MySqlParameter("@cid", _classId)})
+            If dt Is Nothing Then Return
+
+            Dim custom As Integer = 0
+            For Each row As DataRow In dt.Rows
+                Dim cat As Integer
+                If Convert.ToInt32(row("is_fixed")) = 1 Then
+                    cat = 4
+                Else
+                    custom += 1
+                    If custom > 3 Then Continue For
+                    cat = custom
+                End If
+
+                rubricIdByCat(cat) = Convert.ToInt32(row("rubric_id"))
+                Dim nm As String = row("component_name").ToString()
+                Dim w As Decimal = Convert.ToDecimal(row("weight_percent"))
+
+                Select Case cat
+                    Case 1 : customCat1Name = nm : customCat1Weight = w
+                    Case 2 : customCat2Name = nm : customCat2Weight = w
+                    Case 3 : customCat3Name = nm : customCat3Weight = w
+                    Case 4 : weightExam = w
+                End Select
+            Next
         Catch ex As Exception
             ' Fallbacks to defaults if uninitialized
         End Try
@@ -134,7 +159,7 @@ Public Class ucStudentGradebook
             .ColumnHeadersDefaultCellStyle.WrapMode = DataGridViewTriState.False
             .DefaultCellStyle.WrapMode = DataGridViewTriState.False
             .ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
-            .ColumnHeadersDefaultCellStyle.BackColor = Color.LightGray
+            .ColumnHeadersDefaultCellStyle.BackColor = HdrFixed
             .ColumnHeadersDefaultCellStyle.ForeColor = Color.Black
             .DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
@@ -146,40 +171,22 @@ Public Class ucStudentGradebook
         Dim cDrp As New DataGridViewTextBoxColumn() With {.Name = "status", .HeaderText = "DRP", .ReadOnly = True, .Tag = New ColInfo()}
         dgvGradebook.Columns.AddRange(cNo, cName, cDrp)
 
-        ' Dynamically build assessment columns based on class rubrics and items
+        ' Dynamically build assessment columns from this class's grading components and items
         Try
-            Dim rubricQuery As String = "SELECT rubric_id, component_name FROM grading_rubric WHERE class_id = @cid ORDER BY rubric_id"
-            Dim rubricDt As DataTable = DatabaseHelper.ExecuteQuery(rubricQuery, {New MySqlParameter("@cid", _classId)})
-
             For cat As Integer = 1 To 4
-                Dim targetRubricId As Integer = -1
-                If rubricDt IsNot Nothing Then
-                    For Each rRow As DataRow In rubricDt.Rows
-                        Dim compName As String = rRow("component_name").ToString()
-                        If (cat = 1 AndAlso compName.Equals(customCat1Name, StringComparison.OrdinalIgnoreCase)) OrElse
-                           (cat = 2 AndAlso (compName.Equals(customCat2Name, StringComparison.OrdinalIgnoreCase) OrElse compName.Equals("Quizzes", StringComparison.OrdinalIgnoreCase))) OrElse
-                           (cat = 3 AndAlso (compName.Equals(customCat3Name, StringComparison.OrdinalIgnoreCase) OrElse compName.Equals("Projects", StringComparison.OrdinalIgnoreCase))) OrElse
-                           (cat = 4 AndAlso compName.Equals("Final Exam", StringComparison.OrdinalIgnoreCase)) Then
-                            targetRubricId = Convert.ToInt32(rRow("rubric_id"))
-                            Exit For
-                        End If
-                    Next
-                    If targetRubricId = -1 AndAlso rubricDt.Rows.Count >= cat Then
-                        targetRubricId = Convert.ToInt32(rubricDt.Rows(cat - 1)("rubric_id"))
-                    End If
-                End If
-
-                If targetRubricId <> -1 Then
-                    Dim itemQuery As String = "SELECT item_id, item_name, max_score FROM grade_item WHERE rubric_id = @rid"
-                    Dim itemDt As DataTable = DatabaseHelper.ExecuteQuery(itemQuery, {New MySqlParameter("@rid", targetRubricId)})
+                If rubricIdByCat(cat) > 0 Then
+                    Dim itemDt As DataTable = DatabaseHelper.ExecuteQuery(
+                        "SELECT item_id, item_name, max_score FROM grade_item WHERE rubric_id = @rid ORDER BY item_id",
+                        {New MySqlParameter("@rid", rubricIdByCat(cat))})
 
                     If itemDt IsNot Nothing Then
                         For Each iRow As DataRow In itemDt.Rows
+                            Dim itemId As Integer = Convert.ToInt32(iRow("item_id"))
                             Dim itemName As String = iRow("item_name").ToString()
                             Dim maxScore As Decimal = Convert.ToDecimal(iRow("max_score"))
-                            Dim internalName As String = "col_" & Regex.Replace(itemName, "[^A-Za-z0-9]", "_") & "_" & iRow("item_id")
+                            Dim internalName As String = "col_" & Regex.Replace(itemName, "[^A-Za-z0-9]", "_") & "_" & itemId
 
-                            Dim pair = CreateAssessmentColumns(itemName, internalName, cat, maxScore)
+                            Dim pair = CreateAssessmentColumns(itemName, internalName, cat, maxScore, itemId)
                             dgvGradebook.Columns.Add(pair.Raw)
                             dgvGradebook.Columns.Add(pair.GrA)
                         Next
@@ -210,13 +217,13 @@ Public Class ucStudentGradebook
         Next
     End Sub
 
-    Private Function CreateAssessmentColumns(itemName As String, colName As String, cat As Integer, maxScore As Decimal) As (Raw As DataGridViewTextBoxColumn, GrA As DataGridViewTextBoxColumn)
+    Private Function CreateAssessmentColumns(itemName As String, colName As String, cat As Integer, maxScore As Decimal, Optional itemId As Integer = 0) As (Raw As DataGridViewTextBoxColumn, GrA As DataGridViewTextBoxColumn)
         Dim raw As New DataGridViewTextBoxColumn()
         raw.Name = colName
         raw.HeaderText = (itemName & " (" & maxScore.ToString("0.##") & ")").ToUpper()
         raw.Width = 80
         raw.ReadOnly = False
-        raw.Tag = New ColInfo() With {.Category = cat, .Kind = ColKind.Raw, .MaxScore = maxScore, .ItemName = itemName}
+        raw.Tag = New ColInfo() With {.Category = cat, .Kind = ColKind.Raw, .MaxScore = maxScore, .ItemName = itemName, .ItemId = itemId}
 
         Dim gra As New DataGridViewTextBoxColumn()
         gra.Name = colName & "_gra"
@@ -256,7 +263,7 @@ Public Class ucStudentGradebook
         Dim txtFlags As TextFormatFlags = TextFormatFlags.HorizontalCenter Or TextFormatFlags.VerticalCenter Or TextFormatFlags.WordBreak
 
         If cat = 0 Then
-            Using br As New SolidBrush(Color.LightGray)
+            Using br As New SolidBrush(HdrFixed)
                 g.FillRectangle(br, b)
             End Using
             g.DrawRectangle(Pens.Black, b.X, b.Y, b.Width - 1, b.Height - 1)
@@ -268,7 +275,7 @@ Public Class ucStudentGradebook
         Dim bandRect As New Rectangle(b.X, b.Y, b.Width, h)
         Dim lowRect As New Rectangle(b.X, b.Y + h, b.Width, b.Height - h)
 
-        Using br As New SolidBrush(Color.LightGray)
+        Using br As New SolidBrush(HdrSubRow)
             g.FillRectangle(br, lowRect)
         End Using
         g.DrawRectangle(Pens.Black, lowRect.X, lowRect.Y, lowRect.Width - 1, lowRect.Height - 1)
@@ -298,7 +305,7 @@ Public Class ucStudentGradebook
         Dim bandText As String = (CategoryName(cat) & " " & CategoryWeight(cat).ToString("0.##") & "%").ToUpper()
 
         Dim state As Drawing2D.GraphicsState = g.Save()
-        g.IntersectClip(spanRect)
+        g.IntersectClip(bandRect)
         Using bold As New Font(baseFont, FontStyle.Bold)
             TextRenderer.DrawText(g, bandText, bold, spanRect, Color.Black, TextFormatFlags.HorizontalCenter Or TextFormatFlags.VerticalCenter Or TextFormatFlags.EndEllipsis)
         End Using
@@ -341,7 +348,7 @@ Public Class ucStudentGradebook
                         For Each col As DataGridViewColumn In dgvGradebook.Columns
                             Dim info As ColInfo = GetInfo(col)
                             If info.Kind = ColKind.Raw AndAlso col.Tag IsNot Nothing Then
-                                If col.Name.EndsWith("_" & targetItemId) Then
+                                If info.ItemId = targetItemId Then
                                     row.Cells(col.Index).Value = Convert.ToDecimal(r("score")).ToString("0.00")
                                 End If
                             End If
@@ -367,7 +374,7 @@ Public Class ucStudentGradebook
     ' ==========================================
     Private Function ToGrA(raw As Decimal, maxScore As Decimal) As Decimal
         If maxScore <= 0 Then Return 0D
-        Return Math.Round(raw / maxScore * (100D - GrABase) + GrABase, 2)
+        Return GradeCalculator.ToGrA(raw, maxScore)
     End Function
 
     Private Sub RecalculateAll()
@@ -403,8 +410,7 @@ Public Class ucStudentGradebook
             Dim totalCol As String = "cat" & cat & "_total"
             If Not dgvGradebook.Columns.Contains(totalCol) Then Continue For
             If counts(cat) > 0 Then
-                Dim avg As Decimal = sums(cat) / counts(cat)
-                Dim weighted As Decimal = Math.Round(avg * CategoryWeight(cat) / 100D, 2)
+                Dim weighted As Decimal = GradeCalculator.CategoryTotal(sums(cat), counts(cat), CategoryWeight(cat))
                 row.Cells(totalCol).Value = weighted.ToString("0.00")
                 finalGrade += weighted
             Else

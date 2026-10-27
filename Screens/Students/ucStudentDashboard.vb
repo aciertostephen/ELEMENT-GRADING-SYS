@@ -33,7 +33,7 @@ Public Class ucStudentDashboard
                 Dim query As String = "SELECT e.enrollment_id, c.class_id, co.course_code, co.course_name, " &
                                  "CONCAT(s.section_code) AS section_name, " &
                                  "CONCAT(tp.last_name, ', ', tp.first_name) AS teacher_name, " &
-                                 "COALESCE(e.final_grade, 0.00) AS final_grade " &
+                                 "COALESCE(CASE WHEN c.grades_released_at IS NULL THEN NULL ELSE e.final_grade END, 0.00) AS final_grade " &
                                  "FROM enrollment e " &
                                  "JOIN classes c ON e.class_id = c.class_id " &
                                  "JOIN course co ON c.course_id = co.course_id " &
@@ -66,7 +66,7 @@ Public Class ucStudentDashboard
                 End If
             End If
         Catch ex As Exception
-            MessageBox.Show("Error loading dashboard courses: " & ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            MessageBox.Show("Error loading dashboard courses: " & ex.Message, "Database Error", MessageBoxButtons.OK)
         End Try
     End Sub
 
