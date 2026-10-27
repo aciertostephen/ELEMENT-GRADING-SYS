@@ -53,7 +53,7 @@ Partial Class ucProfileSettings
         ' 
         pnlInfoCard.ActiveBorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
         pnlInfoCard.BackColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
-        pnlInfoCard.BorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
+        pnlInfoCard.BorderColor = Color.FromArgb(CByte(209), CByte(213), CByte(219))
         pnlInfoCard.BorderThickness = 1
         pnlInfoCard.Controls.Add(lblPhone)
         pnlInfoCard.Controls.Add(lblEmail)
@@ -167,7 +167,7 @@ Partial Class ucProfileSettings
         ' 
         btnBack.BackColor = Color.Transparent
         btnBack.BackgroundImageLayout = ImageLayout.Zoom
-        btnBack.BorderColor = Color.Transparent
+        btnBack.BorderColor = Color.FromArgb(CByte(209), CByte(213), CByte(219))
         btnBack.EnteredBorderColor = Color.Transparent
         btnBack.EnteredColor = Color.DarkGray
         btnBack.Font = New Font("Century Gothic", 10.2F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))

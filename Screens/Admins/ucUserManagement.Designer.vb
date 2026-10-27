@@ -25,6 +25,11 @@ Partial Class ucUserManagement
         Dim DataGridViewCellStyle1 As DataGridViewCellStyle = New DataGridViewCellStyle()
         Dim DataGridViewCellStyle2 As DataGridViewCellStyle = New DataGridViewCellStyle()
         tblMain = New TableLayoutPanel()
+        pnlMainBG = New RoundedPanel()
+        linkResetPass = New LinkLabel()
+        linkUserStatus = New LinkLabel()
+        linkEditInfo = New LinkLabel()
+        btnCreateUser = New ReaLTaiizor.Controls.Button()
         pnlUserBG = New RoundedPanel()
         dgvUsers = New DataGridView()
         user = New DataGridViewTextBoxColumn()
@@ -40,27 +45,23 @@ Partial Class ucUserManagement
         txtSearch = New TextBox()
         pnlStats = New Panel()
         flowStats = New FlowLayoutPanel()
-        pnlMainBG = New RoundedPanel()
-        linkResetPass = New LinkLabel()
-        linkUserStatus = New LinkLabel()
-        linkEditInfo = New LinkLabel()
-        btnCreateUser = New ReaLTaiizor.Controls.Button()
         tblMain.SuspendLayout()
+        pnlMainBG.SuspendLayout()
         pnlUserBG.SuspendLayout()
         CType(dgvUsers, ComponentModel.ISupportInitialize).BeginInit()
         pnlToolbar.SuspendLayout()
         pnlSearch.SuspendLayout()
         pnlStats.SuspendLayout()
-        pnlMainBG.SuspendLayout()
         SuspendLayout()
         ' 
         ' tblMain
         ' 
+        tblMain.BackColor = Color.Transparent
         tblMain.ColumnCount = 2
         tblMain.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 100F))
         tblMain.ColumnStyles.Add(New ColumnStyle(SizeType.Absolute, 445F))
-        tblMain.Controls.Add(pnlUserBG, 0, 0)
         tblMain.Controls.Add(pnlMainBG, 1, 0)
+        tblMain.Controls.Add(pnlUserBG, 0, 0)
         tblMain.Dock = DockStyle.Fill
         tblMain.Location = New Point(0, 0)
         tblMain.Name = "tblMain"
@@ -70,12 +71,99 @@ Partial Class ucUserManagement
         tblMain.Size = New Size(1925, 917)
         tblMain.TabIndex = 2
         ' 
+        ' pnlMainBG
+        ' 
+        pnlMainBG.ActiveBorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
+        pnlMainBG.Anchor = AnchorStyles.None
+        pnlMainBG.AutoSizeMode = AutoSizeMode.GrowAndShrink
+        pnlMainBG.BackColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
+        pnlMainBG.BorderColor = Color.FromArgb(CByte(209), CByte(213), CByte(219))
+        pnlMainBG.BorderThickness = 1
+        pnlMainBG.Controls.Add(linkResetPass)
+        pnlMainBG.Controls.Add(linkUserStatus)
+        pnlMainBG.Controls.Add(linkEditInfo)
+        pnlMainBG.Controls.Add(btnCreateUser)
+        pnlMainBG.Location = New Point(1497, 3)
+        pnlMainBG.Name = "pnlMainBG"
+        pnlMainBG.Radius = 20
+        pnlMainBG.Size = New Size(410, 891)
+        pnlMainBG.TabIndex = 0
+        ' 
+        ' linkResetPass
+        ' 
+        linkResetPass.ActiveLinkColor = Color.Black
+        linkResetPass.BackColor = Color.Transparent
+        linkResetPass.DisabledLinkColor = Color.Gray
+        linkResetPass.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        linkResetPass.ForeColor = Color.Black
+        linkResetPass.LinkBehavior = LinkBehavior.NeverUnderline
+        linkResetPass.LinkColor = Color.DimGray
+        linkResetPass.Location = New Point(25, 265)
+        linkResetPass.Name = "linkResetPass"
+        linkResetPass.Size = New Size(146, 23)
+        linkResetPass.TabIndex = 8
+        linkResetPass.TabStop = True
+        linkResetPass.Text = "Reset Password"
+        ' 
+        ' linkUserStatus
+        ' 
+        linkUserStatus.ActiveLinkColor = Color.Black
+        linkUserStatus.BackColor = Color.Transparent
+        linkUserStatus.DisabledLinkColor = Color.Gray
+        linkUserStatus.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        linkUserStatus.ForeColor = Color.Black
+        linkUserStatus.LinkBehavior = LinkBehavior.NeverUnderline
+        linkUserStatus.LinkColor = Color.DimGray
+        linkUserStatus.Location = New Point(25, 223)
+        linkUserStatus.Name = "linkUserStatus"
+        linkUserStatus.Size = New Size(146, 23)
+        linkUserStatus.TabIndex = 7
+        linkUserStatus.TabStop = True
+        linkUserStatus.Text = "User Status"
+        ' 
+        ' linkEditInfo
+        ' 
+        linkEditInfo.ActiveLinkColor = Color.Black
+        linkEditInfo.BackColor = Color.Transparent
+        linkEditInfo.DisabledLinkColor = Color.Black
+        linkEditInfo.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        linkEditInfo.ForeColor = Color.Black
+        linkEditInfo.LinkBehavior = LinkBehavior.NeverUnderline
+        linkEditInfo.LinkColor = Color.DimGray
+        linkEditInfo.Location = New Point(25, 176)
+        linkEditInfo.Name = "linkEditInfo"
+        linkEditInfo.Size = New Size(146, 23)
+        linkEditInfo.TabIndex = 6
+        linkEditInfo.TabStop = True
+        linkEditInfo.Text = "Edit Information"
+        ' 
+        ' btnCreateUser
+        ' 
+        btnCreateUser.BackColor = Color.Transparent
+        btnCreateUser.BackgroundImageLayout = ImageLayout.Zoom
+        btnCreateUser.BorderColor = Color.Transparent
+        btnCreateUser.EnteredBorderColor = Color.Transparent
+        btnCreateUser.EnteredColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
+        btnCreateUser.Font = New Font("Century Gothic", 9F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        btnCreateUser.Image = Nothing
+        btnCreateUser.ImageAlign = ContentAlignment.MiddleLeft
+        btnCreateUser.InactiveColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
+        btnCreateUser.Location = New Point(90, 64)
+        btnCreateUser.Name = "btnCreateUser"
+        btnCreateUser.PressedBorderColor = Color.Transparent
+        btnCreateUser.PressedColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
+        btnCreateUser.Size = New Size(235, 36)
+        btnCreateUser.TabIndex = 4
+        btnCreateUser.Text = "Create New User"
+        btnCreateUser.TextAlignment = StringAlignment.Center
+        btnCreateUser.UseWaitCursor = True
+        ' 
         ' pnlUserBG
         ' 
         pnlUserBG.ActiveBorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
         pnlUserBG.Anchor = AnchorStyles.None
         pnlUserBG.BackColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
-        pnlUserBG.BorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
+        pnlUserBG.BorderColor = Color.FromArgb(CByte(209), CByte(213), CByte(219))
         pnlUserBG.BorderThickness = 1
         pnlUserBG.Controls.Add(dgvUsers)
         pnlUserBG.Controls.Add(pnlToolbar)
@@ -165,6 +253,7 @@ Partial Class ucUserManagement
         ' 
         ' pnlToolbar
         ' 
+        pnlToolbar.BackColor = Color.Transparent
         pnlToolbar.Controls.Add(btnFilter)
         pnlToolbar.Controls.Add(pnlSearch)
         pnlToolbar.Dock = DockStyle.Top
@@ -220,6 +309,7 @@ Partial Class ucUserManagement
         ' 
         ' pnlStats
         ' 
+        pnlStats.BackColor = Color.Transparent
         pnlStats.Controls.Add(flowStats)
         pnlStats.Dock = DockStyle.Top
         pnlStats.Location = New Point(0, 0)
@@ -229,99 +319,13 @@ Partial Class ucUserManagement
         ' 
         ' flowStats
         ' 
+        flowStats.BackColor = Color.Transparent
         flowStats.Dock = DockStyle.Fill
         flowStats.Location = New Point(0, 0)
         flowStats.Name = "flowStats"
         flowStats.Size = New Size(1453, 100)
         flowStats.TabIndex = 0
         flowStats.WrapContents = False
-        ' 
-        ' pnlMainBG
-        ' 
-        pnlMainBG.ActiveBorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
-        pnlMainBG.Anchor = AnchorStyles.None
-        pnlMainBG.AutoSizeMode = AutoSizeMode.GrowAndShrink
-        pnlMainBG.BackColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
-        pnlMainBG.BorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
-        pnlMainBG.BorderThickness = 1
-        pnlMainBG.Controls.Add(linkResetPass)
-        pnlMainBG.Controls.Add(linkUserStatus)
-        pnlMainBG.Controls.Add(linkEditInfo)
-        pnlMainBG.Controls.Add(btnCreateUser)
-        pnlMainBG.Location = New Point(1497, 3)
-        pnlMainBG.Name = "pnlMainBG"
-        pnlMainBG.Radius = 20
-        pnlMainBG.Size = New Size(410, 891)
-        pnlMainBG.TabIndex = 0
-        ' 
-        ' linkResetPass
-        ' 
-        linkResetPass.ActiveLinkColor = Color.Black
-        linkResetPass.BackColor = Color.Transparent
-        linkResetPass.DisabledLinkColor = Color.Gray
-        linkResetPass.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        linkResetPass.ForeColor = Color.Black
-        linkResetPass.LinkBehavior = LinkBehavior.NeverUnderline
-        linkResetPass.LinkColor = Color.DimGray
-        linkResetPass.Location = New Point(25, 265)
-        linkResetPass.Name = "linkResetPass"
-        linkResetPass.Size = New Size(146, 23)
-        linkResetPass.TabIndex = 8
-        linkResetPass.TabStop = True
-        linkResetPass.Text = "Reset Password"
-        ' 
-        ' linkUserStatus
-        ' 
-        linkUserStatus.ActiveLinkColor = Color.Black
-        linkUserStatus.BackColor = Color.Transparent
-        linkUserStatus.DisabledLinkColor = Color.Gray
-        linkUserStatus.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        linkUserStatus.ForeColor = Color.Black
-        linkUserStatus.LinkBehavior = LinkBehavior.NeverUnderline
-        linkUserStatus.LinkColor = Color.DimGray
-        linkUserStatus.Location = New Point(25, 223)
-        linkUserStatus.Name = "linkUserStatus"
-        linkUserStatus.Size = New Size(146, 23)
-        linkUserStatus.TabIndex = 7
-        linkUserStatus.TabStop = True
-        linkUserStatus.Text = "User Status"
-        ' 
-        ' linkEditInfo
-        ' 
-        linkEditInfo.ActiveLinkColor = Color.Black
-        linkEditInfo.BackColor = Color.Transparent
-        linkEditInfo.DisabledLinkColor = Color.Black
-        linkEditInfo.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        linkEditInfo.ForeColor = Color.Black
-        linkEditInfo.LinkBehavior = LinkBehavior.NeverUnderline
-        linkEditInfo.LinkColor = Color.DimGray
-        linkEditInfo.Location = New Point(25, 176)
-        linkEditInfo.Name = "linkEditInfo"
-        linkEditInfo.Size = New Size(146, 23)
-        linkEditInfo.TabIndex = 6
-        linkEditInfo.TabStop = True
-        linkEditInfo.Text = "Edit Information"
-        ' 
-        ' btnCreateUser
-        ' 
-        btnCreateUser.BackColor = Color.Transparent
-        btnCreateUser.BackgroundImageLayout = ImageLayout.Zoom
-        btnCreateUser.BorderColor = Color.Transparent
-        btnCreateUser.EnteredBorderColor = Color.Transparent
-        btnCreateUser.EnteredColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
-        btnCreateUser.Font = New Font("Century Gothic", 9F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        btnCreateUser.Image = Nothing
-        btnCreateUser.ImageAlign = ContentAlignment.MiddleLeft
-        btnCreateUser.InactiveColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
-        btnCreateUser.Location = New Point(90, 64)
-        btnCreateUser.Name = "btnCreateUser"
-        btnCreateUser.PressedBorderColor = Color.Transparent
-        btnCreateUser.PressedColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
-        btnCreateUser.Size = New Size(235, 36)
-        btnCreateUser.TabIndex = 4
-        btnCreateUser.Text = "Create New User"
-        btnCreateUser.TextAlignment = StringAlignment.Center
-        btnCreateUser.UseWaitCursor = True
         ' 
         ' ucUserManagement
         ' 
@@ -332,13 +336,13 @@ Partial Class ucUserManagement
         Name = "ucUserManagement"
         Size = New Size(1925, 917)
         tblMain.ResumeLayout(False)
+        pnlMainBG.ResumeLayout(False)
         pnlUserBG.ResumeLayout(False)
         CType(dgvUsers, ComponentModel.ISupportInitialize).EndInit()
         pnlToolbar.ResumeLayout(False)
         pnlSearch.ResumeLayout(False)
         pnlSearch.PerformLayout()
         pnlStats.ResumeLayout(False)
-        pnlMainBG.ResumeLayout(False)
         ResumeLayout(False)
     End Sub
     Friend WithEvents tblMain As TableLayoutPanel

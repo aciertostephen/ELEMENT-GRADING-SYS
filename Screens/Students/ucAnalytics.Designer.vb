@@ -57,48 +57,45 @@ Partial Class ucAnalytics
         tblMainDock.Controls.Add(tblLeftDock, 0, 0)
         tblMainDock.Dock = DockStyle.Fill
         tblMainDock.Location = New Point(0, 0)
-        tblMainDock.Margin = New Padding(3, 2, 3, 2)
         tblMainDock.Name = "tblMainDock"
         tblMainDock.RowCount = 1
         tblMainDock.RowStyles.Add(New RowStyle(SizeType.Percent, 100F))
-        tblMainDock.Size = New Size(1684, 688)
+        tblMainDock.Size = New Size(1925, 917)
         tblMainDock.TabIndex = 0
         ' 
         ' RoundedPanel1
         ' 
         RoundedPanel1.ActiveBorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
         RoundedPanel1.BackColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
-        RoundedPanel1.BorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
+        RoundedPanel1.BorderColor = Color.FromArgb(CByte(209), CByte(213), CByte(219))
         RoundedPanel1.BorderThickness = 1
         RoundedPanel1.Controls.Add(Panel1)
         RoundedPanel1.Controls.Add(cboCourses)
         RoundedPanel1.Controls.Add(lblGradeComponent)
         RoundedPanel1.Dock = DockStyle.Fill
-        RoundedPanel1.Location = New Point(1019, 8)
-        RoundedPanel1.Margin = New Padding(9, 8, 18, 15)
+        RoundedPanel1.Location = New Point(1165, 11)
+        RoundedPanel1.Margin = New Padding(10, 11, 21, 20)
         RoundedPanel1.Name = "RoundedPanel1"
-        RoundedPanel1.Padding = New Padding(3, 2, 3, 2)
+        RoundedPanel1.Padding = New Padding(3, 3, 3, 3)
         RoundedPanel1.Radius = 12
-        RoundedPanel1.Size = New Size(647, 665)
+        RoundedPanel1.Size = New Size(739, 886)
         RoundedPanel1.TabIndex = 2
         ' 
         ' Panel1
         ' 
         Panel1.BackColor = Color.Transparent
         Panel1.Controls.Add(FormsPlot2)
-        Panel1.Location = New Point(30, 130)
-        Panel1.Margin = New Padding(3, 2, 3, 2)
+        Panel1.Location = New Point(34, 173)
         Panel1.Name = "Panel1"
-        Panel1.Size = New Size(581, 452)
+        Panel1.Size = New Size(664, 603)
         Panel1.TabIndex = 9
         ' 
         ' FormsPlot2
         ' 
         FormsPlot2.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
         FormsPlot2.Location = New Point(0, 0)
-        FormsPlot2.Margin = New Padding(3, 2, 3, 2)
         FormsPlot2.Name = "FormsPlot2"
-        FormsPlot2.Size = New Size(581, 452)
+        FormsPlot2.Size = New Size(664, 603)
         FormsPlot2.TabIndex = 0
         ' 
         ' cboCourses
@@ -107,10 +104,9 @@ Partial Class ucAnalytics
         cboCourses.Font = New Font("Century Gothic", 16.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         cboCourses.FormattingEnabled = True
         cboCourses.Items.AddRange(New Object() {""})
-        cboCourses.Location = New Point(477, 8)
-        cboCourses.Margin = New Padding(3, 2, 3, 2)
+        cboCourses.Location = New Point(545, 11)
         cboCourses.Name = "cboCourses"
-        cboCourses.Size = New Size(156, 33)
+        cboCourses.Size = New Size(178, 41)
         cboCourses.TabIndex = 8
         ' 
         ' lblGradeComponent
@@ -118,9 +114,9 @@ Partial Class ucAnalytics
         lblGradeComponent.AutoSize = True
         lblGradeComponent.BackColor = Color.Transparent
         lblGradeComponent.Font = New Font("Century Gothic", 10.8F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        lblGradeComponent.Location = New Point(30, 19)
+        lblGradeComponent.Location = New Point(34, 25)
         lblGradeComponent.Name = "lblGradeComponent"
-        lblGradeComponent.Size = New Size(304, 20)
+        lblGradeComponent.Size = New Size(371, 21)
         lblGradeComponent.TabIndex = 4
         lblGradeComponent.Text = "Grade Component Analytics Per Subject"
         ' 
@@ -128,34 +124,33 @@ Partial Class ucAnalytics
         ' 
         tblLeftDock.ColumnCount = 1
         tblLeftDock.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 100F))
-        tblLeftDock.ColumnStyles.Add(New ColumnStyle(SizeType.Absolute, 18F))
+        tblLeftDock.ColumnStyles.Add(New ColumnStyle(SizeType.Absolute, 21F))
         tblLeftDock.Controls.Add(pnlBottomBG, 0, 1)
         tblLeftDock.Controls.Add(pnlTopBG, 0, 0)
         tblLeftDock.Dock = DockStyle.Fill
-        tblLeftDock.Location = New Point(3, 2)
-        tblLeftDock.Margin = New Padding(3, 2, 3, 2)
+        tblLeftDock.Location = New Point(3, 3)
         tblLeftDock.Name = "tblLeftDock"
         tblLeftDock.RowCount = 2
         tblLeftDock.RowStyles.Add(New RowStyle(SizeType.Percent, 50F))
         tblLeftDock.RowStyles.Add(New RowStyle(SizeType.Percent, 50F))
-        tblLeftDock.Size = New Size(1004, 684)
+        tblLeftDock.Size = New Size(1149, 911)
         tblLeftDock.TabIndex = 0
         ' 
         ' pnlBottomBG
         ' 
         pnlBottomBG.ActiveBorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
         pnlBottomBG.BackColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
-        pnlBottomBG.BorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
+        pnlBottomBG.BorderColor = Color.FromArgb(CByte(209), CByte(213), CByte(219))
         pnlBottomBG.BorderThickness = 1
         pnlBottomBG.Controls.Add(pnlOverallAverage)
         pnlBottomBG.Controls.Add(pnlAverageGrade)
         pnlBottomBG.Dock = DockStyle.Fill
-        pnlBottomBG.Location = New Point(18, 350)
-        pnlBottomBG.Margin = New Padding(18, 8, 9, 15)
+        pnlBottomBG.Location = New Point(21, 466)
+        pnlBottomBG.Margin = New Padding(21, 11, 10, 20)
         pnlBottomBG.Name = "pnlBottomBG"
-        pnlBottomBG.Padding = New Padding(3, 2, 3, 2)
+        pnlBottomBG.Padding = New Padding(3, 3, 3, 3)
         pnlBottomBG.Radius = 12
-        pnlBottomBG.Size = New Size(977, 319)
+        pnlBottomBG.Size = New Size(1118, 425)
         pnlBottomBG.TabIndex = 1
         ' 
         ' pnlOverallAverage
@@ -163,9 +158,9 @@ Partial Class ucAnalytics
         pnlOverallAverage.AutoSize = True
         pnlOverallAverage.BackColor = Color.Transparent
         pnlOverallAverage.Font = New Font("Century Gothic", 10.8F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        pnlOverallAverage.Location = New Point(36, 21)
+        pnlOverallAverage.Location = New Point(41, 28)
         pnlOverallAverage.Name = "pnlOverallAverage"
-        pnlOverallAverage.Size = New Size(346, 20)
+        pnlOverallAverage.Size = New Size(416, 21)
         pnlOverallAverage.TabIndex = 3
         pnlOverallAverage.Text = "Overall Average Grade Component Analyrics"
         ' 
@@ -173,36 +168,34 @@ Partial Class ucAnalytics
         ' 
         pnlAverageGrade.BackColor = Color.Transparent
         pnlAverageGrade.Controls.Add(FormsPlot3)
-        pnlAverageGrade.Location = New Point(147, 49)
-        pnlAverageGrade.Margin = New Padding(3, 2, 3, 2)
+        pnlAverageGrade.Location = New Point(168, 65)
         pnlAverageGrade.Name = "pnlAverageGrade"
-        pnlAverageGrade.Size = New Size(672, 243)
+        pnlAverageGrade.Size = New Size(768, 324)
         pnlAverageGrade.TabIndex = 2
         ' 
         ' FormsPlot3
         ' 
         FormsPlot3.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
         FormsPlot3.Location = New Point(0, 0)
-        FormsPlot3.Margin = New Padding(3, 2, 3, 2)
         FormsPlot3.Name = "FormsPlot3"
-        FormsPlot3.Size = New Size(672, 243)
+        FormsPlot3.Size = New Size(768, 324)
         FormsPlot3.TabIndex = 0
         ' 
         ' pnlTopBG
         ' 
         pnlTopBG.ActiveBorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
         pnlTopBG.BackColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
-        pnlTopBG.BorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
+        pnlTopBG.BorderColor = Color.FromArgb(CByte(209), CByte(213), CByte(219))
         pnlTopBG.BorderThickness = 1
         pnlTopBG.Controls.Add(lblOverallGradeStanding)
         pnlTopBG.Controls.Add(pnlOverallStanding)
         pnlTopBG.Dock = DockStyle.Fill
-        pnlTopBG.Location = New Point(18, 8)
-        pnlTopBG.Margin = New Padding(18, 8, 9, 8)
+        pnlTopBG.Location = New Point(21, 11)
+        pnlTopBG.Margin = New Padding(21, 11, 10, 11)
         pnlTopBG.Name = "pnlTopBG"
-        pnlTopBG.Padding = New Padding(3, 2, 3, 2)
+        pnlTopBG.Padding = New Padding(3, 3, 3, 3)
         pnlTopBG.Radius = 12
-        pnlTopBG.Size = New Size(977, 326)
+        pnlTopBG.Size = New Size(1118, 433)
         pnlTopBG.TabIndex = 0
         ' 
         ' lblOverallGradeStanding
@@ -210,9 +203,9 @@ Partial Class ucAnalytics
         lblOverallGradeStanding.AutoSize = True
         lblOverallGradeStanding.BackColor = Color.Transparent
         lblOverallGradeStanding.Font = New Font("Century Gothic", 10.8F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        lblOverallGradeStanding.Location = New Point(36, 16)
+        lblOverallGradeStanding.Location = New Point(41, 21)
         lblOverallGradeStanding.Name = "lblOverallGradeStanding"
-        lblOverallGradeStanding.Size = New Size(182, 20)
+        lblOverallGradeStanding.Size = New Size(216, 21)
         lblOverallGradeStanding.TabIndex = 2
         lblOverallGradeStanding.Text = "Overall Grade Standing"
         ' 
@@ -220,30 +213,27 @@ Partial Class ucAnalytics
         ' 
         pnlOverallStanding.BackColor = Color.Transparent
         pnlOverallStanding.Controls.Add(FormsPlot1)
-        pnlOverallStanding.Location = New Point(147, 44)
-        pnlOverallStanding.Margin = New Padding(3, 2, 3, 2)
+        pnlOverallStanding.Location = New Point(168, 59)
         pnlOverallStanding.Name = "pnlOverallStanding"
-        pnlOverallStanding.Size = New Size(672, 243)
+        pnlOverallStanding.Size = New Size(768, 324)
         pnlOverallStanding.TabIndex = 1
         ' 
         ' FormsPlot1
         ' 
         FormsPlot1.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
         FormsPlot1.Location = New Point(0, 0)
-        FormsPlot1.Margin = New Padding(3, 2, 3, 2)
         FormsPlot1.Name = "FormsPlot1"
-        FormsPlot1.Size = New Size(672, 243)
+        FormsPlot1.Size = New Size(768, 324)
         FormsPlot1.TabIndex = 0
         ' 
         ' ucAnalytics
         ' 
-        AutoScaleDimensions = New SizeF(7F, 15F)
+        AutoScaleDimensions = New SizeF(8F, 20F)
         AutoScaleMode = AutoScaleMode.Font
         BackColor = Color.White
         Controls.Add(tblMainDock)
-        Margin = New Padding(3, 2, 3, 2)
         Name = "ucAnalytics"
-        Size = New Size(1684, 688)
+        Size = New Size(1925, 917)
         tblMainDock.ResumeLayout(False)
         RoundedPanel1.ResumeLayout(False)
         RoundedPanel1.PerformLayout()

@@ -48,7 +48,7 @@ Partial Class ucTranscript
         ' 
         pnlStudentTranscriptBG.ActiveBorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
         pnlStudentTranscriptBG.BackColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
-        pnlStudentTranscriptBG.BorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
+        pnlStudentTranscriptBG.BorderColor = Color.FromArgb(CByte(209), CByte(213), CByte(219))
         pnlStudentTranscriptBG.BorderThickness = 1
         pnlStudentTranscriptBG.Controls.Add(btnExportStudent)
         pnlStudentTranscriptBG.Controls.Add(pnlStudentInfo)

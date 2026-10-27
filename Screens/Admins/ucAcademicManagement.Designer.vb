@@ -26,6 +26,7 @@ Partial Class ucAcademicManagement
         pnlCards = New Panel()
         flowCourses = New FlowLayoutPanel()
         pnlFilters = New Panel()
+        btnCreateCourse = New ReaLTaiizor.Controls.Button()
         btnAddSection = New ReaLTaiizor.Controls.Button()
         btnAddCourse = New ReaLTaiizor.Controls.Button()
         cboSemester = New ComboBox()
@@ -38,7 +39,6 @@ Partial Class ucAcademicManagement
         lblSemester = New Label()
         pnlStats = New Panel()
         flowStats = New FlowLayoutPanel()
-        btnCreateCourse = New ReaLTaiizor.Controls.Button()
         pnlAcadBG.SuspendLayout()
         pnlCards.SuspendLayout()
         pnlFilters.SuspendLayout()
@@ -49,7 +49,7 @@ Partial Class ucAcademicManagement
         ' 
         pnlAcadBG.ActiveBorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
         pnlAcadBG.BackColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
-        pnlAcadBG.BorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
+        pnlAcadBG.BorderColor = Color.FromArgb(CByte(209), CByte(213), CByte(219))
         pnlAcadBG.BorderThickness = 1
         pnlAcadBG.Controls.Add(pnlCards)
         pnlAcadBG.Controls.Add(pnlFilters)
@@ -63,6 +63,7 @@ Partial Class ucAcademicManagement
         ' pnlCards
         ' 
         pnlCards.AutoScroll = True
+        pnlCards.BackColor = Color.Transparent
         pnlCards.Controls.Add(flowCourses)
         pnlCards.Dock = DockStyle.Fill
         pnlCards.Location = New Point(0, 170)
@@ -73,6 +74,7 @@ Partial Class ucAcademicManagement
         ' flowCourses
         ' 
         flowCourses.AutoScroll = True
+        flowCourses.BackColor = Color.Transparent
         flowCourses.Dock = DockStyle.Fill
         flowCourses.Location = New Point(0, 0)
         flowCourses.Name = "flowCourses"
@@ -81,6 +83,7 @@ Partial Class ucAcademicManagement
         ' 
         ' pnlFilters
         ' 
+        pnlFilters.BackColor = Color.Transparent
         pnlFilters.Controls.Add(btnCreateCourse)
         pnlFilters.Controls.Add(btnAddSection)
         pnlFilters.Controls.Add(btnAddCourse)
@@ -97,6 +100,28 @@ Partial Class ucAcademicManagement
         pnlFilters.Name = "pnlFilters"
         pnlFilters.Size = New Size(1864, 70)
         pnlFilters.TabIndex = 1
+        ' 
+        ' btnCreateCourse
+        ' 
+        btnCreateCourse.Anchor = AnchorStyles.Left Or AnchorStyles.Right
+        btnCreateCourse.BackColor = Color.Transparent
+        btnCreateCourse.BackgroundImageLayout = ImageLayout.Zoom
+        btnCreateCourse.BorderColor = Color.Transparent
+        btnCreateCourse.EnteredBorderColor = Color.Transparent
+        btnCreateCourse.EnteredColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
+        btnCreateCourse.Font = New Font("Century Gothic", 7.8F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        btnCreateCourse.Image = Nothing
+        btnCreateCourse.ImageAlign = ContentAlignment.MiddleLeft
+        btnCreateCourse.InactiveColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
+        btnCreateCourse.Location = New Point(1685, 17)
+        btnCreateCourse.Name = "btnCreateCourse"
+        btnCreateCourse.PressedBorderColor = Color.Transparent
+        btnCreateCourse.PressedColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
+        btnCreateCourse.Size = New Size(145, 35)
+        btnCreateCourse.TabIndex = 12
+        btnCreateCourse.Text = "Create Course"
+        btnCreateCourse.TextAlignment = StringAlignment.Center
+        btnCreateCourse.UseWaitCursor = True
         ' 
         ' btnAddSection
         ' 
@@ -228,6 +253,7 @@ Partial Class ucAcademicManagement
         ' 
         ' pnlStats
         ' 
+        pnlStats.BackColor = Color.Transparent
         pnlStats.Controls.Add(flowStats)
         pnlStats.Dock = DockStyle.Top
         pnlStats.Location = New Point(0, 0)
@@ -237,33 +263,12 @@ Partial Class ucAcademicManagement
         ' 
         ' flowStats
         ' 
+        flowStats.BackColor = Color.Transparent
         flowStats.Dock = DockStyle.Fill
         flowStats.Location = New Point(0, 0)
         flowStats.Name = "flowStats"
         flowStats.Size = New Size(1864, 100)
         flowStats.TabIndex = 0
-        ' 
-        ' btnCreateCourse
-        ' 
-        btnCreateCourse.Anchor = AnchorStyles.Left Or AnchorStyles.Right
-        btnCreateCourse.BackColor = Color.Transparent
-        btnCreateCourse.BackgroundImageLayout = ImageLayout.Zoom
-        btnCreateCourse.BorderColor = Color.Transparent
-        btnCreateCourse.EnteredBorderColor = Color.Transparent
-        btnCreateCourse.EnteredColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
-        btnCreateCourse.Font = New Font("Century Gothic", 7.8F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        btnCreateCourse.Image = Nothing
-        btnCreateCourse.ImageAlign = ContentAlignment.MiddleLeft
-        btnCreateCourse.InactiveColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
-        btnCreateCourse.Location = New Point(1685, 17)
-        btnCreateCourse.Name = "btnCreateCourse"
-        btnCreateCourse.PressedBorderColor = Color.Transparent
-        btnCreateCourse.PressedColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
-        btnCreateCourse.Size = New Size(145, 35)
-        btnCreateCourse.TabIndex = 12
-        btnCreateCourse.Text = "Create Course"
-        btnCreateCourse.TextAlignment = StringAlignment.Center
-        btnCreateCourse.UseWaitCursor = True
         ' 
         ' ucAcademicManagement
         ' 

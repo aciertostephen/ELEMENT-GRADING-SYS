@@ -81,7 +81,7 @@ Partial Class ucStudentGradebook
         ' 
         pnlTop.ActiveBorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
         pnlTop.BackColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
-        pnlTop.BorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
+        pnlTop.BorderColor = Color.FromArgb(CByte(209), CByte(213), CByte(219))
         pnlTop.BorderThickness = 1
         pnlTop.Controls.Add(btnBack)
         pnlTop.Controls.Add(lblGradebook)
@@ -130,7 +130,7 @@ Partial Class ucStudentGradebook
         ' 
         pnlRubric.ActiveBorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
         pnlRubric.BackColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
-        pnlRubric.BorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
+        pnlRubric.BorderColor = Color.FromArgb(CByte(209), CByte(213), CByte(219))
         pnlRubric.BorderThickness = 1
         pnlRubric.Controls.Add(tblMainRubric)
         pnlRubric.Dock = DockStyle.Fill

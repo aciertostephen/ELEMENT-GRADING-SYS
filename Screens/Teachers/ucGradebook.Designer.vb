@@ -22,8 +22,8 @@ Partial Class ucGradebook
     'Do not modify it using the code editor.
     <System.Diagnostics.DebuggerStepThrough()>
     Private Sub InitializeComponent()
-        Dim DataGridViewCellStyle1 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle2 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle3 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle4 As DataGridViewCellStyle = New DataGridViewCellStyle()
         pnlTop = New RoundedPanel()
         btnBack = New ReaLTaiizor.Controls.Button()
         lblGradebook = New Label()
@@ -72,7 +72,7 @@ Partial Class ucGradebook
         ' 
         pnlTop.ActiveBorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
         pnlTop.BackColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
-        pnlTop.BorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
+        pnlTop.BorderColor = Color.FromArgb(CByte(209), CByte(213), CByte(219))
         pnlTop.BorderThickness = 1
         pnlTop.Controls.Add(btnBack)
         pnlTop.Controls.Add(lblGradebook)
@@ -91,7 +91,7 @@ Partial Class ucGradebook
         btnBack.BorderColor = Color.FromArgb(CByte(141), CByte(161), CByte(180))
         btnBack.EnteredBorderColor = Color.Empty
         btnBack.EnteredColor = Color.FromArgb(CByte(141), CByte(161), CByte(180))
-        btnBack.Font = New Font("Century Gothic", 9.0F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        btnBack.Font = New Font("Century Gothic", 9F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
         btnBack.Image = Nothing
         btnBack.ImageAlign = ContentAlignment.MiddleLeft
         btnBack.InactiveColor = Color.FromArgb(CByte(141), CByte(161), CByte(180))
@@ -120,7 +120,7 @@ Partial Class ucGradebook
         ' tblMainGBook
         ' 
         tblMainGBook.ColumnCount = 1
-        tblMainGBook.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 100.0F))
+        tblMainGBook.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 100F))
         tblMainGBook.Controls.Add(pnlTop, 0, 0)
         tblMainGBook.Controls.Add(pnlRubric, 0, 1)
         tblMainGBook.Dock = DockStyle.Fill
@@ -128,8 +128,8 @@ Partial Class ucGradebook
         tblMainGBook.Name = "tblMainGBook"
         tblMainGBook.Padding = New Padding(20)
         tblMainGBook.RowCount = 2
-        tblMainGBook.RowStyles.Add(New RowStyle(SizeType.Absolute, 75.0F))
-        tblMainGBook.RowStyles.Add(New RowStyle(SizeType.Percent, 100.0F))
+        tblMainGBook.RowStyles.Add(New RowStyle(SizeType.Absolute, 75F))
+        tblMainGBook.RowStyles.Add(New RowStyle(SizeType.Percent, 100F))
         tblMainGBook.Size = New Size(1924, 917)
         tblMainGBook.TabIndex = 1
         ' 
@@ -137,7 +137,7 @@ Partial Class ucGradebook
         ' 
         pnlRubric.ActiveBorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
         pnlRubric.BackColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
-        pnlRubric.BorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
+        pnlRubric.BorderColor = Color.FromArgb(CByte(209), CByte(213), CByte(219))
         pnlRubric.BorderThickness = 1
         pnlRubric.Controls.Add(tblMainRubric)
         pnlRubric.Dock = DockStyle.Fill
@@ -150,8 +150,9 @@ Partial Class ucGradebook
         ' 
         ' tblMainRubric
         ' 
+        tblMainRubric.BackColor = Color.Transparent
         tblMainRubric.ColumnCount = 1
-        tblMainRubric.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 100.0F))
+        tblMainRubric.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 100F))
         tblMainRubric.Controls.Add(pnlBottomActions, 0, 2)
         tblMainRubric.Controls.Add(dgvGradebook, 0, 1)
         tblMainRubric.Controls.Add(pnlTopRubricBG, 0, 0)
@@ -159,9 +160,9 @@ Partial Class ucGradebook
         tblMainRubric.Location = New Point(0, 0)
         tblMainRubric.Name = "tblMainRubric"
         tblMainRubric.RowCount = 3
-        tblMainRubric.RowStyles.Add(New RowStyle(SizeType.Absolute, 125.0F))
-        tblMainRubric.RowStyles.Add(New RowStyle(SizeType.Percent, 100.0F))
-        tblMainRubric.RowStyles.Add(New RowStyle(SizeType.Absolute, 75.0F))
+        tblMainRubric.RowStyles.Add(New RowStyle(SizeType.Absolute, 125F))
+        tblMainRubric.RowStyles.Add(New RowStyle(SizeType.Percent, 100F))
+        tblMainRubric.RowStyles.Add(New RowStyle(SizeType.Absolute, 75F))
         tblMainRubric.Size = New Size(1874, 782)
         tblMainRubric.TabIndex = 0
         ' 
@@ -225,24 +226,24 @@ Partial Class ucGradebook
         dgvGradebook.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
         dgvGradebook.BackgroundColor = Color.White
         dgvGradebook.BorderStyle = BorderStyle.None
-        DataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle1.BackColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
-        DataGridViewCellStyle1.Font = New Font("Century Gothic", 9.0F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        DataGridViewCellStyle1.ForeColor = Color.White
-        DataGridViewCellStyle1.SelectionBackColor = SystemColors.Highlight
-        DataGridViewCellStyle1.SelectionForeColor = Color.White
-        DataGridViewCellStyle1.WrapMode = DataGridViewTriState.True
-        dgvGradebook.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle1
+        DataGridViewCellStyle3.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle3.BackColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
+        DataGridViewCellStyle3.Font = New Font("Century Gothic", 9F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        DataGridViewCellStyle3.ForeColor = Color.White
+        DataGridViewCellStyle3.SelectionBackColor = SystemColors.Highlight
+        DataGridViewCellStyle3.SelectionForeColor = Color.White
+        DataGridViewCellStyle3.WrapMode = DataGridViewTriState.True
+        dgvGradebook.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle3
         dgvGradebook.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize
         dgvGradebook.Columns.AddRange(New DataGridViewColumn() {number, studname, status, part, gra, EXTRA, Seatwork, quiz1, GRAQ1, quiz2, GRAQ2, quizp, project, graproject, exam, GRAexam, majorexam, grademajorexam})
-        DataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle2.BackColor = Color.White
-        DataGridViewCellStyle2.Font = New Font("Segoe UI", 9.0F)
-        DataGridViewCellStyle2.ForeColor = SystemColors.ControlText
-        DataGridViewCellStyle2.SelectionBackColor = SystemColors.Highlight
-        DataGridViewCellStyle2.SelectionForeColor = SystemColors.HighlightText
-        DataGridViewCellStyle2.WrapMode = DataGridViewTriState.False
-        dgvGradebook.DefaultCellStyle = DataGridViewCellStyle2
+        DataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle4.BackColor = Color.White
+        DataGridViewCellStyle4.Font = New Font("Segoe UI", 9F)
+        DataGridViewCellStyle4.ForeColor = SystemColors.ControlText
+        DataGridViewCellStyle4.SelectionBackColor = SystemColors.Highlight
+        DataGridViewCellStyle4.SelectionForeColor = SystemColors.HighlightText
+        DataGridViewCellStyle4.WrapMode = DataGridViewTriState.False
+        dgvGradebook.DefaultCellStyle = DataGridViewCellStyle4
         dgvGradebook.Dock = DockStyle.Fill
         dgvGradebook.GridColor = Color.White
         dgvGradebook.Location = New Point(20, 125)
@@ -502,7 +503,7 @@ Partial Class ucGradebook
         ' 
         pnlTopGradeBook.AutoSize = True
         pnlTopGradeBook.BackColor = Color.Transparent
-        pnlTopGradeBook.Font = New Font("Century Gothic", 12.0F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        pnlTopGradeBook.Font = New Font("Century Gothic", 12F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         pnlTopGradeBook.ForeColor = Color.FromArgb(CByte(126), CByte(126), CByte(126))
         pnlTopGradeBook.Location = New Point(22, 31)
         pnlTopGradeBook.Name = "pnlTopGradeBook"
@@ -512,7 +513,7 @@ Partial Class ucGradebook
         ' 
         ' ucGradebook
         ' 
-        AutoScaleDimensions = New SizeF(8.0F, 20.0F)
+        AutoScaleDimensions = New SizeF(8F, 20F)
         AutoScaleMode = AutoScaleMode.Font
         BackColor = Color.White
         Controls.Add(tblMainGBook)

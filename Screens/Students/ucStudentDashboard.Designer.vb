@@ -31,7 +31,7 @@ Partial Class ucStudentDashboard
         ' 
         pnlStudentDashBG.ActiveBorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
         pnlStudentDashBG.BackColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
-        pnlStudentDashBG.BorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
+        pnlStudentDashBG.BorderColor = Color.FromArgb(CByte(209), CByte(213), CByte(219))
         pnlStudentDashBG.BorderThickness = 1
         pnlStudentDashBG.Controls.Add(flowRubric)
         pnlStudentDashBG.Location = New Point(30, 19)
@@ -43,6 +43,7 @@ Partial Class ucStudentDashboard
         ' flowRubric
         ' 
         flowRubric.AutoScroll = True
+        flowRubric.BackColor = Color.Transparent
         flowRubric.Dock = DockStyle.Fill
         flowRubric.Location = New Point(0, 0)
         flowRubric.Name = "flowRubric"

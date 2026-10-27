@@ -39,7 +39,7 @@ Partial Class ucTeacherDashboard
         ' 
         pnlTeacherBG.ActiveBorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
         pnlTeacherBG.BackColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
-        pnlTeacherBG.BorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
+        pnlTeacherBG.BorderColor = Color.FromArgb(CByte(209), CByte(213), CByte(219))
         pnlTeacherBG.BorderThickness = 1
         pnlTeacherBG.Controls.Add(pnlSectionCards)
         pnlTeacherBG.Controls.Add(pnlToolTDash)
