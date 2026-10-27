@@ -32,7 +32,6 @@ Partial Class ucGradebook
         tblMainRubric = New TableLayoutPanel()
         pnlBottomActions = New Panel()
         btnSaveChanges = New ReaLTaiizor.Controls.Button()
-        btnSubmit = New ReaLTaiizor.Controls.Button()
         btnExportExcel = New ReaLTaiizor.Controls.Button()
         dgvGradebook = New DataGridView()
         number = New DataGridViewTextBoxColumn()
@@ -54,6 +53,7 @@ Partial Class ucGradebook
         majorexam = New DataGridViewTextBoxColumn()
         grademajorexam = New DataGridViewTextBoxColumn()
         pnlTopRubricBG = New RoundedPanel()
+        btnImport = New ReaLTaiizor.Controls.Button()
         Weights = New ComboBox()
         btnConfigureWeights = New Button()
         btnAddColumn = New ReaLTaiizor.Controls.Button()
@@ -91,7 +91,7 @@ Partial Class ucGradebook
         btnBack.BorderColor = Color.FromArgb(CByte(141), CByte(161), CByte(180))
         btnBack.EnteredBorderColor = Color.Empty
         btnBack.EnteredColor = Color.FromArgb(CByte(141), CByte(161), CByte(180))
-        btnBack.Font = New Font("Century Gothic", 9F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        btnBack.Font = New Font("Century Gothic", 9.0F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
         btnBack.Image = Nothing
         btnBack.ImageAlign = ContentAlignment.MiddleLeft
         btnBack.InactiveColor = Color.FromArgb(CByte(141), CByte(161), CByte(180))
@@ -120,7 +120,7 @@ Partial Class ucGradebook
         ' tblMainGBook
         ' 
         tblMainGBook.ColumnCount = 1
-        tblMainGBook.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 100F))
+        tblMainGBook.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 100.0F))
         tblMainGBook.Controls.Add(pnlTop, 0, 0)
         tblMainGBook.Controls.Add(pnlRubric, 0, 1)
         tblMainGBook.Dock = DockStyle.Fill
@@ -128,8 +128,8 @@ Partial Class ucGradebook
         tblMainGBook.Name = "tblMainGBook"
         tblMainGBook.Padding = New Padding(20)
         tblMainGBook.RowCount = 2
-        tblMainGBook.RowStyles.Add(New RowStyle(SizeType.Absolute, 75F))
-        tblMainGBook.RowStyles.Add(New RowStyle(SizeType.Percent, 100F))
+        tblMainGBook.RowStyles.Add(New RowStyle(SizeType.Absolute, 75.0F))
+        tblMainGBook.RowStyles.Add(New RowStyle(SizeType.Percent, 100.0F))
         tblMainGBook.Size = New Size(1924, 917)
         tblMainGBook.TabIndex = 1
         ' 
@@ -151,7 +151,7 @@ Partial Class ucGradebook
         ' tblMainRubric
         ' 
         tblMainRubric.ColumnCount = 1
-        tblMainRubric.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 100F))
+        tblMainRubric.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 100.0F))
         tblMainRubric.Controls.Add(pnlBottomActions, 0, 2)
         tblMainRubric.Controls.Add(dgvGradebook, 0, 1)
         tblMainRubric.Controls.Add(pnlTopRubricBG, 0, 0)
@@ -159,9 +159,9 @@ Partial Class ucGradebook
         tblMainRubric.Location = New Point(0, 0)
         tblMainRubric.Name = "tblMainRubric"
         tblMainRubric.RowCount = 3
-        tblMainRubric.RowStyles.Add(New RowStyle(SizeType.Absolute, 125F))
-        tblMainRubric.RowStyles.Add(New RowStyle(SizeType.Percent, 100F))
-        tblMainRubric.RowStyles.Add(New RowStyle(SizeType.Absolute, 75F))
+        tblMainRubric.RowStyles.Add(New RowStyle(SizeType.Absolute, 125.0F))
+        tblMainRubric.RowStyles.Add(New RowStyle(SizeType.Percent, 100.0F))
+        tblMainRubric.RowStyles.Add(New RowStyle(SizeType.Absolute, 75.0F))
         tblMainRubric.Size = New Size(1874, 782)
         tblMainRubric.TabIndex = 0
         ' 
@@ -169,7 +169,6 @@ Partial Class ucGradebook
         ' 
         pnlBottomActions.BackColor = Color.Transparent
         pnlBottomActions.Controls.Add(btnSaveChanges)
-        pnlBottomActions.Controls.Add(btnSubmit)
         pnlBottomActions.Controls.Add(btnExportExcel)
         pnlBottomActions.Dock = DockStyle.Fill
         pnlBottomActions.Location = New Point(3, 710)
@@ -197,27 +196,6 @@ Partial Class ucGradebook
         btnSaveChanges.Text = "Save Changes"
         btnSaveChanges.TextAlignment = StringAlignment.Center
         btnSaveChanges.UseWaitCursor = True
-        ' 
-        ' btnSubmit
-        ' 
-        btnSubmit.BackColor = Color.Transparent
-        btnSubmit.BackgroundImageLayout = ImageLayout.Zoom
-        btnSubmit.BorderColor = Color.FromArgb(CByte(32), CByte(34), CByte(37))
-        btnSubmit.EnteredBorderColor = Color.Empty
-        btnSubmit.EnteredColor = Color.FromArgb(CByte(220), CByte(70), CByte(70))
-        btnSubmit.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        btnSubmit.Image = Nothing
-        btnSubmit.ImageAlign = ContentAlignment.MiddleLeft
-        btnSubmit.InactiveColor = Color.FromArgb(CByte(200), CByte(51), CByte(51))
-        btnSubmit.Location = New Point(201, 15)
-        btnSubmit.Name = "btnSubmit"
-        btnSubmit.PressedBorderColor = Color.Transparent
-        btnSubmit.PressedColor = Color.FromArgb(CByte(165), CByte(38), CByte(38))
-        btnSubmit.Size = New Size(178, 40)
-        btnSubmit.TabIndex = 19
-        btnSubmit.Text = "Export"
-        btnSubmit.TextAlignment = StringAlignment.Center
-        btnSubmit.UseWaitCursor = True
         ' 
         ' btnExportExcel
         ' 
@@ -249,7 +227,7 @@ Partial Class ucGradebook
         dgvGradebook.BorderStyle = BorderStyle.None
         DataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft
         DataGridViewCellStyle1.BackColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
-        DataGridViewCellStyle1.Font = New Font("Century Gothic", 9F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        DataGridViewCellStyle1.Font = New Font("Century Gothic", 9.0F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         DataGridViewCellStyle1.ForeColor = Color.White
         DataGridViewCellStyle1.SelectionBackColor = SystemColors.Highlight
         DataGridViewCellStyle1.SelectionForeColor = Color.White
@@ -259,7 +237,7 @@ Partial Class ucGradebook
         dgvGradebook.Columns.AddRange(New DataGridViewColumn() {number, studname, status, part, gra, EXTRA, Seatwork, quiz1, GRAQ1, quiz2, GRAQ2, quizp, project, graproject, exam, GRAexam, majorexam, grademajorexam})
         DataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft
         DataGridViewCellStyle2.BackColor = Color.White
-        DataGridViewCellStyle2.Font = New Font("Segoe UI", 9F)
+        DataGridViewCellStyle2.Font = New Font("Segoe UI", 9.0F)
         DataGridViewCellStyle2.ForeColor = SystemColors.ControlText
         DataGridViewCellStyle2.SelectionBackColor = SystemColors.Highlight
         DataGridViewCellStyle2.SelectionForeColor = SystemColors.HighlightText
@@ -426,6 +404,7 @@ Partial Class ucGradebook
         pnlTopRubricBG.BackColor = Color.White
         pnlTopRubricBG.BorderColor = Color.White
         pnlTopRubricBG.BorderThickness = 1
+        pnlTopRubricBG.Controls.Add(btnImport)
         pnlTopRubricBG.Controls.Add(Weights)
         pnlTopRubricBG.Controls.Add(btnConfigureWeights)
         pnlTopRubricBG.Controls.Add(btnAddColumn)
@@ -438,6 +417,27 @@ Partial Class ucGradebook
         pnlTopRubricBG.Radius = 20
         pnlTopRubricBG.Size = New Size(1834, 85)
         pnlTopRubricBG.TabIndex = 0
+        ' 
+        ' btnImport
+        ' 
+        btnImport.BackColor = Color.Transparent
+        btnImport.BackgroundImageLayout = ImageLayout.Zoom
+        btnImport.BorderColor = Color.FromArgb(CByte(32), CByte(34), CByte(37))
+        btnImport.EnteredBorderColor = Color.Empty
+        btnImport.EnteredColor = Color.FromArgb(CByte(44), CByte(110), CByte(90))
+        btnImport.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        btnImport.Image = Nothing
+        btnImport.ImageAlign = ContentAlignment.MiddleLeft
+        btnImport.InactiveColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
+        btnImport.Location = New Point(1245, 24)
+        btnImport.Name = "btnImport"
+        btnImport.PressedBorderColor = Color.Transparent
+        btnImport.PressedColor = Color.FromArgb(CByte(25), CByte(70), CByte(57))
+        btnImport.Size = New Size(184, 40)
+        btnImport.TabIndex = 20
+        btnImport.Text = "Import Class List"
+        btnImport.TextAlignment = StringAlignment.Center
+        btnImport.UseWaitCursor = True
         ' 
         ' Weights
         ' 
@@ -502,7 +502,7 @@ Partial Class ucGradebook
         ' 
         pnlTopGradeBook.AutoSize = True
         pnlTopGradeBook.BackColor = Color.Transparent
-        pnlTopGradeBook.Font = New Font("Century Gothic", 12F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        pnlTopGradeBook.Font = New Font("Century Gothic", 12.0F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         pnlTopGradeBook.ForeColor = Color.FromArgb(CByte(126), CByte(126), CByte(126))
         pnlTopGradeBook.Location = New Point(22, 31)
         pnlTopGradeBook.Name = "pnlTopGradeBook"
@@ -512,7 +512,7 @@ Partial Class ucGradebook
         ' 
         ' ucGradebook
         ' 
-        AutoScaleDimensions = New SizeF(8F, 20F)
+        AutoScaleDimensions = New SizeF(8.0F, 20.0F)
         AutoScaleMode = AutoScaleMode.Font
         BackColor = Color.White
         Controls.Add(tblMainGBook)
@@ -538,7 +538,6 @@ Partial Class ucGradebook
     Friend WithEvents tblMainRubric As TableLayoutPanel
     Friend WithEvents pnlBottomActions As Panel
     Friend WithEvents btnSaveChanges As ReaLTaiizor.Controls.Button
-    Friend WithEvents btnSubmit As ReaLTaiizor.Controls.Button
     Friend WithEvents btnExportExcel As ReaLTaiizor.Controls.Button
     Friend WithEvents pnlTopRubricBG As RoundedPanel
     Friend WithEvents btnConfigureWeights As Button
@@ -565,5 +564,6 @@ Partial Class ucGradebook
     Friend WithEvents majorexam As DataGridViewTextBoxColumn
     Friend WithEvents grademajorexam As DataGridViewTextBoxColumn
     Friend WithEvents Weights As ComboBox
+    Friend WithEvents btnImport As ReaLTaiizor.Controls.Button
 
 End Class

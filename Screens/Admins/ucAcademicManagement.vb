@@ -1,9 +1,13 @@
-﻿Public Class ucAcademicManagement
+﻿Imports MySqlConnector
+
+Public Class ucAcademicManagement
 
     Private Sub ucAcademicManagement_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        InitViewSwitcher()          ' NEW
         PopulateDropdowns()
         LoadAcademicStats()
         LoadCoursesFromDatabase()
+        SelectActiveYearInFilter()
     End Sub
 
     ' =========================================================================
@@ -19,10 +23,10 @@
         cboYearLevel.Items.Clear()
         cboYearLevel.Items.Add("All Year Levels")
         Try
-            Dim dtYL As DataTable = DatabaseHelper.ExecuteQuery("SELECT DISTINCT year_level FROM student_profile WHERE year_level IS NOT NULL AND year_level <> '' ORDER BY year_level ASC;")
+            Dim dtYL As DataTable = DatabaseHelper.ExecuteQuery("SELECT DISTINCT year_level FROM section WHERE year_level IS NOT NULL ORDER BY year_level ASC;")
             If dtYL IsNot Nothing AndAlso dtYL.Rows.Count > 0 Then
                 For Each row As DataRow In dtYL.Rows
-                    cboYearLevel.Items.Add(row(0).ToString() & "nd Year")
+                    cboYearLevel.Items.Add(AcademicContext.OrdinalYear(Convert.ToInt32(row(0))))
                 Next
             Else
                 cboYearLevel.Items.AddRange(New String() {"1st Year", "2nd Year", "3rd Year", "4th Year"})
@@ -94,14 +98,18 @@
     ' =========================================================================
     Private Sub LoadCoursesFromDatabase()
         If flowCourses Is Nothing Then Return
-        DisposeAndClear(flowCourses)
+        flowCourses.DisposeAndClear()
 
         Dim sql As String = "SELECT cl.class_id, " &
                              "co.course_code, " &
                              "co.course_name, " &
                              "COALESCE(s.section_code, 'N/A') AS sec_name, " &
                              "CONCAT(tp.first_name, ' ', tp.last_name) AS instructor, " &
-                             "COUNT(e.student_id) AS student_count " &
+                             "COUNT(DISTINCT CASE WHEN e.status = 'Dropped' THEN NULL ELSE e.enrollment_id END) AS student_count, " &
+                             "(SELECT COUNT(*) FROM grade_item gi INNER JOIN grading_rubric gr ON gr.rubric_id = gi.rubric_id " &
+                             "  WHERE gr.class_id = cl.class_id) AS item_count, " &
+                             "(SELECT COUNT(*) FROM grade_entry ge INNER JOIN enrollment e2 ON e2.enrollment_id = ge.enrollment_id " &
+                             "  WHERE e2.class_id = cl.class_id AND e2.status <> 'Dropped' AND ge.score IS NOT NULL) AS filled_count " &
                              "FROM classes cl " &
                              "INNER JOIN course co ON cl.course_id = co.course_id " &
                              "LEFT JOIN section s ON cl.section_id = s.section_id " &
@@ -112,6 +120,13 @@
 
         If cboAY IsNot Nothing AndAlso cboAY.SelectedIndex > 0 Then
             sql &= " AND t.school_year = '" & SafeSql(cboAY.SelectedItem.ToString()) & "' "
+        End If
+
+        If cboYearLevel IsNot Nothing AndAlso cboYearLevel.SelectedIndex > 0 Then
+            Dim yl As Integer
+            If Integer.TryParse(cboYearLevel.SelectedItem.ToString().Substring(0, 1), yl) Then
+                sql &= " AND s.year_level = " & yl & " "
+            End If
         End If
 
         If cboSemester IsNot Nothing AndAlso cboSemester.SelectedIndex > 0 Then
@@ -140,8 +155,16 @@
                     Dim instructor As String = row("instructor").ToString()
                     Dim studentCount As String = row("student_count").ToString()
 
+                    ' Encoding progress = scores entered / (enrolled students x grade items)
+                    Dim expectedScores As Integer = Convert.ToInt32(row("student_count")) * Convert.ToInt32(row("item_count"))
+                    Dim filledScores As Integer = Convert.ToInt32(row("filled_count"))
+                    Dim progress As Integer = 0
+                    If expectedScores > 0 Then
+                        progress = CInt(Math.Min(100D, Math.Round(filledScores * 100D / expectedScores)))
+                    End If
+
                     Dim card As New ucCourseCard()
-                    card.SetData(subjectTitle, sectionCode, instructor, studentCount, 100)
+                    card.SetData(subjectTitle, sectionCode, instructor, studentCount, progress)
                     card.Margin = New Padding(15)
 
                     AddHandler card.CardClicked, Sub()
@@ -149,10 +172,12 @@
                                                  End Sub
 
                     flowCourses.Controls.Add(card)
+                    AttachClassMenu(card, classId)
                 Next
             End If
 
         Catch ex As Exception
+            MessageBox.Show("Error loading classes: " & ex.Message, "Database Error", MessageBoxButtons.OK)
         End Try
     End Sub
 
@@ -160,106 +185,34 @@
         Return val.Replace("'", "''")
     End Function
 
-    Private Sub OnFilterChanged(sender As Object, e As EventArgs) Handles cboAY.SelectedIndexChanged,
-                                                                           cboSemester.SelectedIndexChanged,
-                                                                           cboYearLevel.SelectedIndexChanged,
-                                                                           cboSection.SelectedIndexChanged
-        LoadCoursesFromDatabase()
+    Private Sub OnFilterChanged(sender As Object, e As EventArgs)
+        RefreshCurrentView()
     End Sub
 
     ' =========================================================================
     ' 3. ADD COURSE / INSTANTIATE CLASS MODAL
     ' =========================================================================
     Private Sub btnAddCourse_Click(sender As Object, e As EventArgs) Handles btnAddCourse.Click
-        Dim dtCourses As DataTable = DatabaseHelper.ExecuteQuery("SELECT course_id, CONCAT(course_code, ' - ', course_name) AS display FROM course ORDER BY course_code ASC;")
-        Dim dtSections As DataTable = DatabaseHelper.ExecuteQuery("SELECT section_id, section_code FROM section ORDER BY section_code ASC;")
-        Dim dtTeachers As DataTable = DatabaseHelper.ExecuteQuery("SELECT teacher_id, CONCAT(first_name, ' ', last_name) AS teacher_name FROM teacher_profile ORDER BY last_name ASC;")
-        Dim dtActiveTerm As DataTable = DatabaseHelper.ExecuteQuery("SELECT term_id, school_year, semester FROM academic_term WHERE is_active = 1 LIMIT 1;")
-
-        If dtActiveTerm Is Nothing OrElse dtActiveTerm.Rows.Count = 0 Then
-            MessageBox.Show("No active academic term found. Please set an active semester first in Semester/Grading Settings.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+        If showingSections Then
+            ShowAddSectionDialog()
             Return
         End If
 
-        Dim f As New Form()
-        f.Text = "Add New Class Instance"
-        f.Size = New Size(450, 380)
-        f.StartPosition = FormStartPosition.CenterParent
-        f.FormBorderStyle = FormBorderStyle.FixedDialog
-        f.MaximizeBox = False
-        f.MinimizeBox = False
-        f.Font = New Font("Century Gothic", 9, FontStyle.Regular)
-
-        Dim lblCourse As New Label() With {.Text = "Select Course:", .Location = New Point(20, 20), .AutoSize = True, .Font = New Font("Century Gothic", 9, FontStyle.Bold)}
-        Dim cboCourses As New ComboBox() With {.Location = New Point(20, 42), .Width = 390, .DropDownStyle = ComboBoxStyle.DropDownList, .Font = New Font("Century Gothic", 9, FontStyle.Regular)}
-        cboCourses.DataSource = dtCourses
-        cboCourses.DisplayMember = "display"
-        cboCourses.ValueMember = "course_id"
-
-        Dim lblSection As New Label() With {.Text = "Select Section:", .Location = New Point(20, 80), .AutoSize = True, .Font = New Font("Century Gothic", 9, FontStyle.Bold)}
-        Dim cboSections As New ComboBox() With {.Location = New Point(20, 102), .Width = 390, .DropDownStyle = ComboBoxStyle.DropDownList, .Font = New Font("Century Gothic", 9, FontStyle.Regular)}
-        cboSections.DataSource = dtSections
-        cboSections.DisplayMember = "section_code"
-        cboSections.ValueMember = "section_id"
-
-        Dim lblTeacher As New Label() With {.Text = "Assign Teacher:", .Location = New Point(20, 140), .AutoSize = True, .Font = New Font("Century Gothic", 9, FontStyle.Bold)}
-        Dim cboTeachers As New ComboBox() With {.Location = New Point(20, 162), .Width = 390, .DropDownStyle = ComboBoxStyle.DropDownList, .Font = New Font("Century Gothic", 9, FontStyle.Regular)}
-        cboTeachers.DataSource = dtTeachers
-        cboTeachers.DisplayMember = "teacher_name"
-        cboTeachers.ValueMember = "teacher_id"
-
-        Dim activeTermId As Integer = Convert.ToInt32(dtActiveTerm.Rows(0)("term_id"))
-        Dim activeTermLabel As String = $"{dtActiveTerm.Rows(0)("school_year")} (Sem {dtActiveTerm.Rows(0)("semester")})"
-        Dim lblTermInfo As New Label() With {.Text = "Active Term: " & activeTermLabel, .Location = New Point(20, 205), .AutoSize = True, .Font = New Font("Century Gothic", 9, FontStyle.Bold)}
-
-        Dim btnSave As New Button() With {.Text = "Save Class", .Location = New Point(200, 260), .Width = 100, .Height = 35, .DialogResult = DialogResult.OK, .Font = New Font("Century Gothic", 9, FontStyle.Bold)}
-        Dim btnCancel As New Button() With {.Text = "Cancel", .Location = New Point(310, 260), .Width = 100, .Height = 35, .DialogResult = DialogResult.Cancel, .Font = New Font("Century Gothic", 9, FontStyle.Regular)}
-
-        f.Controls.AddRange({lblCourse, cboCourses, lblSection, cboSections, lblTeacher, cboTeachers, lblTermInfo, btnSave, btnCancel})
-        f.AcceptButton = btnSave
-
-        If f.ShowDialog() = DialogResult.OK Then
-            If cboCourses.SelectedValue Is Nothing OrElse cboSections.SelectedValue Is Nothing OrElse cboTeachers.SelectedValue Is Nothing Then
-                MessageBox.Show("All fields must be selected.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-                Return
-            End If
-
-            Dim selectedCourseId As Integer = Convert.ToInt32(cboCourses.SelectedValue)
-            Dim selectedSectionId As Integer = Convert.ToInt32(cboSections.SelectedValue)
-            Dim selectedTeacherId As String = cboTeachers.SelectedValue.ToString()
-
-            Dim insertSql As String = "INSERT INTO classes (course_id, section_id, teacher_id, term_id) VALUES " &
-                                      $"({selectedCourseId}, {selectedSectionId}, '{selectedTeacherId}', {activeTermId});"
-
-            Try
-                DatabaseHelper.ExecuteNonQuery(insertSql)
-                MessageBox.Show("Class successfully instantiated and assigned!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information)
-                LoadCoursesFromDatabase()
-            Catch ex As Exception
-                MessageBox.Show("Error adding class instance: " & ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-            End Try
-        End If
+        ShowAddClassDialog()
     End Sub
 
     ' =========================================================================
-    ' 4. FLASH GRADEBOOK FROM TEACHER POV
-    ' =========================================================================
-    ' =========================================================================
-    ' 4. FLASH GRADEBOOK FROM TEACHER POV (ROUNDED BACK BUTTON WITH HOVER)
+    ' 4. FLASH GRADEBOOK FROM TEACHER POV (COMPLETE ASSESSMENT MATRIX)
     ' =========================================================================
     Private Sub ShowGradebookPOV(classId As Integer, courseTitle As String, sectionCode As String, teacherName As String)
-        Dim sql As String = "SELECT " &
-                             "sp.student_id AS `Student ID`, " &
-                             "CONCAT(sp.last_name, ', ', sp.first_name) AS `Student Name`, " &
-                             "e.status AS `Enrollment Status`, " &
-                             "COALESCE(e.final_grade, 0.00) AS `Final Grade`, " &
-                             "COALESCE(e.grade_equivalent, 0.00) AS `Equivalent` " &
-                             "FROM enrollment e " &
-                             "INNER JOIN student_profile sp ON e.student_id = sp.student_id " &
-                             "WHERE e.class_id = " & classId & " " &
-                             "ORDER BY sp.last_name ASC;"
-
-        Dim dtRoster As DataTable = DatabaseHelper.ExecuteQuery(sql)
+        ' If a gradebook is already open, replace it instead of stacking another one
+        For i As Integer = Me.Controls.Count - 1 To 0 Step -1
+            If Me.Controls(i).Name = "pnlGradebookView" Then
+                Dim stale As Control = Me.Controls(i)
+                Me.Controls.RemoveAt(i)
+                stale.Dispose()
+            End If
+        Next
 
         Dim pnlGradebook As New Panel() With {
             .Name = "pnlGradebookView",
@@ -269,83 +222,95 @@
 
         Dim pnlTopBar As New Panel() With {
             .Dock = DockStyle.Top,
-            .Height = 60,
+            .Height = 55,
             .BackColor = Color.FromArgb(240, 243, 246)
         }
 
-        ' ROUNDED BACK BUTTON WITH CUSTOM RGB COLORS & HOVER EFFECT
+        ' REFINED DYNAMIC-SIZED BACK BUTTON
         Dim normalColor As Color = Color.FromArgb(34, 90, 74)
         Dim hoverColor As Color = Color.FromArgb(23, 61, 50)
+        Dim isHovered As Boolean = False
+
+        Dim btnFont As New Font("Century Gothic", 8.5F, FontStyle.Regular)
+        Dim buttonText As String = "← Back to Classes"
+
+        ' Dynamically measure text width to prevent clipping under any DPI scaling
+        Dim measuredSize As Size = TextRenderer.MeasureText(buttonText, btnFont)
+        Dim btnWidth As Integer = measuredSize.Width + 28 ' 14px horizontal padding on each side
+        Dim btnHeight As Integer = 30
 
         Dim btnBack As New Button() With {
-            .Text = "← Back to Classes",
-            .Size = New Size(150, 35),
-            .Location = New Point(15, 12),
+            .Text = buttonText,
+            .Size = New Size(btnWidth, btnHeight),
+            .Location = New Point(15, (pnlTopBar.Height - btnHeight) \ 2), ' Perfectly centered vertically
             .FlatStyle = FlatStyle.Flat,
-            .BackColor = normalColor,
             .ForeColor = Color.White,
-            .Font = New Font("Century Gothic", 9, FontStyle.Regular),
-            .Cursor = Cursors.Hand
+            .Font = btnFont,
+            .Cursor = Cursors.Hand,
+            .BackColor = Color.Transparent
         }
         btnBack.FlatAppearance.BorderSize = 0
+        btnBack.FlatAppearance.MouseDownBackColor = Color.Transparent
+        btnBack.FlatAppearance.MouseOverBackColor = Color.Transparent
 
-        ' Dynamically apply rounded corners (Radius: 15px)
-        Dim cornerRadius As Integer = 15
-        Dim path As New System.Drawing.Drawing2D.GraphicsPath()
-        path.AddArc(0, 0, cornerRadius, cornerRadius, 180, 90)
-        path.AddArc(btnBack.Width - cornerRadius, 0, cornerRadius, cornerRadius, 270, 90)
-        path.AddArc(btnBack.Width - cornerRadius, btnBack.Height - cornerRadius, cornerRadius, cornerRadius, 0, 90)
-        path.AddArc(0, btnBack.Height - cornerRadius, cornerRadius, cornerRadius, 90, 90)
-        path.CloseAllFigures()
-        btnBack.Region = New Region(path)
+        AddHandler btnBack.MouseEnter, Sub()
+                                           isHovered = True
+                                           btnBack.Invalidate()
+                                       End Sub
 
-        ' Mouse Hover Event Handlers
-        AddHandler btnBack.MouseEnter, Sub() btnBack.BackColor = hoverColor
-        AddHandler btnBack.MouseLeave, Sub() btnBack.BackColor = normalColor
+        AddHandler btnBack.MouseLeave, Sub()
+                                           isHovered = False
+                                           btnBack.Invalidate()
+                                       End Sub
 
-        ' Click Event Handler
+        AddHandler btnBack.Paint, Sub(sender As Object, pe As PaintEventArgs)
+                                      Dim g As Graphics = pe.Graphics
+                                      g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias
+                                      g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit
+
+                                      Dim rect As New Rectangle(0, 0, btnBack.Width - 1, btnBack.Height - 1)
+                                      Dim cornerRadius As Integer = 12
+
+                                      Using path As New System.Drawing.Drawing2D.GraphicsPath()
+                                          path.AddArc(rect.X, rect.Y, cornerRadius, cornerRadius, 180, 90)
+                                          path.AddArc(rect.Right - cornerRadius, rect.Y, cornerRadius, cornerRadius, 270, 90)
+                                          path.AddArc(rect.Right - cornerRadius, rect.Bottom - cornerRadius, cornerRadius, cornerRadius, 0, 90)
+                                          path.AddArc(rect.X, rect.Bottom - cornerRadius, cornerRadius, cornerRadius, 90, 90)
+                                          path.CloseAllFigures()
+
+                                          Dim fillColor As Color = If(isHovered, hoverColor, normalColor)
+                                          Using brush As New SolidBrush(fillColor)
+                                              g.FillPath(brush, path)
+                                          End Using
+                                      End Using
+
+                                      TextRenderer.DrawText(g, btnBack.Text, btnBack.Font, rect, btnBack.ForeColor, TextFormatFlags.HorizontalCenter Or TextFormatFlags.VerticalCenter)
+                                  End Sub
+
         AddHandler btnBack.Click, Sub()
                                       Me.Controls.Remove(pnlGradebook)
                                       pnlGradebook.Dispose()
                                       LoadCoursesFromDatabase()
                                   End Sub
 
+        ' Dynamic positioning for title label relative to button
         Dim lblTitle As New Label() With {
             .Text = $"{courseTitle} — Section: {sectionCode} (Teacher: {teacherName})",
-            .Font = New Font("Century Gothic", 11, FontStyle.Bold),
-            .Location = New Point(180, 18),
+            .Font = New Font("Century Gothic", 10.5F, FontStyle.Bold),
             .AutoSize = True
         }
+        lblTitle.Location = New Point(btnBack.Right + 18, (pnlTopBar.Height - lblTitle.PreferredHeight) \ 2)
 
         pnlTopBar.Controls.Add(btnBack)
         pnlTopBar.Controls.Add(lblTitle)
 
-        Dim dgvRoster As New DataGridView() With {
-            .Dock = DockStyle.Fill,
-            .ReadOnly = True,
-            .AllowUserToAddRows = False,
-            .AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-            .SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-            .BackgroundColor = Color.White,
-            .BorderStyle = BorderStyle.None,
-            .Font = New Font("Century Gothic", 9, FontStyle.Regular)
-        }
-        dgvRoster.ColumnHeadersDefaultCellStyle.Font = New Font("Century Gothic", 9, FontStyle.Bold)
-        dgvRoster.DataSource = dtRoster
+        ' The real gradebook for this class.
+        Dim gradebook As New ucGradebook(classId) With {.Dock = DockStyle.Fill}
+        gradebook.EmbeddedMode = True
+        gradebook.ViewOnly = True
 
-        Dim lblFooter As New Label() With {
-            .Text = $"Total Enrolled Students: {If(dtRoster IsNot Nothing, dtRoster.Rows.Count, 0)}",
-            .Dock = DockStyle.Bottom,
-            .Height = 35,
-            .TextAlign = ContentAlignment.MiddleRight,
-            .Padding = New Padding(0, 0, 20, 0),
-            .Font = New Font("Century Gothic", 9, FontStyle.Bold),
-            .BackColor = Color.FromArgb(245, 247, 248)
-        }
-
-        pnlGradebook.Controls.Add(dgvRoster)
+        pnlGradebook.Controls.Add(gradebook)
         pnlGradebook.Controls.Add(pnlTopBar)
-        pnlGradebook.Controls.Add(lblFooter)
 
         Me.Controls.Add(pnlGradebook)
         pnlGradebook.BringToFront()
@@ -356,7 +321,7 @@
     ' =========================================================================
     Private Sub LoadAcademicStats()
         If flowStats Is Nothing Then Return
-        DisposeAndClear(flowStats)
+        flowStats.DisposeAndClear()
 
         Dim activeSem As String = "1"
         Dim totalSections As String = "0"
@@ -407,13 +372,6 @@
         box.Controls.Add(lblCaption)
         box.Controls.Add(lblValue)
         flowStats.Controls.Add(box)
-    End Sub
-
-    Private Sub DisposeAndClear(container As Control)
-        For Each ctrl As Control In container.Controls
-            ctrl.Dispose()
-        Next
-        container.Controls.Clear()
     End Sub
 
 End Class

@@ -70,6 +70,7 @@ Partial Public Class MainForm
         If pnlContent IsNot Nothing Then DisposeAndClear(pnlContent)
         If flowNotifList IsNot Nothing Then DisposeAndClear(flowNotifList)
 
+        StopNotificationPolling()
         If pnlNotifications IsNot Nothing Then pnlNotifications.Visible = False
         If btnNotif IsNot Nothing Then btnNotif.Visible = False
         If btnLogoutAdmin IsNot Nothing Then btnLogoutAdmin.Visible = False
@@ -114,7 +115,7 @@ Partial Public Class MainForm
                                    OrElse String.Equals(role, "Faculty", StringComparison.OrdinalIgnoreCase)
         Dim isStudent As Boolean = String.Equals(role, "Student", StringComparison.OrdinalIgnoreCase)
 
-        If btnNotif IsNot Nothing Then btnNotif.Visible = isAdmin
+        If btnNotif IsNot Nothing Then btnNotif.Visible = True
         If btnLogoutAdmin IsNot Nothing Then btnLogoutAdmin.Visible = isAdmin
         If pnlNotifications IsNot Nothing Then pnlNotifications.Visible = False
         If lblProfileSettingsLink IsNot Nothing Then
@@ -134,6 +135,8 @@ Partial Public Class MainForm
                 AddNavButton("ALL TRANSCRIPTS", Sub() ShowPage(New ucTranscript()))
                 AddNavButton("ANALYTICS", Sub() ShowPage(New ucAnalytics()))
         End Select
+
+        StartNotificationPolling()   ' red badge on the bell, refreshed every 30 seconds
 
     End Sub
 
@@ -176,19 +179,6 @@ Partial Public Class MainForm
     ' NOTIFICATIONS MANAGEMENT
     '========================================
 
-    Private Sub LoadNotifications()
-
-        If flowNotifList Is Nothing Then Return
-        DisposeAndClear(flowNotifList)
-
-        AddNotification("HH:MM AM  -  DD-MM-YYYY", "Official Midterm Grades for BSCS 1A - GE 001 are now available.", False)
-        AddNotification("HH:MM AM  -  DD-MM-YYYY", "Subject Add / Drop / Transfer Application", False)
-        AddNotification("HH:MM AM  -  DD-MM-YYYY", "Class Update Notice", False)
-        AddNotification("HH:MM AM  -  DD-MM-YYYY", "Official Midterm Grades for BSCS 1A - GE 001 are now available.", False)
-        AddNotification("HH:MM AM  -  DD-MM-YYYY", "Subject Add / Drop / Transfer Application", False)
-        AddNotification("HH:MM AM  -  DD-MM-YYYY", "Class Update Notice", True)
-    End Sub
-
     Private Sub btnNotificationBell_Click(sender As Object, e As EventArgs) Handles btnNotif.Click
         ' 1. Bring the notification container to front and make it visible
         If pnlNotifications IsNot Nothing Then
@@ -207,36 +197,16 @@ Partial Public Class MainForm
         LoadNotifications()
     End Sub
 
-    Private Sub AddNotification(timestamp As String, message As String, isCompleted As Boolean)
-
-        If flowNotifList Is Nothing Then Return
-
-        Dim item As New ucNotificationItem()
-        item.Width = Math.Max(flowNotifList.Width - 25, 100)
-        item.SetData(timestamp, message, isCompleted)
-        AddHandler item.ActionClicked, Sub() MessageBox.Show("Review clicked: " & message)
-        flowNotifList.Controls.Add(item)
-
-    End Sub
-
     '========================================
     ' PROFILE LINK & ACTIVE TAB STYLING
     '========================================
     Private Sub lblProfileSettingsLink_Click(sender As Object, e As EventArgs) Handles lblProfileSettingsLink.Click
-
         SetActiveNavControl(lblProfileSettingsLink)
 
-        Dim isTeacher As Boolean = String.Equals(_currentRole, "Teacher", StringComparison.OrdinalIgnoreCase)
-
+        Dim p = ProfileService.Load(SessionManager.CurrentUserId)
         Dim page As New ucProfileSettings()
-        page.SetData(
-            SessionManager.CurrentFullName,
-            _currentRole,
-            If(isTeacher, "Professor", "Student"),
-            "Department", "Email", "Phone Number"
-        )
+        page.SetData(SessionManager.CurrentFullName, _currentRole, p.RoleLabel, p.Department, p.Email, p.Phone)
         ShowPage(page)
-
     End Sub
 
     Private Sub SetActiveNavControl(active As Control)

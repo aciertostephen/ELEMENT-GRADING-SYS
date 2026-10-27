@@ -23,15 +23,18 @@ Public Class ucTranscript
         Try
             ' Query student details, section, enrolled courses, units, final grades, grade equivalents, and professor names
             Dim query As String = "SELECT sp.first_name, sp.middle_name, sp.last_name, s.section_code, " &
-                                 "co.course_code, co.course_name, co.units, e.final_grade, e.grade_equivalent, " &
+                                 "co.course_code, co.course_name, co.units, e.status AS enroll_status, " &
+                                 "CASE WHEN c.grades_released_at IS NULL THEN NULL ELSE e.final_grade END AS final_grade, " &
+                                 "CASE WHEN c.grades_released_at IS NULL THEN NULL ELSE e.grade_equivalent END AS grade_equivalent, " &
                                  "tp.last_name AS prof_last, tp.first_name AS prof_first " &
                                  "FROM student_profile sp " &
                                  "JOIN section s ON sp.section_id = s.section_id " &
-                                 "JOIN enrollment e ON sp.student_id = e.student_id " &
-                                 "JOIN classes c ON e.class_id = c.class_id " &
-                                 "JOIN course co ON c.course_id = co.course_id " &
-                                 "JOIN teacher_profile tp ON c.teacher_id = tp.teacher_id " &
-                                 "WHERE sp.user_id = @uid"
+                                 "LEFT JOIN enrollment e ON sp.student_id = e.student_id " &
+                                 "LEFT JOIN classes c ON e.class_id = c.class_id " &
+                                 "LEFT JOIN course co ON c.course_id = co.course_id " &
+                                 "LEFT JOIN teacher_profile tp ON c.teacher_id = tp.teacher_id " &
+                                 "WHERE sp.user_id = @uid " &
+                                 "ORDER BY c.term_id, co.course_code"
 
             Dim dt As DataTable = DatabaseHelper.ExecuteQuery(query, {New MySqlParameter("@uid", _userId)})
 
@@ -51,6 +54,7 @@ Public Class ucTranscript
 
                 ' Populate transcript courses, professor names, final grades, and compute GWA
                 For Each row As DataRow In dt.Rows
+                    If IsDBNull(row("course_code")) Then Continue For      ' student not enrolled in any class yet
                     Dim courseCode As String = row("course_code").ToString()
                     Dim courseName As String = row("course_name").ToString()
                     Dim units As Decimal = Convert.ToDecimal(row("units"))
@@ -65,13 +69,16 @@ Public Class ucTranscript
                     ' Grade shown in the grid: the computed grade equivalent (same scale as the GWA), or "IP" if not graded yet.
                     ' If your dashboard shows the percentage instead, swap to the line below:
                     ' Dim displayGrade As String = If(finalGrade.HasValue, finalGrade.Value.ToString("0.00"), "IP")
-                    Dim displayGrade As String = If(gradeEquiv > 0, gradeEquiv.ToString("0.00"), "IP")
+                    Dim enrollStatus As String = Convert.ToString(row("enroll_status"))
+                    Dim displayGrade As String = If(enrollStatus = "Dropped", "DRP",
+                                                 If(gradeEquiv > 0, gradeEquiv.ToString("0.00"),
+                                                 If(enrollStatus = "INC", "INC", "IP")))
 
                     ' Add row to DataGridView (Columns: Code, Subjects, Professor, Grade)
                     ' Units is not passed because the grid has no Units column; it is still used for the GWA below.
                     dgvTranscript.Rows.Add(courseCode, courseName, professorName, displayGrade)
 
-                    If gradeEquiv > 0 Then
+                    If gradeEquiv > 0 AndAlso enrollStatus <> "Dropped" Then
                         weightedSum += (gradeEquiv * units)
                         totalUnits += units
                     End If
@@ -79,7 +86,7 @@ Public Class ucTranscript
 
                 ' Calculate General Weighted Average (GWA)
                 If totalUnits > 0 Then
-                    Dim gwa As Decimal = Math.Round(weightedSum / totalUnits, 2)
+                    Dim gwa As Decimal = Math.Round(weightedSum / totalUnits, 2, MidpointRounding.AwayFromZero)
                     lblGWA.Text = $"GWA : {gwa.ToString("0.00")}"
                 Else
                     lblGWA.Text = "GWA : N/A"

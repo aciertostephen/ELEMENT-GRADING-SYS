@@ -43,7 +43,7 @@ Public Class ucAnalytics
 
             If Not String.IsNullOrEmpty(targetStudentId) Then
                 ' Query the student's actual courses, course codes, and final grades for the active term
-                Dim query As String = "SELECT co.course_code, co.course_name, COALESCE(e.final_grade, 0) AS final_grade " &
+                Dim query As String = "SELECT co.course_code, co.course_name, COALESCE(CASE WHEN c.grades_released_at IS NULL THEN NULL ELSE e.final_grade END, 0) AS final_grade " &
                                      "FROM enrollment e " &
                                      "JOIN classes c ON e.class_id = c.class_id " &
                                      "JOIN course co ON c.course_id = co.course_id " &
@@ -76,21 +76,25 @@ Public Class ucAnalytics
     End Sub
 
     Private Sub LoadComponentAnalyticsChart()
-        Dim labels() As String = {"PARTICIPATION", "QUIZZES", "PROJECT", "MAJOR EXAM"}
-        Dim values() As Double = {100, 75, 88, 85}
-
         FormsPlot2.Plot.Clear()
-        FormsPlot2.Plot.Add.Bars(values)
-        FormsPlot2.Plot.Axes.Bottom.SetTicks(Enumerable.Range(0, labels.Length).Select(Function(i) CDbl(i)).ToArray(), labels)
+        Dim data = AnalyticsService.ComponentAverages(GetStudentId())
+        If data.Count > 0 Then
+            FormsPlot2.Plot.Add.Bars(data.Select(Function(d) d.Value).ToArray())
+            FormsPlot2.Plot.Axes.Bottom.SetTicks(Enumerable.Range(0, data.Count).Select(Function(i) CDbl(i)).ToArray(),
+                                         data.Select(Function(d) d.Key).ToArray())
+        End If
         FormsPlot2.Refresh()
     End Sub
 
     Private Sub LoadAverageTrendChart()
-        Dim xs() As Double = {1, 2, 3, 4}
-        Dim ys() As Double = {95, 85, 90, 82}
-
         FormsPlot3.Plot.Clear()
-        FormsPlot3.Plot.Add.Scatter(xs, ys)
+        Dim data = AnalyticsService.TermTrend(GetStudentId())
+        If data.Count > 0 Then
+            FormsPlot3.Plot.Add.Scatter(Enumerable.Range(0, data.Count).Select(Function(i) CDbl(i)).ToArray(),
+                                data.Select(Function(d) d.Value).ToArray())
+            FormsPlot3.Plot.Axes.Bottom.SetTicks(Enumerable.Range(0, data.Count).Select(Function(i) CDbl(i)).ToArray(),
+                                         data.Select(Function(d) d.Key).ToArray())
+        End If
         FormsPlot3.Refresh()
     End Sub
 

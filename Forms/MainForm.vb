@@ -6,7 +6,7 @@ Public Class MainForm
     Implements IMessageFilter
 
     Private Sub MainForm_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-
+        AddHandler Application.ThreadException, Sub(s, ex) Msg.Fail("complete the action", ex.Exception)
         Me.WindowState = FormWindowState.Maximized
         Me.FormBorderStyle = FormBorderStyle.None
         Me.MaximizeBox = False
@@ -53,6 +53,16 @@ Public Class MainForm
     ' ADMIN LOGOUT HANDLER
     '========================================
     Private Sub btnLogoutAdmin_Click(sender As Object, e As EventArgs) Handles btnLogoutAdmin.Click
+        ' 1. Show confirmation dialog
+        Dim result As DialogResult = MessageBox.Show(
+        "Are you sure you want to log out?",
+        "Confirm Logout",
+        MessageBoxButtons.YesNo)
+
+        ' 2. If the user clicks 'No', cancel the logout process
+        If result <> DialogResult.Yes Then Return
+
+        ' 3. Proceed with existing logout logic if confirmed
         SessionManager.EndSession()
 
         If pnlApp IsNot Nothing Then

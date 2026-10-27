@@ -37,10 +37,12 @@
     End Sub
 
     Private Sub ChildClicked(sender As Object, e As EventArgs)
+        If Control.MouseButtons = MouseButtons.Right Then Return
         RaiseEvent CardClicked(Me, e)
     End Sub
 
     Private Sub ucCourseCard_Click(sender As Object, e As EventArgs) Handles Me.Click
+        If Control.MouseButtons = MouseButtons.Right Then Return
         RaiseEvent CardClicked(Me, e)
     End Sub
 
