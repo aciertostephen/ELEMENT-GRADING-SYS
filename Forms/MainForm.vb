@@ -2,6 +2,8 @@
 Imports System.Windows.Forms
 
 Public Class MainForm
+    Inherits Form
+    Implements IMessageFilter
 
     Private Sub MainForm_Load(sender As Object, e As EventArgs) Handles MyBase.Load
 
@@ -74,6 +76,47 @@ Public Class MainForm
         b.FlatAppearance.BorderSize = 0
         b.FlatAppearance.MouseOverBackColor = hoverColor
         b.FlatAppearance.MouseDownBackColor = downColor
+    End Sub
+
+    Private Const WM_LBUTTONDOWN As Integer = &H201
+    Private Const WM_NCLBUTTONDOWN As Integer = &H2A1
+
+    Protected Overrides Sub OnLoad(e As EventArgs)
+        MyBase.OnLoad(e)
+        ' Register the message filter when MainForm loads
+        Application.AddMessageFilter(Me)
+    End Sub
+
+    Public Function PreFilterMessage(ByRef m As Message) As Boolean Implements IMessageFilter.PreFilterMessage
+        ' Intercept left mouse button clicks
+        If m.Msg = WM_LBUTTONDOWN OrElse m.Msg = WM_NCLBUTTONDOWN Then
+            ' Only process if the notification panel is currently visible
+            If pnlNotifications IsNot Nothing AndAlso pnlNotifications.Visible Then
+                Dim clickPt As Point = Cursor.Position
+
+                ' Get screen bounds of the notification panel
+                Dim panelRect As Rectangle = pnlNotifications.RectangleToScreen(pnlNotifications.ClientRectangle)
+
+                ' Get screen bounds of the notification bell button (so clicking it doesn't instantly re-open/close glitch)
+                Dim bellRect As Rectangle = Rectangle.Empty
+                If btnNotif IsNot Nothing Then
+                    bellRect = btnNotif.RectangleToScreen(btnNotif.ClientRectangle)
+                End If
+
+                ' If the click occurred outside both the panel and the bell button, hide the panel
+                If Not panelRect.Contains(clickPt) AndAlso Not bellRect.Contains(clickPt) Then
+                    pnlNotifications.Visible = False
+                End If
+            End If
+        End If
+
+        Return False ' Allow the click event to continue normally to target controls
+    End Function
+
+    Protected Overrides Sub OnFormClosed(e As FormClosedEventArgs)
+        ' Clean up the message filter when closing
+        Application.RemoveMessageFilter(Me)
+        MyBase.OnFormClosed(e)
     End Sub
 
 End Class

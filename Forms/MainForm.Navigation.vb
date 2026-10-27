@@ -175,6 +175,7 @@ Partial Public Class MainForm
     '========================================
     ' NOTIFICATIONS MANAGEMENT
     '========================================
+
     Private Sub LoadNotifications()
 
         If flowNotifList Is Nothing Then Return
@@ -186,7 +187,24 @@ Partial Public Class MainForm
         AddNotification("HH:MM AM  -  DD-MM-YYYY", "Official Midterm Grades for BSCS 1A - GE 001 are now available.", False)
         AddNotification("HH:MM AM  -  DD-MM-YYYY", "Subject Add / Drop / Transfer Application", False)
         AddNotification("HH:MM AM  -  DD-MM-YYYY", "Class Update Notice", True)
+    End Sub
 
+    Private Sub btnNotificationBell_Click(sender As Object, e As EventArgs) Handles btnNotif.Click
+        ' 1. Bring the notification container to front and make it visible
+        If pnlNotifications IsNot Nothing Then
+            pnlNotifications.Visible = True
+            pnlNotifications.BringToFront()
+        End If
+
+        ' 2. Force layout calculation so flowNotifList has a valid width
+        If flowNotifList IsNot Nothing Then
+            flowNotifList.Visible = True
+            flowNotifList.BringToFront()
+            flowNotifList.PerformLayout()
+        End If
+
+        ' 3. Populate items
+        LoadNotifications()
     End Sub
 
     Private Sub AddNotification(timestamp As String, message As String, isCompleted As Boolean)
