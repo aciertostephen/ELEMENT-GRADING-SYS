@@ -161,7 +161,8 @@ Public Class RoundedPanel
 
         MyBase.OnPaint(e)
 
-        If Me.Width <= 0 OrElse Me.Height <= 0 Then
+        ' Nothing to draw when the panel is collapsed
+        If Me.Width <= 1 OrElse Me.Height <= 1 Then
             Return
         End If
 
@@ -178,10 +179,33 @@ Public Class RoundedPanel
             Me.Height - thickness
         )
 
+        ' Too thin to round (e.g. a 1px divider): fill it flat instead of drawing arcs
+        If rect.Width < 2 OrElse rect.Height < 2 Then
+            Using brush As New SolidBrush(Me.BackColor)
+                e.Graphics.FillRectangle(brush, 0, 0, Me.Width, Me.Height)
+            End Using
+            Return
+        End If
+
         Dim diameter As Single = Math.Min(
             _radius * 2.0F,
             Math.Min(rect.Width, rect.Height)
         )
+
+        ' Radius of 0 (or too small): draw a plain rectangle
+        If diameter < 1.0F Then
+            Using brush As New SolidBrush(Me.BackColor)
+                e.Graphics.FillRectangle(brush, rect)
+            End Using
+
+            If _borderThickness > 0 Then
+                Dim flatColor As Color = If(Me.ContainsFocus, _activeBorderColor, _borderColor)
+                Using pen As New Pen(flatColor, _borderThickness)
+                    e.Graphics.DrawRectangle(pen, rect.X, rect.Y, rect.Width, rect.Height)
+                End Using
+            End If
+            Return
+        End If
 
         Using path As New GraphicsPath()
 
@@ -283,7 +307,9 @@ Public Class RoundedPanel
 
     Private Sub UpdateRegion()
 
-        If Me.Width <= 0 OrElse Me.Height <= 0 Then
+        ' Too small to round: remove any rounded region
+        If Me.Width < 2 OrElse Me.Height < 2 Then
+            Me.Region = Nothing
             Return
         End If
 
@@ -301,6 +327,11 @@ Public Class RoundedPanel
                 rect.Height
             )
         )
+
+        If diameter < 1 Then
+            Me.Region = Nothing
+            Return
+        End If
 
         Using path As New GraphicsPath()
 
