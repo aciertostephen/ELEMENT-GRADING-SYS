@@ -169,8 +169,8 @@ Partial Class ucGradebook
         ' pnlBottomActions
         ' 
         pnlBottomActions.BackColor = Color.Transparent
-        pnlBottomActions.Controls.Add(btnSaveChanges)
         pnlBottomActions.Controls.Add(btnExportExcel)
+        pnlBottomActions.Controls.Add(btnSaveConfig)
         pnlBottomActions.Dock = DockStyle.Fill
         pnlBottomActions.Location = New Point(3, 710)
         pnlBottomActions.Name = "pnlBottomActions"
@@ -188,7 +188,7 @@ Partial Class ucGradebook
         btnSaveChanges.Image = Nothing
         btnSaveChanges.ImageAlign = ContentAlignment.MiddleLeft
         btnSaveChanges.InactiveColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
-        btnSaveChanges.Location = New Point(1673, 15)
+        btnSaveChanges.Location = New Point(1625, 24)
         btnSaveChanges.Name = "btnSaveChanges"
         btnSaveChanges.PressedBorderColor = Color.Transparent
         btnSaveChanges.PressedColor = Color.FromArgb(CByte(25), CByte(70), CByte(57))
@@ -405,11 +405,11 @@ Partial Class ucGradebook
         pnlTopRubricBG.BackColor = Color.White
         pnlTopRubricBG.BorderColor = Color.White
         pnlTopRubricBG.BorderThickness = 1
+        pnlTopRubricBG.Controls.Add(btnSaveChanges)
         pnlTopRubricBG.Controls.Add(btnImport)
         pnlTopRubricBG.Controls.Add(Weights)
         pnlTopRubricBG.Controls.Add(btnConfigureWeights)
         pnlTopRubricBG.Controls.Add(btnAddColumn)
-        pnlTopRubricBG.Controls.Add(btnSaveConfig)
         pnlTopRubricBG.Controls.Add(pnlTopGradeBook)
         pnlTopRubricBG.Dock = DockStyle.Fill
         pnlTopRubricBG.Location = New Point(20, 20)
@@ -447,6 +447,7 @@ Partial Class ucGradebook
         Weights.Name = "Weights"
         Weights.Size = New Size(253, 28)
         Weights.TabIndex = 19
+        Weights.Text = "Weights Percentage"
         ' 
         ' btnConfigureWeights
         ' 
@@ -489,7 +490,7 @@ Partial Class ucGradebook
         btnSaveConfig.Image = Nothing
         btnSaveConfig.ImageAlign = ContentAlignment.MiddleLeft
         btnSaveConfig.InactiveColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
-        btnSaveConfig.Location = New Point(1626, 24)
+        btnSaveConfig.Location = New Point(1642, 15)
         btnSaveConfig.Name = "btnSaveConfig"
         btnSaveConfig.PressedBorderColor = Color.Transparent
         btnSaveConfig.PressedColor = Color.FromArgb(CByte(25), CByte(70), CByte(57))
