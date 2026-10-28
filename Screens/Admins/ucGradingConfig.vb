@@ -117,12 +117,10 @@ Public Class ucGradingConfig
             .Text = text,
             .Size = New Size(90, 32),
             .Location = New Point(x, y),
-            .FlatStyle = FlatStyle.Flat,
-            .ForeColor = Color.White,
-            .BackColor = If(primary, Color.FromArgb(30, 86, 62), Color.Gray),
+            .FlatStyle = FlatStyle.System,
+            .UseVisualStyleBackColor = True,
             .DialogResult = If(primary, DialogResult.OK, DialogResult.Cancel)
         }
-        b.FlatAppearance.BorderSize = 0
         Return b
     End Function
 
@@ -262,6 +260,25 @@ Public Class ucGradingConfig
         End If
         btnEditEncoding.Enabled = (t IsNot Nothing)
         btnSetActive.Enabled = (t IsNot Nothing AndAlso Not t.IsActive)
+        If t IsNot Nothing AndAlso t.IsActive Then
+            btnSetActive.BackColor = RoundedPanel3.BackColor
+            btnSetActive.InactiveColor = RoundedPanel3.BackColor
+            btnSetActive.EnteredColor = RoundedPanel3.BackColor
+            btnSetActive.PressedColor = RoundedPanel3.BackColor
+            btnSetActive.BorderColor = Color.FromArgb(190, 198, 194)
+            btnSetActive.EnteredBorderColor = Color.FromArgb(190, 198, 194)
+            btnSetActive.PressedBorderColor = Color.FromArgb(190, 198, 194)
+            btnSetActive.ForeColor = Color.FromArgb(75, 85, 80)
+        Else
+            btnSetActive.BackColor = Color.Transparent
+            btnSetActive.InactiveColor = Color.FromArgb(34, 90, 74)
+            btnSetActive.EnteredColor = Color.FromArgb(23, 61, 50)
+            btnSetActive.PressedColor = Color.FromArgb(23, 61, 50)
+            btnSetActive.BorderColor = Color.Transparent
+            btnSetActive.EnteredBorderColor = Color.Transparent
+            btnSetActive.PressedBorderColor = Color.Transparent
+            btnSetActive.ForeColor = Color.White
+        End If
 
         ' ---- Active term (global: classes are created under it) ----
         Dim dtA As DataTable = DatabaseHelper.ExecuteQuery(
@@ -640,10 +657,10 @@ Public Class ucGradingConfig
         Private ReadOnly _maxCover As DateTime?
 
         Private ReadOnly nudStartYear As New NumericUpDown() With {.Width = 110, .Minimum = 2000, .Maximum = 2100}
-        Private ReadOnly lblYearValue As New Label() With {.AutoSize = True, .Font = New Font("Century Gothic", 11, FontStyle.Bold)}
+        Private ReadOnly lblYearValue As New Label() With {.AutoSize = True, .Font = SystemFonts.MessageBoxFont}
         Private ReadOnly dtpStart As New DateTimePicker() With {.Width = 310, .Format = DateTimePickerFormat.Short}
         Private ReadOnly dtpEnd As New DateTimePicker() With {.Width = 310, .Format = DateTimePickerFormat.Short}
-        Private ReadOnly lblWarning As New Label() With {.Width = 310, .Height = 50, .Font = New Font("Century Gothic", 8, FontStyle.Regular)}
+        Private ReadOnly lblWarning As New Label() With {.Width = 310, .Height = 50, .Font = SystemFonts.MessageBoxFont}
         Private ReadOnly btnOk As Button
         Private ReadOnly btnCancel As Button
 
@@ -669,13 +686,14 @@ Public Class ucGradingConfig
         Public Sub New(isNew As Boolean, startYear As Integer, startDt As DateTime?, endDt As DateTime?,
                        existingYears As List(Of String), minCover As DateTime?, maxCover As DateTime?)
             Text = If(isNew, "New School Year", "Edit School Year")
-            Font = New Font("Century Gothic", 9, FontStyle.Regular)
+            Font = SystemFonts.MessageBoxFont
             Size = New Size(370, 350)
             StartPosition = FormStartPosition.CenterParent
             FormBorderStyle = FormBorderStyle.FixedDialog
             MaximizeBox = False
             MinimizeBox = False
             ShowInTaskbar = False
+            ShowIcon = False
 
             _isNew = isNew
             _existingYears = existingYears
@@ -760,11 +778,11 @@ Public Class ucGradingConfig
             End If
 
             If msg = "" Then
-                lblWarning.ForeColor = Color.Green
+                lblWarning.ForeColor = SystemColors.ControlText
                 lblWarning.Text = "Valid school year. Next step: set up its semesters."
                 btnOk.Enabled = True
             Else
-                lblWarning.ForeColor = Color.Red
+                lblWarning.ForeColor = SystemColors.ControlText
                 lblWarning.Text = msg
                 btnOk.Enabled = False
             End If
@@ -782,8 +800,8 @@ Public Class ucGradingConfig
         Private ReadOnly dtpS1End As New DateTimePicker() With {.Width = 200, .Format = DateTimePickerFormat.Short}
         Private ReadOnly dtpS2Start As New DateTimePicker() With {.Width = 200, .Format = DateTimePickerFormat.Short}
         Private ReadOnly dtpS2End As New DateTimePicker() With {.Width = 200, .Format = DateTimePickerFormat.Short}
-        Private ReadOnly lblBreak As New Label() With {.Width = 440, .Height = 34, .ForeColor = Color.DimGray}
-        Private ReadOnly lblWarning As New Label() With {.Width = 440, .Height = 40, .Font = New Font("Century Gothic", 8, FontStyle.Regular)}
+        Private ReadOnly lblBreak As New Label() With {.Width = 440, .Height = 34, .ForeColor = SystemColors.ControlText}
+        Private ReadOnly lblWarning As New Label() With {.Width = 440, .Height = 40, .Font = SystemFonts.MessageBoxFont}
         Private ReadOnly btnOk As Button
         Private ReadOnly btnCancel As Button
 
@@ -820,13 +838,14 @@ Public Class ucGradingConfig
 
         Public Sub New(sy As String, syStart As DateTime, syEnd As DateTime, t1 As TermInfo, t2 As TermInfo)
             Text = "Edit Semesters - " & sy
-            Font = New Font("Century Gothic", 9, FontStyle.Regular)
+            Font = SystemFonts.MessageBoxFont
             Size = New Size(500, 380)
             StartPosition = FormStartPosition.CenterParent
             FormBorderStyle = FormBorderStyle.FixedDialog
             MaximizeBox = False
             MinimizeBox = False
             ShowInTaskbar = False
+            ShowIcon = False
 
             btnOk = MakeButton("Save", 290, 295, True)
             btnCancel = MakeButton("Cancel", 390, 295, False)
@@ -844,13 +863,10 @@ Public Class ucGradingConfig
             Dim pnl As New Panel() With {.Dock = DockStyle.Fill}
 
             Dim lblInfo As Label = MakeLabel("School year " & sy & ":  " & syStart.ToString("MM/dd/yyyy") & " - " & syEnd.ToString("MM/dd/yyyy"), 20, 12)
-            lblInfo.ForeColor = Color.DimGray
             pnl.Controls.Add(lblInfo)
 
             Dim h1 As Label = MakeLabel("1st Semester", 20, 42)
-            h1.Font = New Font("Century Gothic", 9, FontStyle.Bold)
             Dim h2 As Label = MakeLabel("2nd Semester", 250, 42)
-            h2.Font = New Font("Century Gothic", 9, FontStyle.Bold)
             pnl.Controls.Add(h1)
             pnl.Controls.Add(h2)
 
@@ -909,11 +925,11 @@ Public Class ucGradingConfig
             End If
 
             If msg = "" Then
-                lblWarning.ForeColor = Color.Green
+                lblWarning.ForeColor = SystemColors.ControlText
                 lblWarning.Text = "Valid. Grade encoding opens on each semester's start date."
                 btnOk.Enabled = True
             Else
-                lblWarning.ForeColor = Color.Red
+                lblWarning.ForeColor = SystemColors.ControlText
                 lblWarning.Text = msg
                 btnOk.Enabled = False
             End If
@@ -929,8 +945,8 @@ Public Class ucGradingConfig
 
         Private ReadOnly dtpDeadline As New DateTimePicker() With {.Width = 310, .Format = DateTimePickerFormat.Custom, .CustomFormat = "MM/dd/yyyy hh:mm tt"}
         Private ReadOnly chkLockSystem As New CheckBox() With {.Text = "Force Lock (close encoding for this semester now)", .AutoSize = True}
-        Private ReadOnly lblOpens As New Label() With {.Width = 310, .Height = 36, .ForeColor = Color.DimGray}
-        Private ReadOnly lblWarning As New Label() With {.Width = 310, .Height = 45, .Font = New Font("Century Gothic", 8, FontStyle.Regular)}
+        Private ReadOnly lblOpens As New Label() With {.Width = 310, .Height = 36, .ForeColor = SystemColors.ControlText}
+        Private ReadOnly lblWarning As New Label() With {.Width = 310, .Height = 45, .Font = SystemFonts.MessageBoxFont}
         Private ReadOnly btnOk As Button
         Private ReadOnly btnCancel As Button
 
@@ -953,13 +969,14 @@ Public Class ucGradingConfig
 
         Public Sub New(t As TermInfo, semName As String)
             Text = "Grade Encoding - " & semName
-            Font = New Font("Century Gothic", 9, FontStyle.Regular)
+            Font = SystemFonts.MessageBoxFont
             Size = New Size(370, 330)
             StartPosition = FormStartPosition.CenterParent
             FormBorderStyle = FormBorderStyle.FixedDialog
             MaximizeBox = False
             MinimizeBox = False
             ShowInTaskbar = False
+            ShowIcon = False
 
             encStart = t.EncodingStart
             termEnd = t.EndDate.Date
@@ -1002,19 +1019,19 @@ Public Class ucGradingConfig
 
         Private Sub ValidateSelectedDate(selected As DateTime)
             If selected <= encStart Then
-                lblWarning.ForeColor = Color.Red
+                lblWarning.ForeColor = SystemColors.ControlText
                 lblWarning.Text = "The deadline must be after encoding opens (" & encStart.ToString("MM/dd/yyyy") & ")."
                 btnOk.Enabled = False
             ElseIf selected > maxAllowed Then
-                lblWarning.ForeColor = Color.Red
+                lblWarning.ForeColor = SystemColors.ControlText
                 lblWarning.Text = "The deadline can be at most 1 month after the semester ends (until " & maxAllowed.ToString("MM/dd/yyyy") & ")."
                 btnOk.Enabled = False
             Else
                 If selected.Date > termEnd Then
-                    lblWarning.ForeColor = Color.DarkOrange
+                    lblWarning.ForeColor = SystemColors.ControlText
                     lblWarning.Text = "Falls in the post-semester grace period (the semester ends " & termEnd.ToString("MM/dd/yyyy") & ")."
                 Else
-                    lblWarning.ForeColor = Color.Green
+                    lblWarning.ForeColor = SystemColors.ControlText
                     lblWarning.Text = "Valid encoding window."
                 End If
                 btnOk.Enabled = True
@@ -1031,27 +1048,31 @@ Public Class ucGradingConfig
 
         Private _table As New DataTable()
         Private ReadOnly dgv As New DataGridView()
-        Private ReadOnly lblWarning As New Label() With {.AutoSize = False, .ForeColor = Color.DimGray}
+        Private ReadOnly lblWarning As New Label() With {.AutoSize = False, .ForeColor = SystemColors.ControlText}
         ' Standard Windows buttons (same look as a normal message box)
-        Private ReadOnly btnOk As New Button() With {.Text = "Save", .Size = New Size(110, 38), .FlatStyle = FlatStyle.System, .UseVisualStyleBackColor = True, .Font = New Font("Segoe UI", 10, FontStyle.Regular)}
-        Private ReadOnly btnCancel As New Button() With {.Text = "Cancel", .Size = New Size(110, 38), .FlatStyle = FlatStyle.System, .UseVisualStyleBackColor = True, .Font = New Font("Segoe UI", 10, FontStyle.Regular), .DialogResult = DialogResult.Cancel}
+        Private ReadOnly btnOk As New Button() With {.Text = "Save", .Size = New Size(110, 38), .FlatStyle = FlatStyle.System, .UseVisualStyleBackColor = True, .Font = SystemFonts.MessageBoxFont}
+        Private ReadOnly btnCancel As New Button() With {.Text = "Cancel", .Size = New Size(110, 38), .FlatStyle = FlatStyle.System, .UseVisualStyleBackColor = True, .Font = SystemFonts.MessageBoxFont, .DialogResult = DialogResult.Cancel}
 
         Public Sub New()
             Text = "Edit Grading Scale and GWA"
-            Font = New Font("Century Gothic", 9, FontStyle.Regular)
+            Font = SystemFonts.MessageBoxFont
             Size = New Size(520, 540)
             StartPosition = FormStartPosition.CenterParent
             FormBorderStyle = FormBorderStyle.FixedDialog
             MaximizeBox = False
             MinimizeBox = False
             ShowInTaskbar = False
+            ShowIcon = False
 
             dgv.Location = New Point(20, 15)
             dgv.Size = New Size(465, 350)
             dgv.AllowUserToAddRows = False
             dgv.AllowUserToDeleteRows = False
             dgv.RowHeadersVisible = False
-            dgv.BackgroundColor = Color.White
+            dgv.Font = SystemFonts.MessageBoxFont
+            dgv.BackgroundColor = SystemColors.Window
+            dgv.EnableHeadersVisualStyles = True
+            dgv.BorderStyle = BorderStyle.Fixed3D
 
             lblWarning.Location = New Point(20, 372)
             lblWarning.Size = New Size(465, 40)
@@ -1157,8 +1178,8 @@ Public Class ucGradingConfig
         Private Sub OnSave(sender As Object, e As EventArgs)
             Dim msg As String = ""
             If Not ValidateScale(msg) Then
-                lblWarning.ForeColor = Color.Red
-                lblWarning.Text = "⚠️ " & msg
+                lblWarning.ForeColor = SystemColors.ControlText
+                lblWarning.Text = msg
                 Return
             End If
 

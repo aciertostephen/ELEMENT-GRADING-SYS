@@ -39,7 +39,7 @@ Public Class ucTeacherDashboard
         Catch ex As Exception
             _classes = Nothing
             MessageBox.Show("Error loading courses: " & ex.Message, "Database Error",
-                            MessageBoxButtons.OK, MessageBoxIcon.Error)
+                            MessageBoxButtons.OK, MessageBoxIcon.None)
         End Try
 
         RenderCards()

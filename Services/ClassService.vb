@@ -19,7 +19,7 @@ Public Class ClassService
   Public Shared Function GetInfo(classId As Integer) As ClassInfo
     Dim dt = DatabaseHelper.ExecuteQuery(
       "SELECT c.class_id, c.course_id, c.section_id, c.teacher_id, c.term_id, t.school_year, " &
-      "       CONCAT(co.course_code, ' - ', s.section_code) AS title, c.grades_released_at, " &
+      "       CONCAT(co.course_code, ' - ', s.section_code) AS title, c.grades_released_at, c.midterm_released_at, c.finals_released_at, " &
       "       (SELECT COUNT(*) FROM grade_entry ge JOIN enrollment e ON e.enrollment_id = ge.enrollment_id " &
       "         WHERE e.class_id = c.class_id AND ge.score IS NOT NULL) AS score_count, " &
       "       (SELECT COUNT(*) FROM enrollment e WHERE e.class_id = c.class_id AND e.status <> 'Dropped') AS stu_count " &
@@ -32,7 +32,7 @@ Public Class ClassService
       .ClassId = classId, .CourseId = Convert.ToInt32(r("course_id")), .SectionId = Convert.ToInt32(r("section_id")),
       .TeacherId = r("teacher_id").ToString(), .TermId = Convert.ToInt32(r("term_id")),
       .SchoolYear = r("school_year").ToString(), .Title = r("title").ToString(),
-      .IsReleased = Not IsDBNull(r("grades_released_at")),
+      .IsReleased = Not IsDBNull(r("midterm_released_at")) OrElse Not IsDBNull(r("finals_released_at")) OrElse Not IsDBNull(r("grades_released_at")),
       .ScoreCount = Convert.ToInt32(r("score_count")), .StudentCount = Convert.ToInt32(r("stu_count"))}
   End Function
 
@@ -45,7 +45,9 @@ Public Class ClassService
   End Function
 
   Public Shared Function Create(courseId As Integer, sectionId As Integer, teacherId As String, termId As Integer) As Integer
+    If Not SessionManager.IsAdmin Then Throw New InvalidOperationException("Only an administrator can create a class.")
     EnsureSectionMatchesTerm(sectionId, termId)
+    EnsureTermEditable(termId)
     Try
       Dim r As Object = DatabaseHelper.ExecuteScalar("CALL sp_create_class(@co, @se, @te, @tm)",
         {DatabaseHelper.P("@co", courseId), DatabaseHelper.P("@se", sectionId),
@@ -62,9 +64,14 @@ Public Class ClassService
   End Function
 
   Public Shared Sub Update(classId As Integer, courseId As Integer, sectionId As Integer, teacherId As String)
+    If Not SessionManager.IsAdmin Then Throw New InvalidOperationException("Only an administrator can edit a class.")
     Dim info = GetInfo(classId)
     If info Is Nothing Then Throw New InvalidOperationException("Class not found.")
     EnsureEditable(info)
+    EnsureClassStructureEditable(info)
+    If (courseId <> info.CourseId OrElse sectionId <> info.SectionId) AndAlso (info.StudentCount > 0 OrElse info.ScoreCount > 0) Then
+      Throw New InvalidOperationException("A class with students or saved scores cannot be reassigned to a different course or section. Create a new class instead.")
+    End If
     EnsureSectionMatchesTerm(sectionId, info.TermId)
     Dim oldLabel As String = Label(classId)
     Try
@@ -89,12 +96,11 @@ Public Class ClassService
 
   ''' <summary>Deletes a class and everything under it, atomically.</summary>
   Public Shared Sub Delete(classId As Integer)
+    If Not SessionManager.IsAdmin Then Throw New InvalidOperationException("Only an administrator can delete a class.")
     Dim info = GetInfo(classId)
     If info Is Nothing Then Return
     EnsureEditable(info)
-    If info.IsReleased Then
-      Throw New InvalidOperationException("Grades for this class were already released to students, so it can no longer be deleted.")
-    End If
+    EnsureClassStructureEditable(info)
     Dim deletedLabel As String = Label(classId)
     DatabaseHelper.RunInTransaction(
       Sub(tx)
@@ -108,6 +114,30 @@ Public Class ClassService
       End Sub)
 
     NotifySafe(Sub() NotificationService.NotifyTeacher(info.TeacherId, "Your class " & deletedLabel & " was deleted by the admin."))
+  End Sub
+
+  Private Shared Sub EnsureClassStructureEditable(info As ClassInfo)
+    If info.IsReleased Then
+      Throw New InvalidOperationException("Grades for this class were already released to students, so its structure cannot be changed.")
+    End If
+    If DatabaseHelper.ScalarInt("SELECT is_locked FROM academic_term WHERE term_id = @t",
+                                {DatabaseHelper.P("@t", info.TermId)}) > 0 Then
+      Throw New InvalidOperationException("This term is locked, so the class structure cannot be changed.")
+    End If
+  End Sub
+
+  Private Shared Sub EnsureTermEditable(termId As Integer)
+    Dim dt As DataTable = DatabaseHelper.ExecuteQuery(
+      "SELECT school_year, is_locked FROM academic_term WHERE term_id = @t",
+      {DatabaseHelper.P("@t", termId)})
+    If dt.Rows.Count = 0 Then Throw New InvalidOperationException("The selected term was not found.")
+    Dim schoolYear As String = dt.Rows(0)("school_year").ToString()
+    If Not AcademicContext.IsEditableYear(schoolYear) Then
+      Throw New InvalidOperationException("School year " & schoolYear & " is past history and is read-only.")
+    End If
+    If Convert.ToInt32(dt.Rows(0)("is_locked")) = 1 Then
+      Throw New InvalidOperationException("This term is locked, so a class cannot be created.")
+    End If
   End Sub
 
   ''' <summary>

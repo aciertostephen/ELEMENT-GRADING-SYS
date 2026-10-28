@@ -30,6 +30,9 @@ Public Class MainForm
         If btnMinApp IsNot Nothing Then StyleWindowButton(btnMinApp, Color.FromArgb(230, 230, 230), Color.FromArgb(210, 210, 210))
         If btnExitApp IsNot Nothing Then StyleWindowButton(btnExitApp, Color.FromArgb(232, 17, 35), Color.FromArgb(241, 112, 122))
 
+        UiTheme.HookButtonReset(pnlLogin)
+        UiTheme.HookButtonReset(pnlApp)
+
         UpdateLayout()
 
     End Sub
@@ -109,8 +112,8 @@ Public Class MainForm
 
                 ' Get screen bounds of the notification bell button (so clicking it doesn't instantly re-open/close glitch)
                 Dim bellRect As Rectangle = Rectangle.Empty
-                If btnNotif IsNot Nothing Then
-                    bellRect = btnNotif.RectangleToScreen(btnNotif.ClientRectangle)
+                If btnBell IsNot Nothing Then
+                    bellRect = btnBell.RectangleToScreen(btnBell.ClientRectangle)
                 End If
 
                 ' If the click occurred outside both the panel and the bell button, hide the panel

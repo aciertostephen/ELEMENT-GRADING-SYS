@@ -15,11 +15,13 @@ Public MustInherit Class DialogBase
 
     Protected Sub New(title As String, Optional width As Integer = 420)
         Text = title
+        Font = SystemFonts.MessageBoxFont
         FormBorderStyle = FormBorderStyle.FixedDialog
         StartPosition = FormStartPosition.CenterParent
         MaximizeBox = False
         MinimizeBox = False
         ShowInTaskbar = False
+        ShowIcon = False
         ClientSize = New Size(width, 100)
     End Sub
 
@@ -43,7 +45,7 @@ Public MustInherit Class DialogBase
     Protected Sub AddNote(text As String, Optional isWarning As Boolean = False)
         Dim lbl As New Label() With {
           .Text = text, .AutoSize = False, .Width = ClientSize.Width - 32, .Height = NoteHeight(text),
-          .ForeColor = If(isWarning, UiTheme.Danger, UiTheme.Muted), .Location = New Point(16, _y)}
+          .ForeColor = SystemColors.ControlText, .Location = New Point(16, _y)}
         Controls.Add(lbl)
         _y += lbl.Height + 6
     End Sub

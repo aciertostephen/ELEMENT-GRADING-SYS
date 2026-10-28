@@ -7,16 +7,18 @@ Public Class ucAcademicManagement
         PopulateDropdowns()
         LoadAcademicStats()
         LoadCoursesFromDatabase()
-        SelectActiveYearInFilter()
+        ' The dean opens on the active year and can select historical years and semesters.
+        lblAY.Visible = True
+        cboAY.Visible = True
     End Sub
 
     ' =========================================================================
     ' 1. POPULATE DROPDOWNS FROM DATABASE
     ' =========================================================================
     Private Sub PopulateDropdowns()
-        RemoveHandler cboAY.SelectedIndexChanged, AddressOf OnFilterChanged
+        RemoveHandler cboAY.SelectedIndexChanged, AddressOf OnAcademicYearFilterChanged
         RemoveHandler cboSemester.SelectedIndexChanged, AddressOf OnFilterChanged
-        RemoveHandler cboYearLevel.SelectedIndexChanged, AddressOf OnFilterChanged
+        RemoveHandler cboYearLevel.SelectedIndexChanged, AddressOf OnYearLevelFilterChanged
         RemoveHandler cboSection.SelectedIndexChanged, AddressOf OnFilterChanged
 
         ' --- Year Levels ---
@@ -57,13 +59,13 @@ Public Class ucAcademicManagement
         Catch
             cboSemester.Items.AddRange(New String() {"1st Semester", "2nd Semester", "Summer"})
         End Try
-        cboSemester.SelectedIndex = 0
-
         ' --- Academic Years ---
         cboAY.Items.Clear()
         cboAY.Items.Add("All Academic Years")
         Try
-            Dim dtAY As DataTable = DatabaseHelper.ExecuteQuery("SELECT DISTINCT school_year FROM academic_term ORDER BY school_year DESC;")
+            Dim dtAY As DataTable = DatabaseHelper.ExecuteQuery(
+                "SELECT school_year FROM school_year_calendar UNION SELECT school_year FROM academic_term " &
+                "UNION SELECT school_year FROM section ORDER BY school_year DESC;")
             If dtAY IsNot Nothing AndAlso dtAY.Rows.Count > 0 Then
                 For Each row As DataRow In dtAY.Rows
                     If Not IsDBNull(row(0)) Then cboAY.Items.Add(row(0).ToString())
@@ -71,8 +73,6 @@ Public Class ucAcademicManagement
             End If
         Catch
         End Try
-        cboAY.SelectedIndex = 0
-
         ' --- Sections ---
         cboSection.Items.Clear()
         cboSection.Items.Add("All Sections")
@@ -85,12 +85,30 @@ Public Class ucAcademicManagement
             End If
         Catch
         End Try
+        Dim activeYear As String = ""
+        Dim activeSemester As Integer = 0
+        Try
+            Dim dtActive As DataTable = DatabaseHelper.ExecuteQuery(
+                "SELECT school_year, semester FROM academic_term WHERE is_active = 1 LIMIT 1;")
+            If dtActive IsNot Nothing AndAlso dtActive.Rows.Count > 0 Then
+                activeYear = dtActive.Rows(0)("school_year").ToString()
+                activeSemester = Convert.ToInt32(dtActive.Rows(0)("semester"))
+            End If
+        Catch
+        End Try
+        Dim yearIndex As Integer = cboAY.Items.IndexOf(activeYear)
+        cboAY.SelectedIndex = If(yearIndex > 0, yearIndex, 0)
+        Dim activeSemesterLabel As String = If(activeSemester = 1, "1st Semester",
+            If(activeSemester = 2, "2nd Semester", If(activeSemester = 3, "Summer", "")))
+        Dim semesterIndex As Integer = cboSemester.Items.IndexOf(activeSemesterLabel)
+        cboSemester.SelectedIndex = If(semesterIndex > 0, semesterIndex, 0)
         cboSection.SelectedIndex = 0
 
-        AddHandler cboAY.SelectedIndexChanged, AddressOf OnFilterChanged
+        AddHandler cboAY.SelectedIndexChanged, AddressOf OnAcademicYearFilterChanged
         AddHandler cboSemester.SelectedIndexChanged, AddressOf OnFilterChanged
-        AddHandler cboYearLevel.SelectedIndexChanged, AddressOf OnFilterChanged
+        AddHandler cboYearLevel.SelectedIndexChanged, AddressOf OnYearLevelFilterChanged
         AddHandler cboSection.SelectedIndexChanged, AddressOf OnFilterChanged
+        RefreshSectionFilter()
     End Sub
 
     ' =========================================================================
@@ -118,8 +136,11 @@ Public Class ucAcademicManagement
                              "LEFT JOIN enrollment e ON cl.class_id = e.class_id " &
                              "WHERE 1=1 "
 
+        Dim parameters As New System.Collections.Generic.List(Of MySqlParameter)()
+
         If cboAY IsNot Nothing AndAlso cboAY.SelectedIndex > 0 Then
-            sql &= " AND t.school_year = '" & SafeSql(cboAY.SelectedItem.ToString()) & "' "
+            sql &= " AND t.school_year = @school_year "
+            parameters.Add(New MySqlParameter("@school_year", cboAY.SelectedItem.ToString()))
         End If
 
         If cboYearLevel IsNot Nothing AndAlso cboYearLevel.SelectedIndex > 0 Then
@@ -130,22 +151,26 @@ Public Class ucAcademicManagement
         End If
 
         If cboSemester IsNot Nothing AndAlso cboSemester.SelectedIndex > 0 Then
-            Dim semVal As String = "1"
-            If cboSemester.SelectedItem.ToString().Contains("1st") Then semVal = "1"
-            If cboSemester.SelectedItem.ToString().Contains("2nd") Then semVal = "2"
-            If cboSemester.SelectedItem.ToString().Contains("Summer") Then semVal = "3"
-            sql &= " AND t.semester = " & semVal & " "
+            Dim semVal As Integer = 0
+            If cboSemester.SelectedItem.ToString().Contains("1st") Then semVal = 1
+            If cboSemester.SelectedItem.ToString().Contains("2nd") Then semVal = 2
+            If cboSemester.SelectedItem.ToString().Contains("Summer") Then semVal = 3
+            If semVal > 0 Then
+                sql &= " AND t.semester = @semester "
+                parameters.Add(New MySqlParameter("@semester", semVal))
+            End If
         End If
 
         If cboSection IsNot Nothing AndAlso cboSection.SelectedIndex > 0 Then
-            sql &= " AND s.section_code = '" & SafeSql(cboSection.SelectedItem.ToString()) & "' "
+            sql &= " AND s.section_code = @section_code "
+            parameters.Add(New MySqlParameter("@section_code", cboSection.SelectedItem.ToString()))
         End If
 
         sql &= " GROUP BY cl.class_id, co.course_code, co.course_name, s.section_code, tp.first_name, tp.last_name " &
                " ORDER BY co.course_code ASC;"
 
         Try
-            Dim dt As DataTable = DatabaseHelper.ExecuteQuery(sql)
+            Dim dt As DataTable = DatabaseHelper.ExecuteQuery(sql, parameters.ToArray())
 
             If dt IsNot Nothing AndAlso dt.Rows.Count > 0 Then
                 For Each row As DataRow In dt.Rows
@@ -189,16 +214,56 @@ Public Class ucAcademicManagement
         RefreshCurrentView()
     End Sub
 
+    Private Sub OnYearLevelFilterChanged(sender As Object, e As EventArgs)
+        RefreshSectionFilter()
+        RefreshCurrentView()
+    End Sub
+
+    Private Sub OnAcademicYearFilterChanged(sender As Object, e As EventArgs)
+        RefreshSectionFilter()
+        RefreshCurrentView()
+    End Sub
+
+    Private Sub RefreshSectionFilter()
+        Dim selected As String = If(cboSection.SelectedItem Is Nothing, "All Sections", cboSection.SelectedItem.ToString())
+        Dim selectedYear As Integer = 0
+        If cboYearLevel.SelectedIndex > 0 Then Integer.TryParse(cboYearLevel.SelectedItem.ToString().Substring(0, 1), selectedYear)
+        RemoveHandler cboSection.SelectedIndexChanged, AddressOf OnFilterChanged
+        cboSection.Items.Clear()
+        cboSection.Items.Add("All Sections")
+        Dim filters As New System.Collections.Generic.List(Of String)()
+        Dim parameters As New System.Collections.Generic.List(Of MySqlParameter)()
+        If selectedYear > 0 Then
+            filters.Add("year_level = @yl")
+            parameters.Add(New MySqlParameter("@yl", selectedYear))
+        End If
+        If cboAY.SelectedIndex > 0 Then
+            filters.Add("school_year = @sy")
+            parameters.Add(New MySqlParameter("@sy", cboAY.SelectedItem.ToString()))
+        End If
+        Dim sql As String = "SELECT DISTINCT section_code FROM section"
+        If filters.Count > 0 Then sql &= " WHERE " & String.Join(" AND ", filters)
+        sql &= " ORDER BY section_code ASC"
+        Dim dt As DataTable = DatabaseHelper.ExecuteQuery(sql, parameters.ToArray())
+        If dt IsNot Nothing Then
+            For Each row As DataRow In dt.Rows
+                cboSection.Items.Add(row(0).ToString())
+            Next
+        End If
+        Dim index As Integer = cboSection.Items.IndexOf(selected)
+        cboSection.SelectedIndex = If(index >= 0, index, 0)
+        AddHandler cboSection.SelectedIndexChanged, AddressOf OnFilterChanged
+    End Sub
+
     ' =========================================================================
     ' 3. ADD COURSE / INSTANTIATE CLASS MODAL
     ' =========================================================================
     Private Sub btnAddCourse_Click(sender As Object, e As EventArgs) Handles btnAddCourse.Click
-        If showingSections Then
-            ShowAddSectionDialog()
-            Return
-        End If
-
         ShowAddClassDialog()
+    End Sub
+
+    Private Sub btnAddSection_Click(sender As Object, e As EventArgs) Handles btnAddSection.Click
+        ShowAddSectionDialog()
     End Sub
 
     ' =========================================================================

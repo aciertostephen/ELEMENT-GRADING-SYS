@@ -13,6 +13,7 @@ Public Class ClassDialog
     Private ReadOnly cboCourse As ComboBox
     Private ReadOnly cboSection As ComboBox
     Private ReadOnly cboTeacher As ComboBox
+    Private ReadOnly txtTerm As TextBox
 
     Public Sub New(Optional classId As Integer = 0)
         MyBase.New(If(classId = 0, "Create Class", "Edit Class"), 440)
@@ -32,11 +33,20 @@ Public Class ClassDialog
         cboCourse = MakeCombo(CourseService.ListForCombo(), "display", "course_id")
         cboSection = MakeCombo(ClassService.SectionsForCombo(schoolYear), "section_label", "section_id")
         cboTeacher = MakeCombo(ClassService.TeachersForCombo(), "teacher_name", "teacher_id")
+        Dim semester As Integer = DatabaseHelper.ScalarInt(
+            "SELECT semester FROM academic_term WHERE term_id = @t", {DatabaseHelper.P("@t", _termId)})
+        txtTerm = New TextBox() With {
+            .ReadOnly = True,
+            .TabStop = False,
+            .Text = schoolYear & " - " & AcademicContext.SemesterName(semester),
+            .BackColor = SystemColors.Control
+        }
 
         AddField("Course:", cboCourse)
         AddField("Section (label only - the teacher imports the real class list):", cboSection)
         AddField("Teacher:", cboTeacher)
-        AddNote("School year: " & schoolYear & If(classId = 0, "  (active term)", "  (term cannot be changed)"))
+        AddField("School Year / Semester:", txtTerm)
+        AddNote(If(classId = 0, "This class will be created for the active term.", "The class term is fixed after creation."))
         If info IsNot Nothing AndAlso info.ScoreCount > 0 Then
             AddNote("This class already has " & info.ScoreCount & " recorded score(s). Changing the teacher moves the whole gradebook to the new teacher.", True)
         End If

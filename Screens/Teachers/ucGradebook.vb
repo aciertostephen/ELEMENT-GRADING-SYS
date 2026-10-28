@@ -5,6 +5,8 @@ Imports System.Text.RegularExpressions
 Public Class ucGradebook
 
     Private _classId As Integer
+    Private _period As String = "Final"
+    Private _periodSelector As ComboBox
 
     Public Sub New()
         InitializeComponent()
@@ -17,6 +19,13 @@ Public Class ucGradebook
     Public Sub New(classId As Integer)
         Me.New()
         _classId = classId
+    End Sub
+
+    Public Sub New(classId As Integer, period As String)
+        Me.New(classId)
+        If period IsNot Nothing AndAlso (period.Equals("Midterm", StringComparison.OrdinalIgnoreCase) OrElse period.Equals("Final", StringComparison.OrdinalIgnoreCase)) Then
+            _period = If(period.Equals("Midterm", StringComparison.OrdinalIgnoreCase), "Midterm", "Final")
+        End If
     End Sub
 
     ' ==========================================
@@ -163,14 +172,47 @@ Public Class ucGradebook
             Me.Enabled = False
             Return
         End If
+        EnsurePeriodSelector()
         EnsureClassRubric()
         LoadWeightsFromDatabase()
         BuildGrid()
         LoadStudents()
         RecalculateAll()
         UpdateWeightDistributionComboBox()
+        _gradebookSaved = IsPeriodReleased()
+        UpdateSaveButtonState()
         ApplyViewMode()
     End Sub
+
+    Private Sub EnsurePeriodSelector()
+        If _periodSelector IsNot Nothing Then Return
+        _periodSelector = New ComboBox With {.DropDownStyle = ComboBoxStyle.DropDownList, .Width = 150, .Height = 28,
+            .Font = New Font("Century Gothic", 9.0F), .Location = New Point(250, 26), .Anchor = AnchorStyles.Top Or AnchorStyles.Left}
+        _periodSelector.Items.AddRange(New Object() {"Midterm", "Final"})
+        _periodSelector.SelectedItem = _period
+        AddHandler _periodSelector.SelectedIndexChanged,
+            Sub(sender, e)
+                If _periodSelector.SelectedItem Is Nothing Then Return
+                Dim selected As String = _periodSelector.SelectedItem.ToString()
+                If selected = _period Then Return
+                _period = selected
+                EnsureClassRubric()
+                LoadWeightsFromDatabase()
+                BuildGrid()
+                LoadStudents()
+                RecalculateAll()
+                UpdateWeightDistributionComboBox()
+                _gradebookSaved = IsPeriodReleased()
+                UpdateSaveButtonState()
+            End Sub
+        pnlTopRubricBG.Controls.Add(_periodSelector)
+    End Sub
+
+    Private Function IsPeriodReleased() As Boolean
+        Dim col As String = If(_period = "Midterm", "midterm_released_at", "finals_released_at")
+        Return DatabaseHelper.ScalarInt("SELECT COUNT(*) FROM classes WHERE class_id = @c AND " & col & " IS NOT NULL",
+            {DatabaseHelper.P("@c", _classId)}) > 0
+    End Function
 
     Private Sub ApplyViewMode()
         btnBack.Visible = Not _embedded
@@ -178,6 +220,22 @@ Public Class ucGradebook
             dgvGradebook.ReadOnly = True
             HideEditControls(Me)
         End If
+    End Sub
+
+    Private Sub btnSaveChanges_Click(sender As Object, e As EventArgs) Handles btnSaveChanges.Click
+        If _viewOnly OrElse _classId <= 0 Then Return
+        If GradebookFrozen() Then Return
+
+        Try
+            dgvGradebook.EndEdit()
+            If WeightsTotal() = 100D Then
+                PersistWeightsIfValid()
+            End If
+            RecalculateAll()
+            Msg.Info("Changes saved. Scores are saved as you enter them; this action does not release grades to students.", "Changes Saved")
+        Catch ex As Exception
+            Msg.Fail("save gradebook changes", ex)
+        End Try
     End Sub
 
     ' Read-only view: remove every control that changes data (Add Column, Set Weights, Save ...).
@@ -202,22 +260,22 @@ Public Class ucGradebook
         If _classId <= 0 OrElse _viewOnly Then Return
         Try
             Dim dtR As DataTable = DatabaseHelper.ExecuteQuery(
-                "SELECT COUNT(*) FROM grading_rubric WHERE class_id = @cid",
-                {New MySqlParameter("@cid", _classId)})
+                "SELECT COUNT(*) FROM grading_rubric WHERE class_id = @cid AND period = @p",
+                {New MySqlParameter("@cid", _classId), New MySqlParameter("@p", _period)})
             If dtR Is Nothing OrElse dtR.Rows.Count = 0 Then Return
 
             If Convert.ToInt32(dtR.Rows(0)(0)) = 0 Then
                 DatabaseHelper.ExecuteNonQuery(
-                    "INSERT INTO grading_rubric (class_id, component_name, weight_percent, is_fixed) VALUES " &
-                    "(@cid, 'Participation', 10, 0), (@cid, 'Quizzes', 20, 0), (@cid, 'Projects', 30, 0), (@cid, 'Final Exam', 40, 1)",
-                    {New MySqlParameter("@cid", _classId)})
+                    "INSERT INTO grading_rubric (class_id, period, component_name, weight_percent, is_fixed) VALUES " &
+                    "(@cid, @p, 'Participation', 10, 0), (@cid, @p, 'Quizzes', 20, 0), (@cid, @p, 'Projects', 30, 0), (@cid, @p, 'Final Exam', 40, 1)",
+                    {New MySqlParameter("@cid", _classId), New MySqlParameter("@p", _period)})
             End If
 
             LoadWeightsFromDatabase()
 
             Dim dtI As DataTable = DatabaseHelper.ExecuteQuery(
-                "SELECT COUNT(*) FROM grade_item gi INNER JOIN grading_rubric r ON r.rubric_id = gi.rubric_id WHERE r.class_id = @cid",
-                {New MySqlParameter("@cid", _classId)})
+                "SELECT COUNT(*) FROM grade_item gi INNER JOIN grading_rubric r ON r.rubric_id = gi.rubric_id WHERE r.class_id = @cid AND r.period = @p",
+                {New MySqlParameter("@cid", _classId), New MySqlParameter("@p", _period)})
             If dtI IsNot Nothing AndAlso dtI.Rows.Count > 0 AndAlso Convert.ToInt32(dtI.Rows(0)(0)) = 0 Then
                 For Each it In defaultItems
                     Dim rid As Integer = rubricIdByCat(it.Category)
@@ -244,8 +302,8 @@ Public Class ucGradebook
         Try
             Dim dt As DataTable = DatabaseHelper.ExecuteQuery(
                 "SELECT rubric_id, component_name, weight_percent, is_fixed FROM grading_rubric " &
-                "WHERE class_id = @cid ORDER BY is_fixed ASC, rubric_id ASC",
-                {New MySqlParameter("@cid", _classId)})
+                "WHERE class_id = @cid AND period = @p ORDER BY is_fixed ASC, rubric_id ASC",
+                {New MySqlParameter("@cid", _classId), New MySqlParameter("@p", _period)})
             If dt Is Nothing Then Return
 
             Dim custom As Integer = 0
@@ -516,10 +574,10 @@ Public Class ucGradebook
         "JOIN student_profile sp ON sp.student_id = e.student_id " &
         "LEFT JOIN grade_entry ge ON ge.enrollment_id = e.enrollment_id " &
         "LEFT JOIN grade_item gi ON gi.item_id = ge.item_id " &
-        "WHERE e.class_id = @cid " &
+        "WHERE e.class_id = @cid AND (gi.item_id IS NULL OR EXISTS (SELECT 1 FROM grading_rubric rp WHERE rp.rubric_id = gi.rubric_id AND rp.period = @p)) " &
         "ORDER BY sp.last_name, sp.first_name"
 
-        Dim dt As DataTable = DatabaseHelper.ExecuteQuery(sql, {New MySqlParameter("@cid", _classId)})
+        Dim dt As DataTable = DatabaseHelper.ExecuteQuery(sql, {New MySqlParameter("@cid", _classId), New MySqlParameter("@p", _period)})
         If dt Is Nothing Then Return
 
         Dim rowsByEnrollment As New Dictionary(Of String, DataGridViewRow)
@@ -614,29 +672,17 @@ Public Class ucGradebook
     End Function
 
     Private Function AskGradingPeriod() As String
-        Do
-            Dim input As String = Microsoft.VisualBasic.InputBox(
-            "Select the grading period to export:" & vbCrLf &
-            "1. Midterm" & vbCrLf &
-            "2. Final" & vbCrLf &
-            "3. Semestral",
-            "Grading Period", "Midterm")
-
-            If String.IsNullOrWhiteSpace(input) Then Return Nothing
-
-            Select Case input.Trim().TrimEnd("."c).ToLower()
-                Case "1", "midterm" : Return "Midterm"
-                Case "2", "final" : Return "Final"
-                Case "3", "semestral" : Return "Semestral"
-            End Select
-
-            MessageBox.Show("Please enter 1, 2, 3 or the name of the grading period.", "Invalid Grading Period", MessageBoxButtons.OK)
-        Loop
+        Using dlg As New GradebookValueDialog("Grading Period", "Choose the grading period to export:", "Midterm",
+                                               New String() {"Midterm", "Final"})
+            If dlg.ShowDialog(FindForm()) <> DialogResult.OK Then Return Nothing
+            Return dlg.Value
+        End Using
     End Function
 
     Private Sub btnExport_Click(sender As Object, e As EventArgs) Handles btnExportExcel.Click
         Dim period As String = AskGradingPeriod()
         If period Is Nothing Then Return
+        If _periodSelector IsNot Nothing Then _periodSelector.SelectedItem = period
 
         Using sfd As New SaveFileDialog()
             sfd.Filter = "Excel Workbook|*.xlsx"
@@ -1420,13 +1466,13 @@ Public Class ucGradebook
             Dim catName As String = CategoryName(picked)
             Dim oldWeight As Decimal = CategoryWeight(picked)
 
-            Dim typed As String = Microsoft.VisualBasic.InputBox(
-                "Set the percentage for " & catName & "." & vbCrLf &
-                "Only the value after "":"" is used." & vbCrLf &
-                "All categories together must total 100% (Major Exam is fixed at 40%).",
-                "Set Category Weight",
-                catName & ": " & oldWeight.ToString("0.##") & "%")
-            If String.IsNullOrWhiteSpace(typed) Then Return
+            Dim typed As String
+            Using dlg As New GradebookValueDialog("Set Category Weight",
+                "Set " & catName & " percentage (the four categories must total 100%):",
+                oldWeight.ToString("0.##"), maxLength:=8)
+                If dlg.ShowDialog(FindForm()) <> DialogResult.OK Then Return
+                typed = dlg.Value
+            End Using
 
             Dim newWeight As Decimal
             If Not TryParseWeightInput(typed, newWeight) OrElse newWeight < 0D OrElse newWeight > 60D Then
@@ -1470,12 +1516,12 @@ Public Class ucGradebook
             Dim newNames() As String = {"", "", "", ""}
 
             For i As Integer = 1 To 3
-                Dim typedName As String = Microsoft.VisualBasic.InputBox(
-                    "Enter the new name for Category " & i & ":" & vbCrLf &
-                    "(Major Exam is fixed at " & weightExam.ToString("0.##") & "% and cannot be renamed or changed.)",
-                    "Rename Category",
-                    oldNames(i))
-                If String.IsNullOrWhiteSpace(typedName) Then Return
+                Dim typedName As String
+                Using dlg As New GradebookValueDialog("Rename Category " & i,
+                    "Enter the new name (Final Exam is fixed and cannot be renamed):", oldNames(i), maxLength:=50)
+                    If dlg.ShowDialog(FindForm()) <> DialogResult.OK Then Return
+                    typedName = dlg.Value
+                End Using
                 typedName = typedName.Trim()
 
                 If typedName.Equals("Major Exam", StringComparison.OrdinalIgnoreCase) Then
@@ -1548,8 +1594,9 @@ Public Class ucGradebook
         Dim reason As String = Nothing
         Try
             reason = FrozenReason()
-        Catch
-            Return False
+        Catch ex As Exception
+            Msg.Fail("check the gradebook status", ex)
+            Return True
         End Try
         If reason Is Nothing Then Return False
         Msg.Warn(reason)
@@ -1590,16 +1637,12 @@ Public Class ucGradebook
 
     Private Sub btnAddColumn_Click(sender As Object, e As EventArgs) Handles btnAddColumn.Click
         If GradebookFrozen() Then Return
-        Dim categoryChoice As String = Microsoft.VisualBasic.InputBox(
-            "Select the category for this column:" & vbCrLf &
-            "1. " & customCat1Name & vbCrLf &
-            "2. " & customCat2Name & vbCrLf &
-            "3. " & customCat3Name & vbCrLf &
-            "4. Final Exam",
-            "Select Category",
-            "2")
-
-        If String.IsNullOrWhiteSpace(categoryChoice) Then Return
+        Dim categoryChoice As String
+        Using dlg As New GradebookValueDialog("Select Category", "Choose the grading category:", customCat2Name,
+            New String() {customCat1Name, customCat2Name, customCat3Name, "Final Exam"})
+            If dlg.ShowDialog(FindForm()) <> DialogResult.OK Then Return
+            categoryChoice = dlg.Value
+        End Using
 
         Dim cat As Integer = ParseCategory(categoryChoice)
         If cat = 0 Then
@@ -1607,19 +1650,17 @@ Public Class ucGradebook
             Return
         End If
 
-        Dim columnName As String = Microsoft.VisualBasic.InputBox(
-            "Enter the name of the new assessment column (e.g., Quiz 3, Activity 4):",
-            "Add Assessment Column",
-            "New Assessment")
+        Dim columnName As String
+        Using dlg As New GradebookValueDialog("Add Assessment Column", "Assessment name:", "New Assessment", maxLength:=100)
+            If dlg.ShowDialog(FindForm()) <> DialogResult.OK Then Return
+            columnName = dlg.Value.Trim()
+        End Using
 
-        If String.IsNullOrWhiteSpace(columnName) Then Return
-        columnName = columnName.Trim()
-
-        Dim maxInput As String = Microsoft.VisualBasic.InputBox(
-            "Enter the total / highest possible score for '" & columnName & "':",
-            "Maximum Score",
-            "100")
-        If String.IsNullOrWhiteSpace(maxInput) Then Return
+        Dim maxInput As String
+        Using dlg As New GradebookValueDialog("Maximum Score", "Highest possible score for " & columnName & ":", "100", maxLength:=12)
+            If dlg.ShowDialog(FindForm()) <> DialogResult.OK Then Return
+            maxInput = dlg.Value
+        End Using
 
         Dim maxScore As Decimal
         If Not Decimal.TryParse(maxInput.Trim(), maxScore) OrElse maxScore <= 0 Then
@@ -1775,6 +1816,16 @@ Public Class ucGradebook
     Private Sub UpdateSaveButtonState()
         If btnSaveConfig Is Nothing OrElse _viewOnly Then Return
 
+        If _gradebookSaved Then
+            btnSaveConfig.Text = "Update Published " & _period & " Grades"
+            btnSaveConfig.Size = New Size(228, btnSaveConfig.Height)
+            btnSaveConfig.Location = New Point(1598, btnSaveConfig.Top)
+        Else
+            btnSaveConfig.Text = "Publish " & _period & " Grades"
+            btnSaveConfig.Size = New Size(184, btnSaveConfig.Height)
+            btnSaveConfig.Location = New Point(1642, btnSaveConfig.Top)
+        End If
+
         If Not _saveBtnColorKept Then
             _saveBtnBackColor = btnSaveConfig.BackColor
             _saveBtnColorKept = True
@@ -1785,7 +1836,7 @@ Public Class ucGradebook
 
         If blockers.Count = 0 Then
             btnSaveConfig.BackColor = _saveBtnBackColor
-            saveTip.SetToolTip(btnSaveConfig, "Save the gradebook")
+            saveTip.SetToolTip(btnSaveConfig, "Publish the " & _period & " gradebook")
         Else
             btnSaveConfig.BackColor = Color.Silver
             saveTip.SetToolTip(btnSaveConfig, "Not ready yet: " & blockers(0))
@@ -1815,9 +1866,10 @@ Public Class ucGradebook
                 Return
             End If
 
-            If Not Msg.Confirm("Saving the gradebook computes the final grades and makes them visible to the students." & vbCrLf &
-                               "The admin is notified, and the class list can no longer be changed (no more importing)." & vbCrLf & vbCrLf &
-                               "Save and release the grades now?", "Save and release grades") Then Return
+            If Not Msg.Confirm("Saving the " & _period & " gradebook computes its grades and makes them visible to students." & vbCrLf &
+                               If(_period = "Final", "The admin is notified. ", "") &
+                               "The class list can no longer be changed (no more importing)." & vbCrLf & vbCrLf &
+                               "Save and release " & _period & " grades now?", "Save and release grades") Then Return
 
             SaveActiveWeightsToDatabase(customCat1Name, customCat1Weight, customCat2Name, customCat2Weight,
                                     customCat3Name, customCat3Weight, weightExam)
@@ -1825,11 +1877,12 @@ Public Class ucGradebook
             dgvGradebook.Invalidate()
             RecalculateAll()   ' only refreshes the grid on screen now
 
-            Dim n As Integer = GradeReleaseService.SaveAndRelease(_classId)
+            Dim n As Integer = GradeReleaseService.SaveAndRelease(_classId, _period)
 
             _gradebookSaved = True
-            Msg.Info("You now have a saved gradebook." & vbCrLf &
-                     n & " student(s) can now see their final grades and the admin was notified." & vbCrLf & vbCrLf &
+            UpdateSaveButtonState()
+            Msg.Info("You now have a saved " & _period & " gradebook." & vbCrLf &
+                     n & " student(s) can now see their " & _period & " grades." & If(_period = "Final", " The admin was notified.", "") & vbCrLf & vbCrLf &
                      "You can still make changes, but each change will need your confirmation and the gradebook has to be saved again.")
         Catch ex As Exception
             Msg.Fail("save the gradebook", ex)

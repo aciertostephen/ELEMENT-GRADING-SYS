@@ -89,11 +89,23 @@ Partial Public Class MainForm
             SessionManager.StartSession(userId, username, role, fullName)
             txtPassword.Clear()
             RouteToDashboard(role)
+            If SessionManager.IsAdmin Then StartAutomaticDatabaseBackup()
 
         Catch ex As Exception
             MessageBox.Show("Database Login Error: " & ex.Message, "Database Error",
                             MessageBoxButtons.OK)
         End Try
+    End Sub
+
+    Private Sub StartAutomaticDatabaseBackup()
+        Task.Run(Function() DatabaseBackupService.CreateDailyBackup()).ContinueWith(
+            Sub(task)
+                Dim warning As String = If(task.IsFaulted,
+                    "Automatic database backup failed: " & task.Exception.GetBaseException().Message,
+                    task.Result)
+                If String.IsNullOrWhiteSpace(warning) OrElse IsDisposed OrElse Not IsHandleCreated Then Return
+                BeginInvoke(New Action(Sub() Msg.Warn(warning, "Automatic Backup")))
+            End Sub)
     End Sub
 
     Private Sub RouteToDashboard(role As String)

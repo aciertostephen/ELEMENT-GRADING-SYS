@@ -54,6 +54,11 @@ Public Class EnrollmentService
   Public Shared Function AddStudent(classId As Integer, studentId As String) As Boolean
     Dim info As ClassService.ClassInfo = ClassService.GetInfo(classId)
     If info Is Nothing Then Throw New InvalidOperationException("Class not found.")
+    If Not SessionManager.IsTeacher OrElse Not ClassService.TeacherOwnsClass(classId, SessionManager.CurrentUserId) Then
+      Throw New InvalidOperationException("Only the class teacher can update this class roster.")
+    End If
+    Dim blocked As String = ClassService.CannotChangeGradebookReason(classId)
+    If blocked IsNot Nothing Then Throw New InvalidOperationException(blocked)
 
     Dim added As Boolean = False
     DatabaseHelper.RunInTransaction(
@@ -70,10 +75,12 @@ Public Class EnrollmentService
           Dim ids As New IdAllocator(tx, info.SchoolYear)
           tx.Exec("INSERT INTO enrollment (enrollment_id, student_id, class_id, status) VALUES (@e, @s, @c, 'Enrolled')",
                   DatabaseHelper.P("@e", ids.NextId()), DatabaseHelper.P("@s", studentId), DatabaseHelper.P("@c", classId))
+          NotificationService.NotifyStudentAssigned(tx, classId, studentId)
           added = True
         ElseIf status.ToString() = "Dropped" Then
           tx.Exec("UPDATE enrollment SET status = 'Enrolled' WHERE class_id = @c AND student_id = @s",
                   DatabaseHelper.P("@c", classId), DatabaseHelper.P("@s", studentId))
+          NotificationService.NotifyStudentAssigned(tx, classId, studentId)
         End If
       End Sub)
     Return added
@@ -81,6 +88,14 @@ Public Class EnrollmentService
 
   ''' <summary>Students with grades are marked Dropped, never deleted.</summary>
   Public Shared Sub Drop(enrollmentId As String)
+    If Not SessionManager.IsTeacher Then Throw New InvalidOperationException("Only a teacher can drop a student from a class.")
+    Dim classId As Integer = DatabaseHelper.ScalarInt("SELECT class_id FROM enrollment WHERE enrollment_id = @e",
+                                                       {DatabaseHelper.P("@e", enrollmentId)})
+    If classId <= 0 OrElse Not ClassService.TeacherOwnsClass(classId, SessionManager.CurrentUserId) Then
+      Throw New InvalidOperationException("This enrollment does not belong to one of your classes.")
+    End If
+    Dim blocked As String = ClassService.CannotChangeGradebookReason(classId)
+    If blocked IsNot Nothing Then Throw New InvalidOperationException(blocked)
     DatabaseHelper.ExecuteNonQuery("UPDATE enrollment SET status = 'Dropped', final_grade = NULL, grade_equivalent = NULL " &
                                    "WHERE enrollment_id = @e", {DatabaseHelper.P("@e", enrollmentId)})
   End Sub

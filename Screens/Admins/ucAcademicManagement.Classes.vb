@@ -2,8 +2,7 @@ Imports System.Windows.Forms
 
 ' =====================================================================
 ' ucAcademicManagement - Courses / Classes part (new partial class).
-' Needs a button named btnCreateCourse in the designer (you said you add it).
-' See PATCHES_AND_TODO.md for the 3 small edits in the existing ucAcademicManagement file.
+' The Create Course button is part of the academic management screen.
 ' =====================================================================
 Partial Public Class ucAcademicManagement
 

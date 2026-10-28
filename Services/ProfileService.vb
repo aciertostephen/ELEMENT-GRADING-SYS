@@ -1,7 +1,8 @@
-Imports System.Data
+﻿Imports System.Data
 Imports System.Drawing
 Imports System.IO
 Imports MySqlConnector
+Imports BCryptHasher = BCrypt.Net.BCrypt
 
 ''' <summary>Real data for Profile Settings (replaces the "Department / Email / Phone Number" placeholders).</summary>
 Public Class ProfileService
@@ -45,12 +46,68 @@ Public Class ProfileService
   End Function
 
   Public Shared Sub SaveContact(userId As Integer, email As String, phone As String)
+    EnsureSelfUser(userId)
     email = If(email, "").Trim()
     If Not IsEmail(email) Then Throw New InvalidOperationException("Please enter a valid email address.")
-    If Not IsPhone(phone) Then Throw New InvalidOperationException("Phone number must be a 10-digit mobile number starting with 9.")
+    phone = If(phone, "").Trim()
+    If phone <> "" AndAlso Not IsPhone(phone) Then Throw New InvalidOperationException("Phone number must be a 10-digit mobile number starting with 9.")
     Try
       DatabaseHelper.ExecuteNonQuery("UPDATE users SET email = @e, phone_no = @p WHERE user_id = @u",
-        {DatabaseHelper.P("@e", email), DatabaseHelper.P("@p", NormalizePhone(phone)), DatabaseHelper.P("@u", userId)})
+        {DatabaseHelper.P("@e", email), DatabaseHelper.P("@p", If(phone = "", CType(DBNull.Value, Object), NormalizePhone(phone))), DatabaseHelper.P("@u", userId)})
+    Catch ex As MySqlException When ex.Number = 1062
+      Throw New InvalidOperationException("That email is already used by another account.")
+    End Try
+  End Sub
+
+  ''' <summary>Save contact details and, when requested, change the user's password atomically.</summary>
+  Public Shared Sub SaveSettings(userId As Integer, email As String, phone As String,
+                                 currentPassword As String, newPassword As String, confirmPassword As String)
+    EnsureSelfUser(userId)
+    email = If(email, "").Trim()
+    phone = If(phone, "").Trim()
+    currentPassword = If(currentPassword, "")
+    newPassword = If(newPassword, "")
+    confirmPassword = If(confirmPassword, "")
+
+    If Not IsEmail(email) Then Throw New InvalidOperationException("Please enter a valid email address.")
+    If phone <> "" AndAlso Not IsPhone(phone) Then Throw New InvalidOperationException("Phone number must be a 10-digit mobile number starting with 9.")
+
+    Dim changePassword As Boolean = currentPassword <> "" OrElse newPassword <> "" OrElse confirmPassword <> ""
+    Dim newHash As String = Nothing
+    If changePassword Then
+      If currentPassword = "" Then Throw New InvalidOperationException("Enter your current password to change it.")
+      If newPassword.Length < 8 Then Throw New InvalidOperationException("The new password must be at least 8 characters.")
+      If newPassword.Contains(" "c) Then Throw New InvalidOperationException("The new password cannot contain spaces.")
+      If newPassword <> confirmPassword Then Throw New InvalidOperationException("The new passwords do not match.")
+
+      Dim stored As Object = DatabaseHelper.ExecuteScalar(
+        "SELECT password_hash FROM users WHERE user_id = @u", {DatabaseHelper.P("@u", userId)})
+      If stored Is Nothing OrElse stored Is DBNull.Value Then Throw New InvalidOperationException("The account password could not be verified.")
+      Dim storedHash As String = If(TypeOf stored Is Byte(), System.Text.Encoding.UTF8.GetString(DirectCast(stored, Byte())), Convert.ToString(stored))
+      Dim valid As Boolean = False
+      Try
+        valid = BCryptHasher.Verify(currentPassword, storedHash.Trim())
+      Catch
+        valid = False
+      End Try
+      If Not valid Then Throw New InvalidOperationException("The current password is incorrect.")
+      newHash = BCryptHasher.HashPassword(newPassword, 11)
+    End If
+
+    Try
+      DatabaseHelper.RunInTransaction(
+        Sub(tx)
+          Dim sql As String = "UPDATE users SET email = @e, phone_no = @p"
+          If changePassword Then sql &= ", password_hash = @h"
+          sql &= " WHERE user_id = @u"
+          If changePassword Then
+            tx.Exec(sql, DatabaseHelper.P("@e", email), DatabaseHelper.P("@p", If(phone = "", CType(DBNull.Value, Object), NormalizePhone(phone))),
+                    DatabaseHelper.P("@h", newHash), DatabaseHelper.P("@u", userId))
+          Else
+            tx.Exec(sql, DatabaseHelper.P("@e", email), DatabaseHelper.P("@p", If(phone = "", CType(DBNull.Value, Object), NormalizePhone(phone))),
+                    DatabaseHelper.P("@u", userId))
+          End If
+        End Sub)
     Catch ex As MySqlException When ex.Number = 1062
       Throw New InvalidOperationException("That email is already used by another account.")
     End Try
@@ -63,10 +120,18 @@ Public Class ProfileService
   End Function
 
   Public Shared Sub SavePicture(userId As Integer, img As Image)
+    EnsureSelfUser(userId)
+    If img Is Nothing Then Throw New InvalidOperationException("Choose a profile image first.")
     Dim path As String = System.IO.Path.Combine(AvatarFolder(), userId & ".png")
     img.Save(path, Imaging.ImageFormat.Png)
     DatabaseHelper.ExecuteNonQuery("UPDATE users SET profile_picture = @p WHERE user_id = @u",
       {DatabaseHelper.P("@p", path), DatabaseHelper.P("@u", userId)})
+  End Sub
+
+  Private Shared Sub EnsureSelfUser(userId As Integer)
+    If Not SessionManager.IsLoggedIn OrElse userId <> SessionManager.CurrentUserId Then
+      Throw New InvalidOperationException("You can only update your own profile.")
+    End If
   End Sub
 
   ''' <summary>Returns a copy of the saved picture (no file lock), or Nothing.</summary>

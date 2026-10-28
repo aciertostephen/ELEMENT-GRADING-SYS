@@ -22,6 +22,8 @@
             btnMinApp.Location = New Point(btnExitApp.Left - btnMinApp.Width, 0)
         End If
 
+        PositionNotificationPanel()
+
     End Sub
 
     Private Sub UpdateLeftPanel()
