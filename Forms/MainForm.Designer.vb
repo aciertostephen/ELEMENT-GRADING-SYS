@@ -53,6 +53,7 @@ Partial Class MainForm
         pnlApp = New Panel()
         pnlContent = New Panel()
         pnlHeader = New Panel()
+        btnBell = New PictureBox()
         btnNotif = New Button()
         btnLogoutAdmin = New ReaLTaiizor.Controls.Button()
         lblProfileSettingsLink = New LinkLabel()
@@ -81,6 +82,7 @@ Partial Class MainForm
         pnlExitConfirmation.SuspendLayout()
         pnlApp.SuspendLayout()
         pnlHeader.SuspendLayout()
+        CType(btnBell, ComponentModel.ISupportInitialize).BeginInit()
         CType(picLogoApp, ComponentModel.ISupportInitialize).BeginInit()
         CType(picCCSApp, ComponentModel.ISupportInitialize).BeginInit()
         pnlNotifications.SuspendLayout()
@@ -484,6 +486,7 @@ Partial Class MainForm
         ' pnlHeader
         ' 
         pnlHeader.BackColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
+        pnlHeader.Controls.Add(btnBell)
         pnlHeader.Controls.Add(btnNotif)
         pnlHeader.Controls.Add(btnLogoutAdmin)
         pnlHeader.Controls.Add(lblProfileSettingsLink)
@@ -499,6 +502,17 @@ Partial Class MainForm
         pnlHeader.Size = New Size(1925, 139)
         pnlHeader.TabIndex = 0
         ' 
+        ' btnBell
+        ' 
+        btnBell.BackColor = Color.Transparent
+        btnBell.BackgroundImage = CType(resources.GetObject("btnBell.BackgroundImage"), Image)
+        btnBell.BackgroundImageLayout = ImageLayout.Zoom
+        btnBell.Location = New Point(1849, 56)
+        btnBell.Name = "btnBell"
+        btnBell.Size = New Size(64, 64)
+        btnBell.TabIndex = 11
+        btnBell.TabStop = False
+        ' 
         ' btnNotif
         ' 
         btnNotif.Anchor = AnchorStyles.Right
@@ -506,12 +520,13 @@ Partial Class MainForm
         btnNotif.FlatAppearance.BorderSize = 0
         btnNotif.FlatStyle = FlatStyle.Flat
         btnNotif.Font = New Font("Segoe MDL2 Assets", 16.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        btnNotif.ForeColor = Color.White
+        btnNotif.ForeColor = Color.Transparent
+        btnNotif.Image = CType(resources.GetObject("btnNotif.Image"), Image)
         btnNotif.Location = New Point(1834, 72)
         btnNotif.Name = "btnNotif"
         btnNotif.Size = New Size(64, 48)
         btnNotif.TabIndex = 8
-        btnNotif.Text = "🔔"
+        btnNotif.Text = """"""
         btnNotif.UseVisualStyleBackColor = False
         ' 
         ' btnLogoutAdmin
@@ -740,6 +755,7 @@ Partial Class MainForm
         pnlApp.PerformLayout()
         pnlHeader.ResumeLayout(False)
         pnlHeader.PerformLayout()
+        CType(btnBell, ComponentModel.ISupportInitialize).EndInit()
         CType(picLogoApp, ComponentModel.ISupportInitialize).EndInit()
         CType(picCCSApp, ComponentModel.ISupportInitialize).EndInit()
         pnlNotifications.ResumeLayout(False)
@@ -792,5 +808,6 @@ Partial Class MainForm
     Friend WithEvents flowNotifList As FlowLayoutPanel
     Friend WithEvents lblProfileSettingsLink As LinkLabel
     Friend WithEvents btnLogoutAdmin As ReaLTaiizor.Controls.Button
+    Friend WithEvents btnBell As PictureBox
 
 End Class

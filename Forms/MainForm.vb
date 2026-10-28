@@ -128,5 +128,4 @@ Public Class MainForm
         Application.RemoveMessageFilter(Me)
         MyBase.OnFormClosed(e)
     End Sub
-
 End Class
