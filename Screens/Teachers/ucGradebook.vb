@@ -83,6 +83,18 @@ Public Class ucGradebook
     ' Value of the cell before the user started editing (used to undo a failed save)
     Private _oldCellValue As Object = Nothing
 
+    ' True right after Save Config: the gradebook is saved, and the next change has to be confirmed
+    Private _gradebookSaved As Boolean = False
+
+    ' Save Config look: dimmed + hover hint while the gradebook is incomplete (the button itself stays clickable
+    ' so that clicking it can explain what is missing)
+    Private ReadOnly saveTip As New ToolTip()
+    Private _saveBtnBackColor As Color
+    Private _saveBtnColorKept As Boolean = False
+
+    ' True while the code itself refills the Weights ComboBox (its SelectedIndexChanged is then ignored)
+    Private _updatingWeights As Boolean = False
+
     ' Custom Categories & Weights (Exam is permanently locked at 40%)
     Private customCat1Name As String = "Class Participation"
     Private customCat1Weight As Decimal = 10
@@ -156,6 +168,7 @@ Public Class ucGradebook
         BuildGrid()
         LoadStudents()
         RecalculateAll()
+        UpdateWeightDistributionComboBox()
         ApplyViewMode()
     End Sub
 
@@ -541,32 +554,24 @@ Public Class ucGradebook
         Next
     End Sub
 
-    ' ==========================================================================
-    ' REPLACES section "4. EXPORT METHOD" in ucGradebook.vb
-    ' (delete the old btnExport_Click CSV code and paste everything below in its place).
-    ' No new Imports are needed - ClosedXML.Excel is already imported.
-    ' ==========================================================================
-
     ' ==========================================
-    ' 4. EXPORT TO THE EXCEL TEMPLATE
+    ' 4. EXPORT TO THE EXCEL TEMPLATE (dynamic layout)
     ' ==========================================
 
-    ' ---- Template settings (adjust if you move the file) ----
-    Private Const TemplateFileName As String = "GradingTemplate.xlsm"   ' put it in <app folder>\Templates\
-    Private Const RosterSheetName As String = "Midterm"                ' Final/Semestral read names + header from here
+    ' ---- Template settings ----
+    Private Const TemplateFileName As String = "GradingTemplate.xlsm"   ' <app folder>\Templates\
+    Private Const RosterSheetName As String = "Midterm"                ' Semestral reads the names from here
+    Private Const HeaderTopRow As Integer = 12                         ' row 12 = category band, 13 = labels, 14 = max score / weight
     Private Const FirstStudentRow As Integer = 15
-    Private Const LastStudentRow As Integer = 59                       ' template formulas/print area stop at row 59
+    Private Const LastStudentRow As Integer = 59                       ' Semestral (and the template summary) stop at row 59
+    Private Const ClearToRow As Integer = 133                          ' everything from row 12 to here is rebuilt
+    Private Const ClearToCol As Integer = 32                           ' ... and from column A to AF
+    Private Const ExportFontSize As Double = 10                         ' font size of the exported table (rows 12 and below)
+    Private Const StudentRowHeight As Double = 21                      ' height of one line of a student row (points)
+    Private Const NameColWidth As Double = 34                          ' width of the NAME column (characters)
 
-    ' ---- INPUT columns of the template (everything else is a formula and is never touched) ----
-    Private Const ColName As String = "B"      ' Student name  (Lastname, Firstname)
-    Private Const ColDrp As String = "C"       ' "Drp" for dropped
-    Private Const ColAbsences As String = "D"  ' Absences (Part / Absences)
-    Private Const ColExtra As String = "F"     ' Extra in (%)
-    Private Const ColCW As String = "G"        ' CW / SW in (%)
-    Private Const ColQuiz1Raw As String = "H"  ' Quiz 1 raw score   (max score in I12)
-    Private Const ColQuiz2Raw As String = "J"  ' Quiz 2 raw score   (max score in K12)
-    Private Const ColProject As String = "M"   ' Project in (%)
-    Private Const ColExamRaw As String = "P"   ' Exam raw score     (max score in Q12)
+    ' Old fixed template input columns - only used to blank the sample scores of the period that is NOT exported
+    Private ReadOnly OldInputColumns As String() = {"C", "D", "F", "G", "H", "J", "M", "P"}
 
     Private Class ExportHeaderInfo
         Public SchoolYear As String = ""   ' -> C1
@@ -606,12 +611,6 @@ Public Class ucGradebook
         End Try
 
         Return info
-    End Function
-
-    ' The gradebook has no absence data. Return the student's number of absences here
-    ' (e.g. from an attendance table). Nothing = leave the cell blank (counts as 0 absences).
-    Private Function GetAbsences(gridRow As DataGridViewRow) As Decimal?
-        Return Nothing
     End Function
 
     Private Function AskGradingPeriod() As String
@@ -669,7 +668,7 @@ Public Class ucGradebook
 
         ' --- Students currently shown in the gradebook ---
         Dim students As List(Of DataGridViewRow) =
-        dgvGradebook.Rows.Cast(Of DataGridViewRow)().Where(Function(r) Not r.IsNewRow).ToList()
+            dgvGradebook.Rows.Cast(Of DataGridViewRow)().Where(Function(r) Not r.IsNewRow).ToList()
 
         Dim capacity As Integer = LastStudentRow - FirstStudentRow + 1
         If students.Count > capacity Then
@@ -678,16 +677,6 @@ Public Class ucGradebook
                         "Too Many Students", MessageBoxButtons.OK)
             Return
         End If
-
-        ' --- Which gradebook columns feed which template columns ---
-        Dim quizCols As List(Of DataGridViewColumn) = RawColumnsOf(2)
-        Dim projectCols As List(Of DataGridViewColumn) = RawColumnsOf(3)
-        Dim examCols As List(Of DataGridViewColumn) = RawColumnsOf(4)
-
-        Dim notes As New List(Of String)
-        If RawColumnsOf(1).Count > 0 Then notes.Add(customCat1Name & " scores (the template uses attendance/absences instead)")
-        If quizCols.Count > 2 Then notes.Add("Quiz columns after the first two (template has only Q1 and Q2)")
-        If examCols.Count > 1 Then notes.Add("Exam columns after the first one")
 
         Try
             Using wb As New XLWorkbook(templatePath)
@@ -705,7 +694,7 @@ Public Class ucGradebook
                     Return
                 End If
 
-                ' --- 1. Header information ---
+                ' --- 1. Header information (rows 1-3, unchanged mapping) ---
                 ' C1, F1, I1, C2, F3 live on the roster sheet (Final links to them by formula).
                 SetTextOrNumber(wsRoster, "C1", header.SchoolYear)
                 SetTextOrNumber(wsRoster, "F1", header.Semester)
@@ -714,18 +703,25 @@ Public Class ucGradebook
                 SetTextOrNumber(wsRoster, "F3", header.Professor)
                 SetTextOrNumber(wsTarget, "C3", period)              ' grading period, on the selected sheet
 
-                ' --- 2. Maximum scores the template formulas divide by (row 12) ---
-                If quizCols.Count >= 1 Then SetNumber(wsTarget, "I12", GetInfo(quizCols(0)).MaxScore)
-                If quizCols.Count >= 2 Then SetNumber(wsTarget, "K12", GetInfo(quizCols(1)).MaxScore)
-                If examCols.Count >= 1 Then SetNumber(wsTarget, "Q12", GetInfo(examCols(0)).MaxScore)
+                ' --- 2. Rows 12+ : rebuilt from the gradebook grid, column for column ---
+                Dim layout As ExportLayout = BuildGradebookSheet(wsTarget, students)
 
-                ' --- 2b. The period that is NOT exported still holds the template's sample scores: clear them ---
+                ' --- 3. Keep the rest of the workbook consistent with the new layout ---
+                ' Semestral reads the names from the roster sheet. When Final is exported the roster (Midterm)
+                ' still needs the names, otherwise Semestral would show the template's sample students.
+                If Not String.Equals(period, RosterSheetName, StringComparison.OrdinalIgnoreCase) Then
+                    For i As Integer = 0 To capacity - 1
+                        SetText(wsRoster, "B" & (FirstStudentRow + i), If(i < students.Count, GridText(students(i), "studname"), ""))
+                    Next
+                End If
+
+                ' The period that is NOT exported still holds the template's sample scores: clear them
                 For Each otherName As String In New String() {"Midterm", "Final"}
                     Dim wsOther As IXLWorksheet = Nothing
                     If Not String.Equals(otherName, period, StringComparison.OrdinalIgnoreCase) AndAlso
                        wb.Worksheets.TryGetWorksheet(otherName, wsOther) Then
                         For rowNo As Integer = FirstStudentRow To LastStudentRow
-                            For Each colLetter As String In New String() {ColDrp, ColAbsences, ColExtra, ColCW, ColQuiz1Raw, ColQuiz2Raw, ColProject, ColExamRaw}
+                            For Each colLetter As String In OldInputColumns
                                 Dim sample As IXLCell = wsOther.Cell(colLetter & rowNo)
                                 If Not sample.HasFormula Then sample.Clear(XLClearOptions.Contents)
                             Next
@@ -733,44 +729,7 @@ Public Class ucGradebook
                     End If
                 Next
 
-                ' --- 3. Student rows (15..59). Unused rows are cleared of template sample data ---
-                For i As Integer = 0 To capacity - 1
-                    Dim r As Integer = FirstStudentRow + i
-                    Dim hasStudent As Boolean = (i < students.Count)
-                    Dim g As DataGridViewRow = If(hasStudent, students(i), Nothing)
-
-                    ' B  Student name (Lastname, Firstname) - written to the roster sheet
-                    SetText(wsRoster, ColName & r, If(hasStudent, GridText(g, "studname"), ""))
-
-                    ' C  Drp only when dropped, otherwise blank
-                    Dim isDropped As Boolean = hasStudent AndAlso GridText(g, "status").Equals("Dropped", StringComparison.OrdinalIgnoreCase)
-                    SetText(wsTarget, ColDrp & r, If(isDropped, "Drp", ""))
-
-                    ' D  Absences / F  Extra / G  CW  (no source in the gradebook for F and G: left blank)
-                    SetNumber(wsTarget, ColAbsences & r, If(hasStudent, GetAbsences(g), Nothing))
-                    SetNumber(wsTarget, ColExtra & r, Nothing)
-                    SetNumber(wsTarget, ColCW & r, Nothing)
-
-                    ' H, J  Quiz 1 and Quiz 2 raw scores
-                    SetNumber(wsTarget, ColQuiz1Raw & r, If(hasStudent AndAlso quizCols.Count >= 1, GridNumber(g, quizCols(0)), Nothing))
-                    SetNumber(wsTarget, ColQuiz2Raw & r, If(hasStudent AndAlso quizCols.Count >= 2, GridNumber(g, quizCols(1)), Nothing))
-
-                    ' M  Project in (%): average of raw/max across the graded project columns
-                    Dim projectPct As Decimal? = Nothing
-                    If hasStudent Then
-                        Dim pcts As New List(Of Decimal)
-                        For Each pc As DataGridViewColumn In projectCols
-                            Dim v As Decimal? = GridNumber(g, pc)
-                            Dim mx As Decimal = GetInfo(pc).MaxScore
-                            If v.HasValue AndAlso mx > 0 Then pcts.Add(v.Value / mx * 100D)
-                        Next
-                        If pcts.Count > 0 Then projectPct = Math.Round(pcts.Average(), 2, MidpointRounding.AwayFromZero)
-                    End If
-                    SetNumber(wsTarget, ColProject & r, projectPct)
-
-                    ' P  Exam raw score
-                    SetNumber(wsTarget, ColExamRaw & r, If(hasStudent AndAlso examCols.Count >= 1, GridNumber(g, examCols(0)), Nothing))
-                Next
+                RepointSummaryAndSemestral(wb, wsTarget, period, layout)
 
                 ' Make Excel recalculate every template formula when the file is opened
                 wb.FullCalculationOnLoad = True
@@ -778,11 +737,7 @@ Public Class ucGradebook
                 wb.SaveAs(savePath)
             End Using
 
-            Dim msg As String = "Class grades have been exported successfully!"
-            If notes.Count > 0 Then
-                msg &= vbCrLf & vbCrLf & "Not exported (no matching template column):" & vbCrLf & "• " & String.Join(vbCrLf & "• ", notes)
-            End If
-            MessageBox.Show(msg, "Export Complete", MessageBoxButtons.OK)
+            MessageBox.Show("Class grades have been exported successfully!", "Export Complete", MessageBoxButtons.OK)
 
         Catch ex As System.IO.IOException
             MessageBox.Show("The file could not be saved. If it is open in Excel, close it and try again." & vbCrLf & vbCrLf & ex.Message,
@@ -792,14 +747,288 @@ Public Class ucGradebook
         End Try
     End Sub
 
-    ' ---------- Export helpers ----------
+    ' ---------- Dynamic sheet builder ----------
 
-    ' Raw (editable) gradebook columns of a category, in on-screen order
-    Private Function RawColumnsOf(cat As Integer) As List(Of DataGridViewColumn)
-        Return dgvGradebook.Columns.Cast(Of DataGridViewColumn)().
-        Where(Function(c) GetInfo(c).Kind = ColKind.Raw AndAlso GetInfo(c).Category = cat).
-        OrderBy(Function(c) c.DisplayIndex).ToList()
+    ' Where the columns that other parts of the workbook depend on ended up
+    Private Class ExportLayout
+        Public GradeCol As Integer
+        Public EqCol As Integer
+        Public RemarksCol As Integer
+    End Class
+
+    Private Function ColLetter(colNumber As Integer) As String
+        Return XLHelper.GetColumnLetterFromNumber(colNumber)
     End Function
+
+    ' Rebuilds rows 12+ of 'ws' so that it mirrors dgvGradebook:
+    '   Excel column n  =  grid column n  (NO., NAME, DRP, [Raw, GrA]..., TOTAL, ..., GRADE)
+    '   + two extra columns after GRADE: EQ and REMARKS (the template's summary and Semestral sheet need them).
+    ' Adding or deleting a column in the grid therefore adds or deletes it in the export automatically.
+    ' Row 12 = category band, row 13 = column label, row 14 = max score (Raw) or weight % (TOTAL).
+    ' GrA, TOTAL and GRADE are Excel formulas that use the same rules as the grid, so the sheet stays live.
+    Private Function BuildGradebookSheet(ws As IXLWorksheet, students As List(Of DataGridViewRow)) As ExportLayout
+        Dim gridCols As List(Of DataGridViewColumn) =
+            dgvGradebook.Columns.Cast(Of DataGridViewColumn)().OrderBy(Function(c) c.DisplayIndex).ToList()
+
+        ' Excel column number of every grid column (1-based, same order)
+        Dim idxByName As New Dictionary(Of String, Integer)
+        For i As Integer = 0 To gridCols.Count - 1
+            idxByName(gridCols(i).Name) = i + 1
+        Next
+        If Not idxByName.ContainsKey("studname") OrElse Not idxByName.ContainsKey("status") OrElse Not idxByName.ContainsKey("grade") Then
+            Throw New InvalidOperationException("The gradebook grid is missing its name, DRP or GRADE column.")
+        End If
+
+        Dim colName As Integer = idxByName("studname")
+        Dim colDrp As Integer = idxByName("status")
+        Dim colGrade As Integer = idxByName("grade")
+        Dim colEq As Integer = gridCols.Count + 1
+        Dim colRem As Integer = gridCols.Count + 2
+
+        ' GrA columns and the TOTAL column of each category
+        Dim graByCat(4) As List(Of Integer)
+        Dim totalByCat(4) As Integer
+        For cat As Integer = 1 To 4
+            graByCat(cat) = New List(Of Integer)
+        Next
+        For i As Integer = 0 To gridCols.Count - 1
+            Dim info As ColInfo = GetInfo(gridCols(i))
+            If info.Kind = ColKind.GrA Then graByCat(info.Category).Add(i + 1)
+            If info.Kind = ColKind.CatTotal Then totalByCat(info.Category) = i + 1
+        Next
+
+        ' ---- 1. Wipe rows 12+ of the old fixed layout (merges, formulas, formats, validations) ----
+        Dim oldMerges As List(Of IXLRange) =
+            ws.MergedRanges.Where(Function(m) m.RangeAddress.FirstAddress.RowNumber >= HeaderTopRow).ToList()
+        For Each m As IXLRange In oldMerges
+            m.Unmerge()
+        Next
+        ws.Range(HeaderTopRow, 1, ClearToRow, Math.Max(ClearToCol, colRem)).Clear()
+
+        Dim lastRow As Integer = FirstStudentRow - 1 + students.Count
+        Dim ci As Globalization.CultureInfo = Globalization.CultureInfo.InvariantCulture
+        Dim graBaseTxt As String = GrABase.ToString(ci)
+        Dim graSpanTxt As String = (100D - GrABase).ToString(ci)
+
+        ' Header palette = the grid's palette
+        Dim cDark As XLColor = XLColor.FromArgb(33, 89, 76)
+        Dim cDark2 As XLColor = XLColor.FromArgb(52, 112, 96)
+        Dim cLight As XLColor = XLColor.FromArgb(228, 237, 233)
+        Dim cGra As XLColor = XLColor.FromArgb(221, 235, 247)
+        Dim cTotal As XLColor = XLColor.FromArgb(226, 239, 218)
+        Dim cLine As XLColor = XLColor.FromArgb(196, 212, 205)
+
+        ' ---- 2. Header rows 12-14 ----
+        Dim pos As Integer = 1
+        While pos <= gridCols.Count
+            Dim cat As Integer = GetInfo(gridCols(pos - 1)).Category
+
+            If cat = 0 Then
+                ' NO., NAME, DRP, GRADE: one tall dark cell (rows 12-14)
+                Dim tall As IXLRange = ws.Range(HeaderTopRow, pos, HeaderTopRow + 2, pos).Merge()
+                tall.FirstCell().Value = gridCols(pos - 1).HeaderText
+                tall.Style.Fill.BackgroundColor = cDark
+                tall.Style.Font.FontColor = XLColor.White
+                tall.Style.Font.Bold = True
+                pos += 1
+            Else
+                ' Category run: merged band over all of its columns
+                Dim first As Integer = pos
+                While pos <= gridCols.Count AndAlso GetInfo(gridCols(pos - 1)).Category = cat
+                    pos += 1
+                End While
+                Dim last As Integer = pos - 1
+
+                Dim band As IXLRange = ws.Range(HeaderTopRow, first, HeaderTopRow, last).Merge()
+                band.FirstCell().Value = (CategoryName(cat) & " " & CategoryWeight(cat).ToString("0.##") & "%").ToUpper()
+                band.Style.Fill.BackgroundColor = If(cat Mod 2 = 1, cDark, cDark2)
+                band.Style.Font.FontColor = XLColor.White
+                band.Style.Font.Bold = True
+
+                For k As Integer = first To last
+                    Dim gi As ColInfo = GetInfo(gridCols(k - 1))
+                    Dim lbl As IXLCell = ws.Cell(HeaderTopRow + 1, k)
+                    Dim sub14 As IXLCell = ws.Cell(HeaderTopRow + 2, k)
+
+                    Select Case gi.Kind
+                        Case ColKind.Raw
+                            lbl.Value = gi.ItemName.ToUpper()
+                            sub14.Value = CDbl(gi.MaxScore)                     ' max score: GrA formulas read this cell
+                            sub14.Style.NumberFormat.Format = """MAX: ""General"
+                        Case ColKind.GrA
+                            lbl.Value = "GrA"
+                        Case ColKind.CatTotal
+                            lbl.Value = If(cat = 4, "MAJOR EXAM", "TOTAL")
+                            sub14.Value = CDbl(CategoryWeight(cat))              ' weight: TOTAL formulas read this cell
+                            sub14.Style.NumberFormat.Format = "General""%"""
+                    End Select
+                Next
+
+                Dim lowRng As IXLRange = ws.Range(HeaderTopRow + 1, first, HeaderTopRow + 2, last)
+                lowRng.Style.Fill.BackgroundColor = cLight
+                lowRng.Style.Font.FontColor = cDark
+                lowRng.Style.Font.Bold = True
+            End If
+        End While
+
+        ' EQ and REMARKS (extra columns): same look as the fixed dark columns
+        Dim extraCols As Integer() = {colEq, colRem}
+        Dim extraTexts As String() = {"EQ", "REMARKS"}
+        For x As Integer = 0 To 1
+            Dim tallX As IXLRange = ws.Range(HeaderTopRow, extraCols(x), HeaderTopRow + 2, extraCols(x)).Merge()
+            tallX.FirstCell().Value = extraTexts(x)
+            tallX.Style.Fill.BackgroundColor = cDark
+            tallX.Style.Font.FontColor = XLColor.White
+            tallX.Style.Font.Bold = True
+        Next
+
+        Dim hdr As IXLRange = ws.Range(HeaderTopRow, 1, HeaderTopRow + 2, colRem)
+        hdr.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center
+        hdr.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center
+        hdr.Style.Alignment.WrapText = True
+        ws.Row(HeaderTopRow).Height = 22
+        ws.Row(HeaderTopRow + 1).Height = 30
+        ws.Row(HeaderTopRow + 2).Height = 18
+
+        ' ---- 3. Student rows ----
+        For i As Integer = 0 To students.Count - 1
+            Dim r As Integer = FirstStudentRow + i
+            Dim g As DataGridViewRow = students(i)
+
+            ' NO., NAME (Lastname, Firstname), DRP ("Drp" only for dropped students)
+            Dim studentName As String = GridText(g, "studname")
+            ws.Cell(r, 1).Value = i + 1
+            ws.Cell(r, colName).Value = studentName
+            Dim nameLines As Integer = Math.Max(1, CInt(Math.Ceiling(studentName.Length / (NameColWidth - 4))))
+            ws.Row(r).Height = StudentRowHeight * nameLines
+            If GridText(g, "status").Equals("Dropped", StringComparison.OrdinalIgnoreCase) Then ws.Cell(r, colDrp).Value = "Drp"
+
+            For k As Integer = 1 To gridCols.Count
+                Dim gi As ColInfo = GetInfo(gridCols(k - 1))
+                Dim cell As IXLCell = ws.Cell(r, k)
+
+                Select Case gi.Kind
+                    Case ColKind.Raw
+                        Dim v As Decimal? = GridNumber(g, gridCols(k - 1))
+                        If v.HasValue Then cell.Value = CDbl(v.Value)
+                        cell.Style.NumberFormat.Format = "0.00"
+                        cell.Style.Protection.Locked = False        ' the sheet is protected: scores stay editable
+
+                    Case ColKind.GrA
+                        ' same rule as the grid:  raw / max * (100 - base) + base, blank when not graded
+                        Dim rawRef As String = ColLetter(k - 1) & r
+                        Dim maxRef As String = ColLetter(k - 1) & "$" & (HeaderTopRow + 2)
+                        cell.FormulaA1 = $"IF(AND(ISNUMBER({rawRef}),{maxRef}>0),ROUND({rawRef}/{maxRef}*{graSpanTxt}+{graBaseTxt},2),"""")"
+                        cell.Style.NumberFormat.Format = "0.00"
+                        cell.Style.Fill.BackgroundColor = cGra
+                        cell.Style.Font.FontColor = XLColor.Blue
+
+                    Case ColKind.CatTotal
+                        ' category average of the graded GrA cells x category weight / 100
+                        If graByCat(gi.Category).Count > 0 Then
+                            Dim refs As String = String.Join(",", graByCat(gi.Category).Select(Function(n) ColLetter(n) & r))
+                            Dim wRef As String = ColLetter(k) & "$" & (HeaderTopRow + 2)
+                            cell.FormulaA1 = $"IF(COUNT({refs})=0,"""",ROUND(AVERAGE({refs})*{wRef}/100,2))"
+                        End If
+                        cell.Style.NumberFormat.Format = "0.00"
+                        cell.Style.Fill.BackgroundColor = cTotal
+                        cell.Style.Font.Bold = True
+                End Select
+            Next
+
+            ' GRADE = sum of the category totals ("DRP" for dropped students)
+            Dim totalRefs As String = String.Join(",", Enumerable.Range(1, 4).Where(Function(n) totalByCat(n) > 0).Select(Function(n) ColLetter(totalByCat(n)) & r))
+            Dim gradeRef As String = ColLetter(colGrade) & r
+            ws.Cell(r, colGrade).FormulaA1 = $"IF(LOWER(${ColLetter(colDrp)}{r})=""drp"",""DRP"",ROUND(SUM({totalRefs}),2))"
+            ws.Cell(r, colGrade).Style.NumberFormat.Format = "0.00"
+            ws.Cell(r, colGrade).Style.Font.Bold = True
+
+            ' EQ (grade equivalent, template's EQTable) and REMARKS (Pass / Fail / DRP, passing grade = D9)
+            ws.Cell(r, colEq).FormulaA1 = $"IF(ISNUMBER({gradeRef}),VLOOKUP({gradeRef},EQTable,2),{gradeRef})"
+            ws.Cell(r, colRem).FormulaA1 = $"IF(ISNUMBER({gradeRef}),IF({gradeRef}>=$D$9,""Pass"",""Fail""),{gradeRef})"
+        Next
+
+        ' ---- 4. Body formatting ----
+        Dim bodyEnd As Integer = Math.Max(lastRow, HeaderTopRow + 2)
+        Dim body As IXLRange = ws.Range(HeaderTopRow, 1, bodyEnd, colRem)
+        body.Style.Border.OutsideBorder = XLBorderStyleValues.Thin
+        body.Style.Border.InsideBorder = XLBorderStyleValues.Thin
+        body.Style.Border.OutsideBorderColor = cLine
+        body.Style.Border.InsideBorderColor = cLine
+        body.Style.Font.FontSize = ExportFontSize
+
+        If students.Count > 0 Then
+            Dim data As IXLRange = ws.Range(FirstStudentRow, 1, lastRow, colRem)
+            data.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center
+            data.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center
+            Dim nameRange As IXLRange = ws.Range(FirstStudentRow, colName, lastRow, colName)
+            nameRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left
+            nameRange.Style.Alignment.WrapText = True
+        End If
+
+        ' ---- 5. Column widths ----
+        ws.Column(1).Width = 6
+        ws.Column(colName).Width = NameColWidth
+        ws.Column(colDrp).Width = 8
+        For k As Integer = 1 To gridCols.Count
+            Dim gi As ColInfo = GetInfo(gridCols(k - 1))
+            Select Case gi.Kind
+                Case ColKind.Raw : ws.Column(k).Width = Math.Min(22, Math.Max(11, gi.ItemName.Length + 3))
+                Case ColKind.GrA : ws.Column(k).Width = 9
+                Case ColKind.CatTotal : ws.Column(k).Width = 12
+            End Select
+        Next
+        ws.Column(colGrade).Width = 10
+        ws.Column(colEq).Width = 8
+        ws.Column(colRem).Width = 11
+
+        Return New ExportLayout With {.GradeCol = colGrade, .EqCol = colEq, .RemarksCol = colRem}
+    End Function
+
+    ' The template's summary box (Q6:Q9) and the Semestral sheet pointed at the OLD fixed columns
+    ' (S = EQ, T = Grade, U = Remarks). Point them at the columns of the rebuilt sheet instead.
+    Private Sub RepointSummaryAndSemestral(wb As XLWorkbook, wsTarget As IXLWorksheet, period As String, layout As ExportLayout)
+        Dim remL As String = ColLetter(layout.RemarksCol)
+
+        ' Summary of grades (DRP / INC / Pass / Fail counts)
+        Dim counts As String() = {"drp", "inc", "Pass", "Fail"}
+        For i As Integer = 0 To 3
+            Dim cell As IXLCell = wsTarget.Cell("Q" & (6 + i))
+            If cell.HasFormula Then
+                cell.FormulaA1 = $"COUNTIF({remL}{FirstStudentRow}:{remL}{LastStudentRow},""{counts(i)}"")"
+            End If
+        Next
+
+        ' Print area follows the new width
+        Try
+            wsTarget.PageSetup.PrintAreas.Clear()
+            wsTarget.PageSetup.PrintAreas.Add("A1:" & remL & LastStudentRow)
+        Catch
+            ' cosmetic only
+        End Try
+
+        ' Semestral: <period>!S/T/U  ->  EQ / GRADE / REMARKS column of the rebuilt sheet
+        Dim wsSem As IXLWorksheet = Nothing
+        If Not wb.Worksheets.TryGetWorksheet("Semestral", wsSem) Then Return
+
+        Dim map As New Dictionary(Of String, String) From {
+            {"S", ColLetter(layout.EqCol)},
+            {"T", ColLetter(layout.GradeCol)},
+            {"U", remL}}
+        Dim pattern As String = "(?<![A-Za-z0-9_])" & Regex.Escape(period) & "!\$?([STU])\$?(\d+)"
+
+        For r As Integer = FirstStudentRow To LastStudentRow
+            For c As Integer = 2 To 10          ' columns B..J of the Semestral table
+                Dim cell As IXLCell = wsSem.Cell(r, c)
+                If Not cell.HasFormula Then Continue For
+                Dim f As String = cell.FormulaA1
+                Dim nf As String = Regex.Replace(f, pattern, Function(m As Match) period & "!" & map(m.Groups(1).Value) & m.Groups(2).Value, RegexOptions.IgnoreCase)
+                If nf <> f Then cell.FormulaA1 = nf
+            Next
+        Next
+    End Sub
+
+    ' ---------- Export helpers ----------
 
     Private Function GridText(row As DataGridViewRow, colName As String) As String
         Dim v As Object = row.Cells(colName).Value
@@ -813,8 +1042,7 @@ Public Class ucGradebook
         Return Nothing
     End Function
 
-    ' Every setter skips formula cells (so template formulas are never overwritten)
-    ' and clears the cell when there is no value (so template sample data never leaks through).
+    ' Skips formula cells (template formulas are never overwritten) and clears the cell when there is no value
     Private Sub SetText(ws As IXLWorksheet, address As String, value As String)
         Dim cell As IXLCell = ws.Cell(address)
         If cell.HasFormula Then Return
@@ -822,16 +1050,6 @@ Public Class ucGradebook
             cell.Clear(XLClearOptions.Contents)
         Else
             cell.Value = value
-        End If
-    End Sub
-
-    Private Sub SetNumber(ws As IXLWorksheet, address As String, value As Decimal?)
-        Dim cell As IXLCell = ws.Cell(address)
-        If cell.HasFormula Then Return
-        If value.HasValue Then
-            cell.Value = CDbl(value.Value)
-        Else
-            cell.Clear(XLClearOptions.Contents)
         End If
     End Sub
 
@@ -896,6 +1114,7 @@ Public Class ucGradebook
 
         If e.RowIndex >= 0 AndAlso dgvGradebook.Columns(e.ColumnIndex).Name = "status" Then
             If GradebookFrozen() Then Return
+            If Not ConfirmChangeAfterSave("changing this student's drop status") Then Return
             Dim cell As DataGridViewCell = dgvGradebook.Rows(e.RowIndex).Cells(e.ColumnIndex)
             Dim currentVal As String = If(cell.Value IsNot Nothing, cell.Value.ToString(), "")
 
@@ -918,14 +1137,31 @@ Public Class ucGradebook
 
             RecalculateRow(dgvGradebook.Rows(e.RowIndex))
             dgvGradebook.InvalidateRow(e.RowIndex)
+            UpdateSaveButtonState()
         End If
     End Sub
 
     Private Sub dgvGradebook_CellBeginEdit(sender As Object, e As DataGridViewCellCancelEventArgs) Handles dgvGradebook.CellBeginEdit
-        If e.RowIndex >= 0 Then _oldCellValue = dgvGradebook.Rows(e.RowIndex).Cells(e.ColumnIndex).Value
+        If e.RowIndex < 0 Then Return
+
+        ' After Save Config the gradebook is "saved": the first score change has to be confirmed
+        If GetInfo(dgvGradebook.Columns(e.ColumnIndex)).Kind = ColKind.Raw AndAlso Not ConfirmChangeAfterSave("editing a score") Then
+            e.Cancel = True
+            Return
+        End If
+
+        _oldCellValue = dgvGradebook.Rows(e.RowIndex).Cells(e.ColumnIndex).Value
     End Sub
 
     Private Sub dgvGradebook_CellEndEdit(sender As Object, e As DataGridViewCellEventArgs) Handles dgvGradebook.CellEndEdit
+        Try
+            ProcessScoreEdit(e)
+        Finally
+            UpdateSaveButtonState()      ' Save Config is only available when every score is filled in
+        End Try
+    End Sub
+
+    Private Sub ProcessScoreEdit(e As DataGridViewCellEventArgs)
         If e.RowIndex < 0 Then Return
         Dim info As ColInfo = GetInfo(dgvGradebook.Columns(e.ColumnIndex))
         If info.Kind <> ColKind.Raw Then Return ' only raw-score columns are editable
@@ -1064,6 +1300,7 @@ Public Class ucGradebook
             Dim fg As Decimal? = RecalculateRow(row)
             SaveFinalGrade(row, fg)
         Next
+        UpdateSaveButtonState()
     End Sub
 
     ' Per row:  GrA per assessment -> category average -> x weight -> category total -> final grade
@@ -1123,130 +1360,185 @@ Public Class ucGradebook
     End Sub
 
     ' ==========================================
-    ' 6. CUSTOM CATEGORY & WEIGHT CONFIGURATION WORKFLOW
+    ' 6. CATEGORY NAMES & WEIGHTS
     ' ==========================================
-    Private Sub btnConfigureWeights_Click(sender As Object, e As EventArgs) Handles btnConfigureWeights.Click
-        If GradebookFrozen() Then Return
+    ' Weights:   click a category in the Weights ComboBox and type its new percentage.
+    ' Names:     the Configure button renames the three custom categories.
+    ' Major Exam is fixed at 40% and can only be read. The four weights must always total 100%.
+
+    Private Function WeightsTotal() As Decimal
+        Return customCat1Weight + customCat2Weight + customCat3Weight + weightExam
+    End Function
+
+    ' Saves names + weights to the database, but only while the total is exactly 100%
+    ' (a half-finished edit is never stored). Returns True when it was saved.
+    Private Function PersistWeightsIfValid() As Boolean
+        If WeightsTotal() <> 100D Then Return False
+        SaveActiveWeightsToDatabase(customCat1Name, customCat1Weight, customCat2Name, customCat2Weight, customCat3Name, customCat3Weight, weightExam)
+        Return True
+    End Function
+
+    ' Reads the percentage typed in the pop-up. Only the text AFTER ":" counts,
+    ' so "Quizzes: 25%", ": 25" and "25" are all read as 25.
+    Private Function TryParseWeightInput(input As String, ByRef value As Decimal) As Boolean
+        Dim s As String = If(input, "")
+        Dim p As Integer = s.LastIndexOf(":"c)
+        If p >= 0 Then s = s.Substring(p + 1)
+        s = s.Replace("%", "").Trim()
+        Return Decimal.TryParse(s, value)
+    End Function
+
+    ' Once the gradebook has been saved, the next change has to be confirmed.
+    ' Yes = the gradebook becomes "unsaved" again (press Save Config to save it); No = the change is cancelled.
+    Private Function ConfirmChangeAfterSave(what As String) As Boolean
+        If Not _gradebookSaved Then Return True
+
+        If Not Msg.Confirm("You now have a saved gradebook." & vbCrLf & vbCrLf &
+                           "Do you want to continue with " & what & "?" & vbCrLf &
+                           "This changes the saved gradebook, so you will need to confirm it by saving again.",
+                           "Saved Gradebook") Then Return False
+
+        _gradebookSaved = False
+        Return True
+    End Function
+
+    ' Click a category in the ComboBox to set its percentage.
+    Private Sub Weights_SelectedIndexChanged(sender As Object, e As EventArgs) Handles Weights.SelectedIndexChanged
+        If _updatingWeights OrElse Weights.SelectedIndex < 0 Then Return
+        Dim picked As Integer = Weights.SelectedIndex + 1      ' 1..3 = custom categories, 4 = Major Exam
+
         Try
-            ' 1. Custom Category 1 (Name & Weight)
-            Dim name1 As String = Microsoft.VisualBasic.InputBox(
-                "Enter the custom name for Category 1:",
-                "Configure Custom Categories",
-                customCat1Name)
-            If String.IsNullOrWhiteSpace(name1) Then Return
+            If _viewOnly Then Return
 
-            Dim weight1Input As String = Microsoft.VisualBasic.InputBox(
-                "Enter the weight percentage for " & name1.Trim() & ":",
-                "Configure Category Weight",
-                customCat1Weight.ToString())
-            If String.IsNullOrEmpty(weight1Input) Then Return
-
-            Dim w1 As Decimal
-            If Not Decimal.TryParse(weight1Input.Trim(), w1) OrElse w1 < 0 Then
-                MessageBox.Show("Please enter a valid non-negative number for " & name1 & ".", "Invalid Input", MessageBoxButtons.OK)
+            If picked = 4 Then
+                Msg.Info("Major Exam is fixed at " & weightExam.ToString("0.##") & "% and cannot be changed.")
                 Return
             End If
 
-            ' 2. Custom Category 2 (Name & Weight)
-            Dim name2 As String = Microsoft.VisualBasic.InputBox(
-                "Enter the custom name for Category 2:",
-                "Configure Custom Categories",
-                customCat2Name)
-            If String.IsNullOrWhiteSpace(name2) Then Return
+            If GradebookFrozen() Then Return
 
-            Dim weight2Input As String = Microsoft.VisualBasic.InputBox(
-                "Enter the weight percentage for " & name2.Trim() & ":",
-                "Configure Category Weight",
-                customCat2Weight.ToString())
-            If String.IsNullOrEmpty(weight2Input) Then Return
+            Dim catName As String = CategoryName(picked)
+            Dim oldWeight As Decimal = CategoryWeight(picked)
 
-            Dim w2 As Decimal
-            If Not Decimal.TryParse(weight2Input.Trim(), w2) OrElse w2 < 0 Then
-                MessageBox.Show("Please enter a valid non-negative number for " & name2 & ".", "Invalid Input", MessageBoxButtons.OK)
+            Dim typed As String = Microsoft.VisualBasic.InputBox(
+                "Set the percentage for " & catName & "." & vbCrLf &
+                "Only the value after "":"" is used." & vbCrLf &
+                "All categories together must total 100% (Major Exam is fixed at 40%).",
+                "Set Category Weight",
+                catName & ": " & oldWeight.ToString("0.##") & "%")
+            If String.IsNullOrWhiteSpace(typed) Then Return
+
+            Dim newWeight As Decimal
+            If Not TryParseWeightInput(typed, newWeight) OrElse newWeight < 0D OrElse newWeight > 60D Then
+                Msg.Warn("Please type a percentage between 0 and 60 after "":"" (for example " & catName & ": 25%).", "Invalid Weight")
                 Return
             End If
+            If newWeight = oldWeight Then Return
 
-            ' 3. Custom Category 3 (Name & Weight)
-            Dim name3 As String = Microsoft.VisualBasic.InputBox(
-                "Enter the custom name for Category 3:",
-                "Configure Custom Categories",
-                customCat3Name)
-            If String.IsNullOrWhiteSpace(name3) Then Return
+            If Not ConfirmChangeAfterSave("changing the weight of " & catName) Then Return
 
-            Dim weight3Input As String = Microsoft.VisualBasic.InputBox(
-                "Enter the weight percentage for " & name3.Trim() & ":",
-                "Configure Category Weight",
-                customCat3Weight.ToString())
-            If String.IsNullOrEmpty(weight3Input) Then Return
+            Select Case picked
+                Case 1 : customCat1Weight = newWeight
+                Case 2 : customCat2Weight = newWeight
+                Case 3 : customCat3Weight = newWeight
+            End Select
 
-            Dim w3 As Decimal
-            If Not Decimal.TryParse(weight3Input.Trim(), w3) OrElse w3 < 0 Then
-                MessageBox.Show("Please enter a valid non-negative number for " & name3 & ".", "Invalid Input", MessageBoxButtons.OK)
-                Return
+            dgvGradebook.Invalidate()          ' header bands show the new percentage
+
+            Dim total As Decimal = WeightsTotal()
+            If total = 100D Then
+                PersistWeightsIfValid()
+                RecalculateAll()
+                Msg.Info(catName & " is now " & newWeight.ToString("0.##") & "%. The total is 100%.")
+            Else
+                Msg.Warn("The total is now " & total.ToString("0.##") & "%. Change another category so that the total is exactly 100% " &
+                         "(Major Exam is fixed at 40%)." & vbCrLf & vbCrLf &
+                         "The saved weights and the grades stay unchanged until the total is 100%.",
+                         "Weight Distribution Mismatch")
             End If
-
-            ' 4. Major Exam is permanently locked at 40%
-            Dim examVal As Decimal = 40D
-
-            ' 5. Strict 100% Total Validation Check
-            Dim totalSum As Decimal = w1 + w2 + w3 + examVal
-
-            If totalSum <> 100D Then
-                MessageBox.Show($"The total distribution must equal exactly 100%. Your current total is {totalSum}%." & vbCrLf & vbCrLf &
-                               "Note: Major Exam is fixed at 40%, meaning your custom categories must combine to equal 60%.",
-                               "Weight Distribution Mismatch",
-                               MessageBoxButtons.OK)
-                Return
-            End If
-
-            ' 6. Commit Custom State
-            customCat1Name = name1.Trim()
-            customCat1Weight = w1
-            customCat2Name = name2.Trim()
-            customCat2Weight = w2
-            customCat3Name = name3.Trim()
-            customCat3Weight = w3
-            weightExam = examVal
-
-            ' Inside your Save/Configure Weights button click event:
-            SaveActiveWeightsToDatabase(customCat1Name, customCat1Weight, customCat2Name, customCat2Weight, customCat3Name, customCat3Weight, weightExam)
-
-            ' Refresh the header bands, recompute every student's totals with the new weights, and update the ComboBox
-            dgvGradebook.Invalidate()
-            RecalculateAll()
+        Finally
             UpdateWeightDistributionComboBox()
-
-            ' 7. Reflect the set weights and custom categories directly in the success message box
-            MessageBox.Show("Gradebook Configuration Saved Successfully!" & vbCrLf & vbCrLf &
-                            $"• {customCat1Name}: {customCat1Weight}%" & vbCrLf &
-                            $"• {customCat2Name}: {customCat2Weight}%" & vbCrLf &
-                            $"• {customCat3Name}: {customCat3Weight}%" & vbCrLf &
-                            $"• Major Exam: {weightExam}% (Locked)" & vbCrLf &
-                            $"Total Gradebook Weight: {totalSum}%",
-                            "Custom Gradebook Configured",
-                            MessageBoxButtons.OK)
-
-        Catch ex As Exception
-            MessageBox.Show("An unexpected error occurred while configuring weights: " & ex.Message, "System Error", MessageBoxButtons.OK)
+            UpdateSaveButtonState()
         End Try
     End Sub
 
-    ' Helper method to update the weights ComboBox control
-    Private Sub UpdateWeightDistributionComboBox()
-        If Weights IsNot Nothing Then
-            Weights.Items.Clear()
-            Weights.Items.Add($"{customCat1Name}: {customCat1Weight}%")
-            Weights.Items.Add($"{customCat2Name}: {customCat2Weight}%")
-            Weights.Items.Add($"{customCat3Name}: {customCat3Weight}%")
-            Weights.Items.Add($"Major Exam: {weightExam}% (Locked)")
+    ' The Configure button only renames the three custom categories. Major Exam and every percentage stay as they are.
+    Private Sub btnConfigureWeights_Click(sender As Object, e As EventArgs) Handles btnConfigureWeights.Click
+        If GradebookFrozen() Then Return
+        Try
+            Dim oldNames() As String = {"", customCat1Name, customCat2Name, customCat3Name}
+            Dim newNames() As String = {"", "", "", ""}
 
-            If Weights.Items.Count > 0 Then
-                Weights.SelectedIndex = 0
+            For i As Integer = 1 To 3
+                Dim typedName As String = Microsoft.VisualBasic.InputBox(
+                    "Enter the new name for Category " & i & ":" & vbCrLf &
+                    "(Major Exam is fixed at " & weightExam.ToString("0.##") & "% and cannot be renamed or changed.)",
+                    "Rename Category",
+                    oldNames(i))
+                If String.IsNullOrWhiteSpace(typedName) Then Return
+                typedName = typedName.Trim()
+
+                If typedName.Equals("Major Exam", StringComparison.OrdinalIgnoreCase) Then
+                    Msg.Warn("'Major Exam' is reserved for the fixed exam category. Please choose another name.", "Invalid Name")
+                    Return
+                End If
+
+                For j As Integer = 1 To i - 1
+                    If newNames(j).Equals(typedName, StringComparison.OrdinalIgnoreCase) Then
+                        Msg.Warn("Each category needs its own name. '" & typedName & "' is already used.", "Duplicate Name")
+                        Return
+                    End If
+                Next
+
+                newNames(i) = typedName
+            Next
+
+            If newNames(1) = oldNames(1) AndAlso newNames(2) = oldNames(2) AndAlso newNames(3) = oldNames(3) Then
+                Msg.Info("No category name was changed.")
+                Return
             End If
-        End If
+
+            If Not ConfirmChangeAfterSave("renaming the categories") Then Return
+
+            customCat1Name = newNames(1)
+            customCat2Name = newNames(2)
+            customCat3Name = newNames(3)
+
+            Dim stored As Boolean = PersistWeightsIfValid()
+
+            dgvGradebook.Invalidate()          ' header bands show the new names
+            UpdateWeightDistributionComboBox()
+
+            Msg.Info("Category names updated:" & vbCrLf & vbCrLf &
+                     "- " & customCat1Name & ": " & customCat1Weight.ToString("0.##") & "%" & vbCrLf &
+                     "- " & customCat2Name & ": " & customCat2Weight.ToString("0.##") & "%" & vbCrLf &
+                     "- " & customCat3Name & ": " & customCat3Weight.ToString("0.##") & "%" & vbCrLf &
+                     "- Major Exam: " & weightExam.ToString("0.##") & "% (Locked)" &
+                     If(stored, "", vbCrLf & vbCrLf & "The names will be stored once the weights total 100%."))
+
+        Catch ex As Exception
+            Msg.Fail("rename the categories", ex)
+        End Try
     End Sub
 
+    ' Refills the Weights ComboBox from the current names/weights.
+    ' No item stays selected, so clicking any category (even the same one twice) raises SelectedIndexChanged.
+    Private Sub UpdateWeightDistributionComboBox()
+        If Weights Is Nothing Then Return
 
+        _updatingWeights = True
+        Try
+            Weights.Items.Clear()
+            Weights.Items.Add(customCat1Name & ": " & customCat1Weight.ToString("0.##") & "%")
+            Weights.Items.Add(customCat2Name & ": " & customCat2Weight.ToString("0.##") & "%")
+            Weights.Items.Add(customCat3Name & ": " & customCat3Weight.ToString("0.##") & "%")
+            Weights.Items.Add("Major Exam: " & weightExam.ToString("0.##") & "% (Locked)")
+            Weights.SelectedIndex = -1
+            Weights.Text = "Weights (click a category to set it)"
+        Finally
+            _updatingWeights = False
+        End Try
+    End Sub
 
     ' True (and tells the teacher why) when the gradebook is frozen: past school year, locked term or
     ' encoding closed. Scores are already protected by database triggers; columns, weights and
@@ -1350,6 +1642,8 @@ Public Class ucGradebook
             Return
         End If
 
+        If Not ConfirmChangeAfterSave("adding the column '" & columnName & "'") Then Return
+
         Dim newItemId As Integer = InsertGradeItem(rubricId, columnName, maxScore)
         If newItemId <= 0 Then Return
 
@@ -1410,6 +1704,8 @@ Public Class ucGradebook
             MessageBoxButtons.YesNo)
 
         If result = DialogResult.Yes Then
+            If Not ConfirmChangeAfterSave("deleting the column '" & label & "'") Then Return
+
             ' Remove the grade_item (and its scores) from the database first
             Dim itemId As Integer = GetInfo(dgvGradebook.Columns(clickedRawColumnName)).ItemId
             If itemId > 0 Then
@@ -1429,9 +1725,87 @@ Public Class ucGradebook
         End If
     End Sub
 
+    ' ---------- Save Config: the gradebook must be complete ----------
+
+    ' Everything that still stops the gradebook from being saved (empty list = ready to save).
+    ' Every student who is NOT marked Dropped needs a score in every assessment column,
+    ' so a blank row is only accepted for a dropped student.
+    Private Function GetSaveBlockers() As List(Of String)
+        Dim problems As New List(Of String)
+
+        Dim studentRows As List(Of DataGridViewRow) =
+            dgvGradebook.Rows.Cast(Of DataGridViewRow)().Where(Function(gr) Not gr.IsNewRow).ToList()
+        Dim scoreCols As List(Of DataGridViewColumn) =
+            dgvGradebook.Columns.Cast(Of DataGridViewColumn)().Where(Function(gc) GetInfo(gc).Kind = ColKind.Raw).ToList()
+
+        If studentRows.Count = 0 Then
+            problems.Add("There are no students in this class.")
+            Return problems
+        End If
+
+        If WeightsTotal() <> 100D Then
+            problems.Add("The weights total " & WeightsTotal().ToString("0.##") & "% instead of 100%.")
+        End If
+
+        For cat As Integer = 1 To 4
+            Dim catNo As Integer = cat
+            If CategoryWeight(cat) > 0D AndAlso Not scoreCols.Any(Function(gc) GetInfo(gc).Category = catNo) Then
+                problems.Add(CategoryName(cat) & " has no assessment column yet.")
+            End If
+        Next
+
+        For Each gridRow As DataGridViewRow In studentRows
+            If GridText(gridRow, "status").Equals("Dropped", StringComparison.OrdinalIgnoreCase) Then Continue For
+
+            Dim missing As Integer = 0
+            For Each scoreCol As DataGridViewColumn In scoreCols
+                If String.IsNullOrWhiteSpace(GridText(gridRow, scoreCol.Name)) Then missing += 1
+            Next
+
+            If missing > 0 Then
+                problems.Add(GridText(gridRow, "studname") & ": " & missing & " score(s) missing (or mark the student as Dropped).")
+            End If
+        Next
+
+        Return problems
+    End Function
+
+    ' While the gradebook is incomplete the Save Config button is dimmed and its hover hint says why.
+    ' It is NOT disabled: a disabled button can't be clicked, so it could never show the explanation message.
+    Private Sub UpdateSaveButtonState()
+        If btnSaveConfig Is Nothing OrElse _viewOnly Then Return
+
+        If Not _saveBtnColorKept Then
+            _saveBtnBackColor = btnSaveConfig.BackColor
+            _saveBtnColorKept = True
+        End If
+
+        Dim blockers As List(Of String) = GetSaveBlockers()
+        btnSaveConfig.Enabled = True
+
+        If blockers.Count = 0 Then
+            btnSaveConfig.BackColor = _saveBtnBackColor
+            saveTip.SetToolTip(btnSaveConfig, "Save the gradebook")
+        Else
+            btnSaveConfig.BackColor = Color.Silver
+            saveTip.SetToolTip(btnSaveConfig, "Not ready yet: " & blockers(0))
+        End If
+    End Sub
+
     Private Sub btnSaveConfig_Click(sender As Object, e As EventArgs) Handles btnSaveConfig.Click
         If GradebookFrozen() Then Return
         Try
+            ' Only a complete gradebook can be saved (blank rows are only allowed for dropped students)
+            Dim blockers As List(Of String) = GetSaveBlockers()
+            If blockers.Count > 0 Then
+                UpdateSaveButtonState()
+                Msg.Warn("Save Config can't be activated yet because the gradebook is incomplete:" & vbCrLf & vbCrLf &
+                         String.Join(vbCrLf, blockers.Take(10).Select(Function(problem) "- " & problem)) &
+                         If(blockers.Count > 10, vbCrLf & "...and " & (blockers.Count - 10) & " more.", ""),
+                         "Gradebook Incomplete")
+                Return
+            End If
+
             Dim totalSum As Decimal = customCat1Weight + customCat2Weight + customCat3Weight + weightExam
 
             If totalSum <> 100D Then
@@ -1452,7 +1826,11 @@ Public Class ucGradebook
             RecalculateAll()   ' only refreshes the grid on screen now
 
             Dim n As Integer = GradeReleaseService.SaveAndRelease(_classId)
-            Msg.Info("Saved. " & n & " student(s) can now see their final grades. The admin was notified.")
+
+            _gradebookSaved = True
+            Msg.Info("You now have a saved gradebook." & vbCrLf &
+                     n & " student(s) can now see their final grades and the admin was notified." & vbCrLf & vbCrLf &
+                     "You can still make changes, but each change will need your confirmation and the gradebook has to be saved again.")
         Catch ex As Exception
             Msg.Fail("save the gradebook", ex)
         End Try
