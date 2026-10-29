@@ -6,6 +6,7 @@ Public Class ucTranscript
 
     Private _userId As Integer
     Private ReadOnly _transcriptRows As New List(Of String())
+    Private _transcriptRefreshTimer As Timer
 
     Public Sub New()
         InitializeComponent()
@@ -19,6 +20,26 @@ Public Class ucTranscript
 
     Private Sub ucTranscript_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         LoadStudentTranscript()
+        StartTranscriptRefresh()
+    End Sub
+
+    Private Sub StartTranscriptRefresh()
+        If _transcriptRefreshTimer IsNot Nothing Then Return
+        _transcriptRefreshTimer = New Timer() With {.Interval = 5000}
+        AddHandler _transcriptRefreshTimer.Tick,
+            Sub(sender, e)
+                If IsDisposed OrElse Disposing OrElse Not Visible Then Return
+                LoadStudentTranscript(quiet:=True)
+            End Sub
+        AddHandler Disposed,
+            Sub(sender, e)
+                If _transcriptRefreshTimer IsNot Nothing Then
+                    _transcriptRefreshTimer.Stop()
+                    _transcriptRefreshTimer.Dispose()
+                    _transcriptRefreshTimer = Nothing
+                End If
+            End Sub
+        _transcriptRefreshTimer.Start()
     End Sub
 
     Private Sub btnExportStudent_Click(sender As Object, e As EventArgs) Handles btnExportStudent.Click
@@ -71,39 +92,43 @@ Public Class ucTranscript
         End Using
     End Sub
 
-    Private Sub LoadStudentTranscript()
-        dgvTranscript.Rows.Clear()
-        _transcriptRows.Clear()
+    Private Sub LoadStudentTranscript(Optional quiet As Boolean = False)
         Try
-            ' Query student details, section, enrolled courses, units, final grades, grade equivalents, and professor names
+            ' The transcript follows officially published period grades. Show Midterm on its own until
+            ' Final is published, then show the average of the two published percentages.
             Dim query As String = "SELECT sp.first_name, sp.middle_name, sp.last_name, s.section_code, " &
-                                 "co.course_code, co.course_name, co.units, e.status AS enroll_status, " &
-                                 "CASE WHEN c.midterm_released_at IS NOT NULL AND c.finals_released_at IS NOT NULL " &
-                                 "AND e.midterm_grade IS NOT NULL AND e.finals_grade IS NOT NULL " &
-                                 "THEN ROUND((e.midterm_grade + e.finals_grade) / 2, 2) ELSE NULL END AS final_grade, " &
-                                 "CASE WHEN c.midterm_released_at IS NOT NULL AND c.finals_released_at IS NOT NULL " &
-                                 "AND e.midterm_grade IS NOT NULL AND e.finals_grade IS NOT NULL " &
-                                 "THEN (SELECT gs.grade_equivalent FROM grade_scale gs " &
-                                 "WHERE gs.min_percent <= ROUND((e.midterm_grade + e.finals_grade) / 2, 2) " &
-                                 "ORDER BY gs.min_percent DESC LIMIT 1) ELSE NULL END AS grade_equivalent, " &
-                                 "CASE WHEN c.midterm_released_at IS NOT NULL AND c.finals_released_at IS NOT NULL " &
-                                 "AND e.midterm_grade IS NOT NULL AND e.finals_grade IS NOT NULL " &
-                                 "THEN (SELECT gs.remarks FROM grade_scale gs " &
-                                 "WHERE gs.min_percent <= ROUND((e.midterm_grade + e.finals_grade) / 2, 2) " &
-                                 "ORDER BY gs.min_percent DESC LIMIT 1) ELSE NULL END AS grade_remarks, " &
+                                 "co.course_code, co.course_name, co.units, period_grade.status AS enroll_status, " &
+                                 "period_grade.transcript_grade AS transcript_percent, " &
+                                 "CASE WHEN period_grade.transcript_grade IS NOT NULL THEN " &
+                                 "  (SELECT gs.grade_equivalent FROM grade_scale gs " &
+                                 "   WHERE gs.min_percent <= period_grade.transcript_grade " &
+                                 "   ORDER BY gs.min_percent DESC LIMIT 1) ELSE NULL END AS grade_equivalent, " &
+                                 "CASE WHEN period_grade.transcript_grade IS NOT NULL THEN " &
+                                 "  (SELECT gs.remarks FROM grade_scale gs " &
+                                 "   WHERE gs.min_percent <= period_grade.transcript_grade " &
+                                 "   ORDER BY gs.min_percent DESC LIMIT 1) ELSE NULL END AS grade_remarks, " &
                                  "tp.last_name AS prof_last, tp.first_name AS prof_first, at.school_year AS term_school_year, at.semester AS term_semester " &
                                  "FROM student_profile sp " &
                                  "LEFT JOIN section s ON sp.section_id = s.section_id " &
-                                 "LEFT JOIN enrollment e ON sp.student_id = e.student_id " &
-                                 "LEFT JOIN classes c ON e.class_id = c.class_id " &
+                                 "LEFT JOIN ( " &
+                                 "  SELECT e.student_id, e.class_id, e.status, " &
+                                 "    CASE WHEN c.midterm_released_at IS NOT NULL AND e.midterm_grade IS NOT NULL THEN " &
+                                 "      CASE WHEN c.finals_released_at IS NOT NULL AND e.finals_grade IS NOT NULL " &
+                                 "           THEN ROUND((e.midterm_grade + e.finals_grade) / 2, 2) " &
+                                 "           ELSE e.midterm_grade END " &
+                                 "    ELSE NULL END AS transcript_grade " &
+                                 "  FROM enrollment e INNER JOIN classes c ON c.class_id = e.class_id " &
+                                 ") period_grade ON period_grade.student_id = sp.student_id " &
+                                 "LEFT JOIN classes c ON period_grade.class_id = c.class_id " &
                                  "LEFT JOIN course co ON c.course_id = co.course_id " &
-                                 "LEFT JOIN program p ON s.program_id = p.program_id " &
                                  "LEFT JOIN academic_term at ON c.term_id = at.term_id " &
                                  "LEFT JOIN teacher_profile tp ON c.teacher_id = tp.teacher_id " &
                                  "WHERE sp.user_id = @uid " &
                                  "ORDER BY c.term_id, co.course_code"
 
             Dim dt As DataTable = DatabaseHelper.ExecuteQuery(query, {New MySqlParameter("@uid", _userId)})
+            dgvTranscript.Rows.Clear()
+            _transcriptRows.Clear()
 
             If dt IsNot Nothing AndAlso dt.Rows.Count > 0 Then
                 Dim r0 = dt.Rows(0)
@@ -127,7 +152,7 @@ Public Class ucTranscript
                     Dim units As Decimal = Convert.ToDecimal(row("units"))
 
                     ' Grades from the enrollment table
-                    Dim finalGrade As Decimal? = If(IsDBNull(row("final_grade")), Nothing, CType(row("final_grade"), Decimal?))
+                    Dim transcriptPercent As Decimal? = If(IsDBNull(row("transcript_percent")), Nothing, CType(row("transcript_percent"), Decimal?))
                     Dim gradeEquiv As Decimal? = Nothing
                     If Not IsDBNull(row("grade_equivalent")) Then gradeEquiv = Convert.ToDecimal(row("grade_equivalent"))
 
@@ -140,19 +165,19 @@ Public Class ucTranscript
                         displayGrade = "DRP"
                     ElseIf enrollStatus = "INC" Then
                         displayGrade = "INC"
-                    ElseIf finalGrade.HasValue Then
-                        ' The semester percentage can be valid even when grade_scale has no matching equivalent.
-                        ' Never label a completed, officially released semester as IP for that lookup failure.
+                    ElseIf transcriptPercent.HasValue Then
+                        ' A published period percentage can be valid even when grade_scale has no matching equivalent.
+                        ' Never label a published grade as IP for that lookup failure.
                         displayGrade = If(gradeEquiv.HasValue,
                                           gradeEquiv.Value.ToString("0.00"),
-                                          finalGrade.Value.ToString("0.00") & "%")
+                                          transcriptPercent.Value.ToString("0.00") & "%")
                     Else
                         displayGrade = "IP"
                     End If
                     Dim remarks As String = If(enrollStatus = "Dropped", "Dropped",
                                             If(enrollStatus = "INC", "Incomplete",
                                             If(IsDBNull(row("grade_remarks")),
-                                               If(finalGrade.HasValue, "Grade-scale equivalent unavailable", "In Progress"),
+                                               If(transcriptPercent.HasValue, "Grade-scale equivalent unavailable", "In Progress"),
                                                row("grade_remarks").ToString())))
                     _transcriptRows.Add({courseCode, courseName, professorName, displayGrade, remarks})
 
@@ -178,7 +203,7 @@ Public Class ucTranscript
                 lblGWA.Text = "GWA : N/A"
             End If
         Catch ex As Exception
-            MessageBox.Show("Error loading transcript: " & ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.None)
+            If Not quiet Then MessageBox.Show("Error loading transcript: " & ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.None)
         End Try
     End Sub
 
