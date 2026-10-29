@@ -6,6 +6,7 @@ Public Class ucGradebook
 
     Private _classId As Integer
     Private _period As String = "Midterm"
+    Private _periodWasExplicitlyRequested As Boolean = False
     Private _periodSelector As ComboBox
     Private _periodLockNotice As Label
 
@@ -26,6 +27,7 @@ Public Class ucGradebook
         Me.New(classId)
         If period IsNot Nothing AndAlso (period.Equals("Midterm", StringComparison.OrdinalIgnoreCase) OrElse period.Equals("Final", StringComparison.OrdinalIgnoreCase)) Then
             _period = If(period.Equals("Midterm", StringComparison.OrdinalIgnoreCase), "Midterm", "Final")
+            _periodWasExplicitlyRequested = True
         End If
     End Sub
 
@@ -182,6 +184,15 @@ Public Class ucGradebook
             Msg.Warn("Teachers can only open classes for the active term.")
             Me.Enabled = False
             Return
+        End If
+        If Not _periodWasExplicitlyRequested Then
+            Try
+                _period = If(GradeReleaseService.IsMidtermCompleteAndPublished(_classId), "Final", "Midterm")
+            Catch ex As Exception
+                Msg.Fail("choose the default grading period", ex)
+                Me.Enabled = False
+                Return
+            End Try
         End If
         EnsurePeriodSelector()
         AddHandler pnlBottomActions.SizeChanged, AddressOf pnlBottomActions_SizeChanged

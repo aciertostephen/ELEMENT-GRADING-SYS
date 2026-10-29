@@ -27,6 +27,7 @@ Partial Public Class ucAcademicManagement
         AddHandler miMove.Click, Sub() OpenPlacement(0, _menuSectionId)
         AddHandler miDelete.Click, Sub() DeleteSection(_menuSectionId)
         AddHandler dgvSections.CellMouseDown, AddressOf SectionRowMouseDown
+        AddHandler dgvSections.CellMouseClick, AddressOf SectionRowMouseClick
 
         ' "Student Placement" button next to the view dropdown (Sections view only)
         btnPlacement = New Button() With {
@@ -60,6 +61,16 @@ Partial Public Class ucAcademicManagement
         _sectionMenu.Show(Cursor.Position)
     End Sub
 
+    Private Sub SectionRowMouseClick(sender As Object, e As DataGridViewCellMouseEventArgs)
+        If e.Button <> MouseButtons.Left OrElse e.RowIndex < 0 OrElse Not dgvSections.Columns.Contains("section_id") Then Return
+        Try
+            Dim sectionId As Integer = Convert.ToInt32(dgvSections.Rows(e.RowIndex).Cells("section_id").Value)
+            ViewCurrentSectionStudents(sectionId)
+        Catch ex As Exception
+            Msg.Fail("show the section's current students", ex)
+        End Try
+    End Sub
+
     Private Sub AfterSectionChange()
         PopulateDropdowns()
         SelectActiveYearInFilter()
@@ -76,6 +87,12 @@ Partial Public Class ucAcademicManagement
         Catch ex As Exception
             Msg.Fail("show the students", ex)
         End Try
+    End Sub
+
+    Private Sub ViewCurrentSectionStudents(sectionId As Integer)
+        Using dlg As New SectionRosterDialog(sectionId, showHistory:=False)
+            dlg.ShowDialog(FindForm())
+        End Using
     End Sub
 
     ''' <summary>Jumps to the Classes view filtered to this section's school year, year level and code.</summary>

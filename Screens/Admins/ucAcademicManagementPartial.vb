@@ -171,6 +171,7 @@ Partial Public Class ucAcademicManagement
             "  s.school_year, COALESCE(s.batch, '') AS batch, " &
             "  (SELECT COUNT(DISTINCT x.student_id) FROM (SELECT student_id, section_id FROM student_section_history " &
             "     UNION SELECT student_id, section_id FROM student_profile) x WHERE x.section_id = s.section_id) AS student_count, " &
+            "  (SELECT COUNT(*) FROM student_profile sp WHERE sp.section_id = s.section_id) AS current_student_count, " &
             "  (SELECT COUNT(*) FROM classes c INNER JOIN academic_term t ON t.term_id = c.term_id " &
             "     WHERE c.section_id = s.section_id " & semFilter & ") AS class_count " &
             "FROM section s " &
@@ -188,10 +189,11 @@ Partial Public Class ucAcademicManagement
             SetSectionColumn("year_label", "Year Level", True)
             SetSectionColumn("school_year", "School Year", True)
             SetSectionColumn("batch", "Batch", True)
-            SetSectionColumn("student_count", "Students (ever placed)", True)
+            SetSectionColumn("student_count", "Students ever placed", True)
+            SetSectionColumn("current_student_count", "Students now", True)
             SetSectionColumn("class_count", "Classes", True)
 
-            For Each colName As String In {"student_count", "class_count"}
+            For Each colName As String In {"student_count", "current_student_count", "class_count"}
                 If dgvSections.Columns.Contains(colName) Then
                     dgvSections.Columns(colName).DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
                     dgvSections.Columns(colName).HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter

@@ -6,7 +6,7 @@ Public Class ucStudentGradebook
 
     Private _classId As Integer
     Private _enrollmentId As String
-    Private _period As String = "Final"
+    Private _period As String = "Midterm"
     Private _periodSelector As ComboBox
     Private _periodNotice As Label
     Private _isPredictiveMode As Boolean = False
@@ -113,6 +113,13 @@ Public Class ucStudentGradebook
             Me.Enabled = False
             Return
         End If
+        Try
+            _period = If(GradeReleaseService.IsMidtermCompleteAndPublished(_classId), "Final", "Midterm")
+        Catch ex As Exception
+            Msg.Fail("choose the default grading period", ex)
+            Me.Enabled = False
+            Return
+        End Try
         EnsurePeriodSelector()
         LoadWeightsFromDatabase()
         BuildStudentGrid()

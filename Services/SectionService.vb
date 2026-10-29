@@ -182,6 +182,16 @@ Public Class SectionService
       {DatabaseHelper.P("@s", sectionId)})
   End Function
 
+  ''' <summary>Students currently assigned to a section, excluding former members kept in history.</summary>
+  Public Shared Function RosterCurrent(sectionId As Integer) As DataTable
+    If Not SessionManager.IsAdmin Then Throw New InvalidOperationException("Only administrators can view section rosters.")
+    Return DatabaseHelper.ExecuteQuery(
+      "SELECT sp.student_id, " &
+      "  CONCAT(sp.last_name, ', ', sp.first_name, IF(sp.middle_name IS NULL OR sp.middle_name = '', '', CONCAT(' ', sp.middle_name))) AS full_name " &
+      "FROM student_profile sp WHERE sp.section_id = @s ORDER BY sp.last_name, sp.first_name, sp.student_id",
+      {DatabaseHelper.P("@s", sectionId)})
+  End Function
+
   ''' <summary>
   ''' Moves the chosen students to a new section. DB triggers close the old history row, open a new
   ''' one and refresh year_level. Each student gets a notification. Returns how many moved.
