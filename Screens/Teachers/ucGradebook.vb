@@ -5,8 +5,9 @@ Imports System.Text.RegularExpressions
 Public Class ucGradebook
 
     Private _classId As Integer
-    Private _period As String = "Final"
+    Private _period As String = "Midterm"
     Private _periodSelector As ComboBox
+    Private _periodLockNotice As Label
 
     Public Sub New()
         InitializeComponent()
@@ -191,6 +192,7 @@ Public Class ucGradebook
         RecalculateAll()
         UpdateWeightDistributionComboBox()
         _gradebookSaved = IsPeriodReleased()
+        UpdatePeriodEditingState()
         UpdateSaveButtonState()
         ApplyViewMode()
     End Sub
@@ -201,6 +203,16 @@ Public Class ucGradebook
             .Font = New Font("Century Gothic", 9.0F), .Location = New Point(710, 31), .Anchor = AnchorStyles.Top Or AnchorStyles.Left}
         _periodSelector.Items.AddRange(New Object() {"Midterm", "Final"})
         _periodSelector.SelectedItem = _period
+        _periodLockNotice = New Label With {
+            .AutoSize = False,
+            .Font = New Font("Segoe UI", 8.5F),
+            .ForeColor = Color.FromArgb(128, 64, 64),
+            .Location = New Point(870, 27),
+            .Size = New Size(350, 34),
+            .TextAlign = ContentAlignment.MiddleLeft,
+            .Visible = False
+        }
+        pnlTopRubricBG.Controls.Add(_periodLockNotice)
         AddHandler _periodSelector.SelectedIndexChanged,
             Sub(sender, e)
                 If _periodSelector.SelectedItem Is Nothing Then Return
@@ -214,9 +226,38 @@ Public Class ucGradebook
                 RecalculateAll()
                 UpdateWeightDistributionComboBox()
                 _gradebookSaved = IsPeriodReleased()
+                UpdatePeriodEditingState()
                 UpdateSaveButtonState()
             End Sub
         pnlTopRubricBG.Controls.Add(_periodSelector)
+    End Sub
+
+    Private Function CurrentPeriodLockReason() As String
+        If _viewOnly OrElse _classId <= 0 OrElse _period <> "Final" Then Return Nothing
+        If Not GradeReleaseService.IsMidtermCompleteAndPublished(_classId) Then
+            Return "Final editing is locked until the Midterm gradebook is complete and officially published."
+        End If
+        Return Nothing
+    End Function
+
+    Private Sub UpdatePeriodEditingState()
+        Dim lockReason As String = CurrentPeriodLockReason()
+        Dim finalLocked As Boolean = lockReason IsNot Nothing
+
+        For Each col As DataGridViewColumn In dgvGradebook.Columns
+            If GetInfo(col).Kind = ColKind.Raw Then col.ReadOnly = finalLocked
+        Next
+
+        If _periodLockNotice IsNot Nothing Then
+            _periodLockNotice.Text = If(finalLocked, "Publish Midterm grades before editing Final.", "")
+            _periodLockNotice.Visible = finalLocked
+        End If
+
+        btnAddColumn.Enabled = Not finalLocked
+        btnConfigureWeights.Enabled = Not finalLocked
+        btnImport.Enabled = Not finalLocked
+        btnSaveChanges.Enabled = Not finalLocked
+        Weights.Enabled = Not finalLocked
     End Sub
 
     Private Function IsPeriodReleased() As Boolean
@@ -269,6 +310,8 @@ Public Class ucGradebook
     ' empty class the starter assessment columns. Teachers only: the admin view never writes.
     Private Sub EnsureClassRubric()
         If _classId <= 0 OrElse _viewOnly Then Return
+        ' Opening a locked Final view must never create or change Final rubric data.
+        If CurrentPeriodLockReason() IsNot Nothing Then Return
         Try
             Dim dtR As DataTable = DatabaseHelper.ExecuteQuery(
                 "SELECT COUNT(*) FROM grading_rubric WHERE class_id = @cid AND period = @p",
@@ -1627,6 +1670,8 @@ Public Class ucGradebook
         Dim info As ClassService.ClassInfo = ClassService.GetInfo(_classId)
         If info Is Nothing Then Return "Class not found."
         If Not ClassService.IsClassInActiveTerm(_classId) Then Return "Teachers can only edit classes for the active term."
+        Dim periodLockReason As String = CurrentPeriodLockReason()
+        If periodLockReason IsNot Nothing Then Return periodLockReason
         If Not AcademicContext.IsEditableYear(info.SchoolYear) Then
             Return "School year " & info.SchoolYear & " is past history and is read-only."
         End If
@@ -1849,6 +1894,14 @@ Public Class ucGradebook
         If Not _saveBtnColorKept Then
             _saveBtnBackColor = btnSaveConfig.BackColor
             _saveBtnColorKept = True
+        End If
+
+        Dim periodLockReason As String = CurrentPeriodLockReason()
+        If periodLockReason IsNot Nothing Then
+            btnSaveConfig.Enabled = False
+            btnSaveConfig.BackColor = Color.Silver
+            saveTip.SetToolTip(btnSaveConfig, periodLockReason)
+            Return
         End If
 
         Dim blockers As List(Of String) = GetSaveBlockers()

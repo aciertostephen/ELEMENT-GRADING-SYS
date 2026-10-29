@@ -128,29 +128,40 @@ Public Class ucTranscript
 
                     ' Grades from the enrollment table
                     Dim finalGrade As Decimal? = If(IsDBNull(row("final_grade")), Nothing, CType(row("final_grade"), Decimal?))
-                    Dim gradeEquiv As Decimal = If(IsDBNull(row("grade_equivalent")), 0.0D, Convert.ToDecimal(row("grade_equivalent")))
+                    Dim gradeEquiv As Decimal? = Nothing
+                    If Not IsDBNull(row("grade_equivalent")) Then gradeEquiv = Convert.ToDecimal(row("grade_equivalent"))
 
                     ' Format Professor's Name (Last Name, First Name)
                     Dim professorName As String = If(IsDBNull(row("prof_last")), "Unassigned", $"{row("prof_last")}, {row("prof_first")}")
 
-                    ' Grade shown in the grid: the computed grade equivalent (same scale as the GWA), or "IP" if not graded yet.
-                    ' If your dashboard shows the percentage instead, swap to the line below:
-                    ' Dim displayGrade As String = If(finalGrade.HasValue, finalGrade.Value.ToString("0.00"), "IP")
                     Dim enrollStatus As String = Convert.ToString(row("enroll_status"))
-                    Dim displayGrade As String = If(enrollStatus = "Dropped", "DRP",
-                                                 If(gradeEquiv > 0, gradeEquiv.ToString("0.00"),
-                                                 If(enrollStatus = "INC", "INC", "IP")))
+                    Dim displayGrade As String
+                    If enrollStatus = "Dropped" Then
+                        displayGrade = "DRP"
+                    ElseIf enrollStatus = "INC" Then
+                        displayGrade = "INC"
+                    ElseIf finalGrade.HasValue Then
+                        ' The semester percentage can be valid even when grade_scale has no matching equivalent.
+                        ' Never label a completed, officially released semester as IP for that lookup failure.
+                        displayGrade = If(gradeEquiv.HasValue,
+                                          gradeEquiv.Value.ToString("0.00"),
+                                          finalGrade.Value.ToString("0.00") & "%")
+                    Else
+                        displayGrade = "IP"
+                    End If
                     Dim remarks As String = If(enrollStatus = "Dropped", "Dropped",
                                             If(enrollStatus = "INC", "Incomplete",
-                                            If(IsDBNull(row("grade_remarks")), "In Progress", row("grade_remarks").ToString())))
+                                            If(IsDBNull(row("grade_remarks")),
+                                               If(finalGrade.HasValue, "Grade-scale equivalent unavailable", "In Progress"),
+                                               row("grade_remarks").ToString())))
                     _transcriptRows.Add({courseCode, courseName, professorName, displayGrade, remarks})
 
                     ' Add row to DataGridView (Columns: Code, Subjects, Professor, Grade)
                     ' Units is not passed because the grid has no Units column; it is still used for the GWA below.
                     dgvTranscript.Rows.Add(courseCode, courseName, professorName, displayGrade)
 
-                    If gradeEquiv > 0 AndAlso enrollStatus <> "Dropped" Then
-                        weightedSum += (gradeEquiv * units)
+                    If gradeEquiv.HasValue AndAlso enrollStatus <> "Dropped" Then
+                        weightedSum += (gradeEquiv.Value * units)
                         totalUnits += units
                     End If
                 Next
