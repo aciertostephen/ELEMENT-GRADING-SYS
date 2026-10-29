@@ -20,8 +20,26 @@
         If pnlHeader.Width > 0 Then
             btnExitApp.Location = New Point(pnlHeader.Width - btnExitApp.Width, 0)
             btnMinApp.Location = New Point(btnExitApp.Left - btnMinApp.Width, 0)
+            UpdateHeaderActions()
         End If
 
+        PositionNotificationPanel()
+
+    End Sub
+
+    Private Sub UpdateHeaderActions()
+        If pnlHeader Is Nothing OrElse pnlHeader.ClientSize.Width <= 0 Then Return
+        Const rightMargin As Integer = 18
+        Const actionGap As Integer = 20
+        Dim centerY As Integer = pnlHeader.ClientSize.Height \ 2
+        btnBell.Size = New Size(50, 50)
+        btnBell.Location = New Point(pnlHeader.ClientSize.Width - rightMargin - btnBell.Width, centerY - (btnBell.Height \ 2))
+        btnLogoutAdmin.Size = New Size(126, 38)
+        btnLogoutAdmin.Location = New Point(btnBell.Left - actionGap - btnLogoutAdmin.Width, centerY - (btnLogoutAdmin.Height \ 2))
+        lblProfileSettingsLink.AutoSize = False
+        lblProfileSettingsLink.Size = New Size(220, 38)
+        lblProfileSettingsLink.Location = New Point(btnLogoutAdmin.Left - actionGap - lblProfileSettingsLink.Width, centerY - (lblProfileSettingsLink.Height \ 2))
+        lblProfileSettingsLink.TextAlign = ContentAlignment.MiddleCenter
     End Sub
 
     Private Sub UpdateLeftPanel()

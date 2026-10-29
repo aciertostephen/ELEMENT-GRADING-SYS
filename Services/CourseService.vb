@@ -3,6 +3,7 @@ Imports MySqlConnector
 Public Class CourseService
 
   Public Shared Function Create(code As String, name As String, units As Integer) As Integer
+    If Not SessionManager.IsAdmin Then Throw New InvalidOperationException("Only an administrator can create a course.")
     code = If(code, "").Trim().ToUpperInvariant()
     name = If(name, "").Trim()
     If code.Length = 0 OrElse code.Length > 15 Then Throw New InvalidOperationException("Course code is required (max 15 characters).")

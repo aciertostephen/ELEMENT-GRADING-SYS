@@ -104,10 +104,12 @@ Public Class ucUserManagement
             "COALESCE(" &
             " NULLIF(TRIM(CONCAT_WS(' ', tp.first_name, tp.last_name)), ''), " &
             " NULLIF(TRIM(CONCAT_WS(' ', sp.first_name, sp.last_name)), ''), " &
+            " NULLIF(TRIM(CONCAT_WS(' ', ap.first_name, NULLIF(ap.middle_name, ''), ap.last_name)), ''), " &
             " u.username) AS full_name " &
             "FROM users u " &
             "LEFT JOIN teacher_profile tp ON u.user_id = tp.user_id " &
             "LEFT JOIN student_profile sp ON u.user_id = sp.user_id " &
+            "LEFT JOIN admin_profile ap ON u.user_id = ap.user_id " &
             "ORDER BY u.user_id DESC;"
 
         Try
@@ -218,7 +220,7 @@ Public Class ucUserManagement
                 CellText(row, Col.Role).ToLower().Contains(query)
 
             Dim matchesCat As Boolean = (currentFilter = FILTER_ALL) OrElse
-                (currentFilter = FILTER_FACULTY AndAlso IsFaculty(role)) OrElse
+                (currentFilter = FILTER_FACULTY AndAlso (IsFaculty(role) OrElse (SameText(role, ROLE_ADMIN) AndAlso Not IsCurrentAdmin(CellText(row, Col.UserId))))) OrElse
                 (currentFilter = FILTER_STUDENT AndAlso SameText(role, ROLE_STUDENT)) OrElse
                 (currentFilter = FILTER_ACTIVE AndAlso SameText(status, STATUS_ACTIVE)) OrElse
                 (currentFilter = FILTER_INACTIVE AndAlso SameText(status, STATUS_INACTIVE))
@@ -302,27 +304,32 @@ Public Class ucUserManagement
                             New MySqlParameter("@uid", userId)
                         })
 
-                    Dim parts As String() = dlg.FullName.Trim().Split(New Char() {" "c}, 2, StringSplitOptions.RemoveEmptyEntries)
+                    Dim parts As String() = dlg.FullName.Trim().Split(New Char() {" "c}, StringSplitOptions.RemoveEmptyEntries)
                     Dim fn As String = If(parts.Length > 0, parts(0), "")
-                    Dim ln As String = If(parts.Length > 1, parts(1), "")
+                    Dim ln As String = If(parts.Length > 1, parts(parts.Length - 1), "")
+                    Dim mn As String = If(parts.Length > 2, String.Join(" ", parts.Skip(1).Take(parts.Length - 2)), "")
 
-                    Dim profileTable As String = If(IsFaculty(role), "teacher_profile", If(SameText(role, ROLE_STUDENT), "student_profile", Nothing))
+                    Dim profileTable As String = If(IsFaculty(role), "teacher_profile", If(SameText(role, ROLE_STUDENT), "student_profile", If(SameText(role, ROLE_ADMIN), "admin_profile", Nothing)))
                     ' only touch the profile name when the admin really changed it: splitting "MA. CASSANDRA AMPARADO"
                     ' at the first space used to overwrite a correct first / last name (and left the middle name behind)
                     If profileTable IsNot Nothing AndAlso Not SameText(dlg.FullName.Trim(), CellText(row, Col.FullName).Trim()) Then
-                        DatabaseHelper.ExecuteNonQuery(
-                            $"UPDATE {profileTable} SET first_name = @fn, last_name = @ln WHERE user_id = @uid;",
-                            {
-                                New MySqlParameter("@fn", fn),
-                                New MySqlParameter("@ln", ln),
-                                New MySqlParameter("@uid", userId)
-                            })
+                        If SameText(role, ROLE_ADMIN) Then
+                            DatabaseHelper.ExecuteNonQuery(
+                                "INSERT INTO admin_profile (user_id, first_name, middle_name, last_name) VALUES (@uid, @fn, @mn, @ln) " &
+                                "ON DUPLICATE KEY UPDATE first_name = VALUES(first_name), middle_name = VALUES(middle_name), last_name = VALUES(last_name);",
+                                {New MySqlParameter("@uid", userId), New MySqlParameter("@fn", fn),
+                                 New MySqlParameter("@mn", If(mn = "", CType(DBNull.Value, Object), mn)), New MySqlParameter("@ln", ln)})
+                        Else
+                            DatabaseHelper.ExecuteNonQuery(
+                                $"UPDATE {profileTable} SET first_name = @fn, last_name = @ln WHERE user_id = @uid;",
+                                {New MySqlParameter("@fn", fn), New MySqlParameter("@ln", ln), New MySqlParameter("@uid", userId)})
+                        End If
                     End If
 
                     LoadUsersFromDatabase()
-                    MessageBox.Show($"Information for User [{userId}] was successfully updated in the database.", "Update Complete", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                    MessageBox.Show($"Information for User [{userId}] was successfully updated in the database.", "Update Complete", MessageBoxButtons.OK, MessageBoxIcon.None)
                 Catch ex As Exception
-                    MessageBox.Show("Failed to update database: " & ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                    MessageBox.Show("Failed to update database: " & ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.None)
                 End Try
             End If
         End Using
@@ -349,7 +356,7 @@ Public Class ucUserManagement
         Dim deactivating As Boolean = SameText(currentStatus, STATUS_ACTIVE)
 
         If deactivating AndAlso IsCurrentAdmin(userId) Then
-            MessageBox.Show("You cannot deactivate your own account.", "Action Not Allowed", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            MessageBox.Show("You cannot deactivate your own account.", "Action Not Allowed", MessageBoxButtons.OK, MessageBoxIcon.None)
             Return
         End If
 
@@ -374,9 +381,9 @@ Public Class ucUserManagement
                 })
 
             LoadUsersFromDatabase()
-            MessageBox.Show($"Account [{userId} - {fullName}] was {verbPast}.", $"Account {If(deactivating, "Deactivated", "Activated")}", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            MessageBox.Show($"Account [{userId} - {fullName}] was {verbPast}.", $"Account {If(deactivating, "Deactivated", "Activated")}", MessageBoxButtons.OK, MessageBoxIcon.None)
         Catch ex As Exception
-            MessageBox.Show("Failed to update status in database: " & ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            MessageBox.Show("Failed to update status in database: " & ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.None)
         End Try
     End Sub
 
@@ -420,9 +427,9 @@ Public Class ucUserManagement
                 })
 
             MessageBox.Show($"The password for [{userId} - {fullName}] was reset successfully." & vbCrLf & vbCrLf &
-                            "Please give the new password to the user securely.", "Password Reset", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                                "Please give the new password to the user securely.", "Password Reset", MessageBoxButtons.OK, MessageBoxIcon.None)
         Catch ex As Exception
-            MessageBox.Show("Failed to reset password: " & ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            MessageBox.Show("Failed to reset password: " & ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.None)
         End Try
     End Sub
 
@@ -431,6 +438,12 @@ Public Class ucUserManagement
     ' =========================================================================
     Private Sub btnCreateUser_Click(sender As Object, e As EventArgs) Handles btnCreateUser.Click
         Using dlg As New CreateUserDialog()
+            AddHandler dlg.BulkImportCompleted,
+                Sub()
+                    currentFilter = FILTER_ALL
+                    txtSearch.Clear()
+                    LoadUsersFromDatabase()
+                End Sub
             If dlg.ShowDialog(Me.FindForm()) <> DialogResult.OK Then Return
             Try
                 Dim hash As String = BCryptHasher.HashPassword(dlg.Password, 11)
@@ -476,14 +489,19 @@ Public Class ucUserManagement
                             ElseIf SameText(selectedRole, ROLE_STUDENT) Then
                                 cmd.CommandText =
                                     "INSERT INTO student_profile (student_id, user_id, first_name, middle_name, last_name, section_id, year_level) " &
-                                    "VALUES (@pid, @id, @fn, @mn, @ln, @sec, @yr);"
+                                    "VALUES (@pid, @id, @fn, @mn, @ln, NULL, NULL);"
                                 cmd.Parameters.AddWithValue("@pid", dlg.IdNumber)
                                 cmd.Parameters.AddWithValue("@id", newId)
                                 cmd.Parameters.AddWithValue("@fn", dlg.FirstName)
                                 cmd.Parameters.AddWithValue("@mn", dlg.MiddleName)
                                 cmd.Parameters.AddWithValue("@ln", dlg.LastName)
-                                cmd.Parameters.AddWithValue("@sec", dlg.SectionId)
-                                cmd.Parameters.AddWithValue("@yr", dlg.YearLevel)
+                                cmd.ExecuteNonQuery()
+                            ElseIf SameText(selectedRole, ROLE_ADMIN) Then
+                                cmd.CommandText = "INSERT INTO admin_profile (user_id, first_name, middle_name, last_name) VALUES (@id, @fn, @mn, @ln);"
+                                cmd.Parameters.AddWithValue("@id", newId)
+                                cmd.Parameters.AddWithValue("@fn", dlg.FirstName)
+                                cmd.Parameters.AddWithValue("@mn", dlg.MiddleName)
+                                cmd.Parameters.AddWithValue("@ln", dlg.LastName)
                                 cmd.ExecuteNonQuery()
                             End If
                         End Using
@@ -501,12 +519,12 @@ Public Class ucUserManagement
                                 $" Name: {dlg.FirstName} {dlg.LastName}" & vbCrLf &
                                 $" Username: {dlg.Username}" & vbCrLf & vbCrLf &
                                 "Please give the initial password to the user securely.",
-                                "User Created", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                                "User Created", MessageBoxButtons.OK, MessageBoxIcon.None)
 
             Catch ex As MySqlException When ex.Number = 1062
-                MessageBox.Show("That username, email, or ID number is already in use.", "Duplicate Account", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                MessageBox.Show("That username, email, or ID number is already in use.", "Duplicate Account", MessageBoxButtons.OK, MessageBoxIcon.None)
             Catch ex As Exception
-                MessageBox.Show("Failed to create user: " & ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                MessageBox.Show("Failed to create user: " & ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.None)
             End Try
         End Using
     End Sub
@@ -529,8 +547,6 @@ Public Class ucUserManagement
         Private ReadOnly pnlStudent As New Panel()
         Private ReadOnly pnlTeacher As New Panel()
         Private ReadOnly txtStudentNo As New TextBox()
-        Private ReadOnly cboSection As New ComboBox() With {.DropDownStyle = ComboBoxStyle.DropDownList}
-        Private ReadOnly cboYear As New ComboBox() With {.DropDownStyle = ComboBoxStyle.DropDownList}
         Private ReadOnly txtTeacherNo As New TextBox()
         Private ReadOnly cboDept As New ComboBox() With {.DropDownStyle = ComboBoxStyle.DropDown}
 
@@ -545,6 +561,8 @@ Public Class ucUserManagement
         Private ReadOnly btnSave As New Button()
         Private ReadOnly btnCancel As New Button()
         Private ReadOnly errors As New ErrorProvider()
+
+        Public Event BulkImportCompleted()
 
         Public ReadOnly Property Role As String
             Get
@@ -575,18 +593,6 @@ Public Class ucUserManagement
                 If SameText(Role, ROLE_STUDENT) Then Return txtStudentNo.Text.Trim()
                 If SameText(Role, ROLE_TEACHER) Then Return txtTeacherNo.Text.Trim().ToLower()
                 Return String.Empty
-            End Get
-        End Property
-
-        Public ReadOnly Property SectionId As Object
-            Get
-                Return cboSection.SelectedValue
-            End Get
-        End Property
-
-        Public ReadOnly Property YearLevel As Integer
-            Get
-                Return Convert.ToInt32(cboYear.SelectedItem)
             End Get
         End Property
 
@@ -627,22 +633,19 @@ Public Class ucUserManagement
 
         Public Sub New()
             Text = "Create New User"
-            Font = New Font("Century Gothic", 9, FontStyle.Regular)
+            Font = SystemFonts.MessageBoxFont
             FormBorderStyle = FormBorderStyle.FixedDialog
             StartPosition = FormStartPosition.CenterParent
             MaximizeBox = False
             MinimizeBox = False
             ShowInTaskbar = False
+            ShowIcon = False
             ClientSize = New Size(780, 480)
 
             errors.ContainerControl = Me
             errors.BlinkStyle = ErrorBlinkStyle.NeverBlink
 
             cboRole.Items.AddRange({ROLE_STUDENT, ROLE_TEACHER, ROLE_ADMIN})
-            cboYear.Items.AddRange({"1", "2", "3", "4"})
-            cboYear.SelectedIndex = 0
-
-            LoadSections()
             LoadDepartments()
 
             AddRow(Me, "Role:", cboRole, 20, 15, 340)
@@ -652,8 +655,10 @@ Public Class ucUserManagement
 
             pnlStudent.SetBounds(0, 235, 390, 165)
             AddRow(pnlStudent, "Student Number (e.g. 25-00547):", txtStudentNo, 20, 0, 340)
-            AddRow(pnlStudent, "Section:", cboSection, 20, 55, 340)
-            AddRow(pnlStudent, "Year Level:", cboYear, 20, 110, 340)
+            Dim lblPlacement As New Label() With {
+                .Text = "Create the account first. Assign the student to a section later through Student Placement.",
+                .Location = New Point(20, 58), .Size = New Size(340, 48), .ForeColor = Color.DimGray}
+            pnlStudent.Controls.Add(lblPlacement)
 
             pnlTeacher.SetBounds(0, 235, 390, 165)
             AddRow(pnlTeacher, "Teacher Number (e.g. tc-25-01196):", txtTeacherNo, 20, 0, 340)
@@ -676,33 +681,22 @@ Public Class ucUserManagement
             chkShow.Location = New Point(400, 295)
             Controls.Add(chkShow)
 
-            ' In-Dialog Excel Import Button
-            Dim normalColor As Color = Color.FromArgb(34, 90, 74)
-            Dim hoverColor As Color = Color.FromArgb(23, 61, 50)
-
+            ' Bulk user import uses the same class-list workbook parser as section and teacher imports.
             btnImportExcel.Text = "Import from Excel"
             btnImportExcel.Size = New Size(160, 32)
             btnImportExcel.Location = New Point(380, 425)
-            btnImportExcel.FlatStyle = FlatStyle.Flat
-            btnImportExcel.BackColor = normalColor
-            btnImportExcel.ForeColor = Color.White
-            btnImportExcel.Font = New Font("Century Gothic", 9, FontStyle.Regular)
-            btnImportExcel.Cursor = Cursors.Hand
-            btnImportExcel.FlatAppearance.BorderSize = 0
-
-            Dim cornerRadius As Integer = 15
-            Dim path As New System.Drawing.Drawing2D.GraphicsPath()
-            path.AddArc(0, 0, cornerRadius, cornerRadius, 180, 90)
-            path.AddArc(btnImportExcel.Width - cornerRadius, 0, cornerRadius, cornerRadius, 270, 90)
-            path.AddArc(btnImportExcel.Width - cornerRadius, btnImportExcel.Height - cornerRadius, cornerRadius, cornerRadius, 0, 90)
-            path.AddArc(0, btnImportExcel.Height - cornerRadius, cornerRadius, cornerRadius, 90, 90)
-            path.CloseAllFigures()
-            btnImportExcel.Region = New Region(path)
-
-            AddHandler btnImportExcel.MouseEnter, Sub() btnImportExcel.BackColor = hoverColor
-            AddHandler btnImportExcel.MouseLeave, Sub() btnImportExcel.BackColor = normalColor
-            AddHandler btnImportExcel.Click, Sub()
-                                             End Sub
+            btnImportExcel.FlatStyle = FlatStyle.System
+            btnImportExcel.UseVisualStyleBackColor = True
+            AddHandler btnImportExcel.Click,
+                Sub()
+                    Try
+                        If AdminBulkUserImportDialog.ChooseAndImport(Me) Then RaiseEvent BulkImportCompleted()
+                    Catch ex As InvalidOperationException
+                        Msg.Warn(ex.Message)
+                    Catch ex As Exception
+                        Msg.Fail("import student users", ex)
+                    End Try
+                End Sub
 
             btnSave.Text = "Create"
             btnSave.Size = New Size(90, 32)
@@ -734,24 +728,6 @@ Public Class ucUserManagement
             parent.Controls.Add(ctl)
         End Sub
 
-        Private Sub LoadSections()
-            Dim dt As DataTable = DatabaseHelper.ExecuteQuery("SELECT * FROM section;")
-            If dt Is Nothing OrElse dt.Columns.Count = 0 Then Return
-            Dim valueCol As String = If(dt.Columns.Contains("section_id"), "section_id", dt.Columns(0).ColumnName)
-            Dim displayCol As String = Nothing
-            For Each cand As String In {"section_code", "section_name", "code", "name"}
-                If dt.Columns.Contains(cand) Then
-                    displayCol = cand
-                    Exit For
-                End If
-            Next
-            If displayCol Is Nothing Then displayCol = valueCol
-
-            cboSection.DisplayMember = displayCol
-            cboSection.ValueMember = valueCol
-            cboSection.DataSource = dt
-        End Sub
-
         Private Sub LoadDepartments()
             Dim dt As DataTable = DatabaseHelper.ExecuteQuery("SELECT DISTINCT department FROM teacher_profile WHERE department IS NOT NULL AND department <> '' ORDER BY department;")
             If dt Is Nothing Then Return
@@ -764,6 +740,7 @@ Public Class ucUserManagement
         Private Sub OnRoleChanged(sender As Object, e As EventArgs)
             pnlStudent.Visible = SameText(Role, ROLE_STUDENT)
             pnlTeacher.Visible = SameText(Role, ROLE_TEACHER)
+            btnImportExcel.Visible = SameText(Role, ROLE_STUDENT)
             errors.Clear()
         End Sub
 
@@ -798,11 +775,6 @@ Public Class ucUserManagement
                 ElseIf IsTaken("student_profile", "student_id", IdNumber) Then
                     errors.SetError(txtStudentNo, "This student number already exists.")
                     If firstInvalid Is Nothing Then firstInvalid = txtStudentNo
-                End If
-
-                If cboSection.SelectedValue Is Nothing Then
-                    errors.SetError(cboSection, "Select a section.")
-                    If firstInvalid Is Nothing Then firstInvalid = cboSection
                 End If
 
             ElseIf SameText(Role, ROLE_TEACHER) Then
@@ -884,12 +856,13 @@ Public Class ucUserManagement
 
         Private Sub New(message As String, title As String)
             Text = title
-            Font = New Font("Century Gothic", 9, FontStyle.Regular)
+            Font = SystemFonts.MessageBoxFont
             FormBorderStyle = FormBorderStyle.FixedDialog
             StartPosition = FormStartPosition.CenterParent
             MaximizeBox = False
             MinimizeBox = False
             ShowInTaskbar = False
+            ShowIcon = False
 
             Dim lbl As New Label() With {
                 .Text = message,
@@ -957,12 +930,13 @@ Public Class ucUserManagement
 
         Public Sub New(userId As String, fullName As String, email As String, phone As String)
             Text = $"Edit User Information - {userId}"
-            Font = New Font("Century Gothic", 9, FontStyle.Regular)
+            Font = SystemFonts.MessageBoxFont
             FormBorderStyle = FormBorderStyle.FixedDialog
             StartPosition = FormStartPosition.CenterParent
             MaximizeBox = False
             MinimizeBox = False
             ShowInTaskbar = False
+            ShowIcon = False
             ClientSize = New Size(400, 230)
 
             errors.ContainerControl = Me
@@ -1052,12 +1026,13 @@ Public Class ucUserManagement
 
         Public Sub New(userId As String, fullName As String)
             Text = $"Reset Password - {userId}"
-            Font = New Font("Century Gothic", 9, FontStyle.Regular)
+            Font = SystemFonts.MessageBoxFont
             FormBorderStyle = FormBorderStyle.FixedDialog
             StartPosition = FormStartPosition.CenterParent
             MaximizeBox = False
             MinimizeBox = False
             ShowInTaskbar = False
+            ShowIcon = False
             ClientSize = New Size(400, 235)
 
             errors.ContainerControl = Me

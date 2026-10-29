@@ -6,14 +6,23 @@ Public Class ucStudentGradebook
 
     Private _classId As Integer
     Private _enrollmentId As String
+    Private _period As String = "Final"
+    Private _periodSelector As ComboBox
+    Private _periodNotice As Label
     Private _isPredictiveMode As Boolean = False
     Private _realGrades As New List(Of Object())
+    Private _predictionPanel As Panel
+    Private _predictionGrid As DataGridView
+    Private _liveGradeRefreshTimer As Timer
 
     ' grading_rubric.rubric_id for each category 1..4 of this class (index 0 unused)
     Private rubricIdByCat(4) As Integer
 
     Public Sub New()
         InitializeComponent()
+        ' Match the teacher gradebook's quiet active-cell highlight instead of the default blue selection.
+        dgvGradebook.DefaultCellStyle.SelectionBackColor = Color.FromArgb(236, 236, 236)
+        dgvGradebook.DefaultCellStyle.SelectionForeColor = Color.Black
     End Sub
 
     Public Sub New(classId As Integer, enrollmentId As String)
@@ -98,11 +107,81 @@ Public Class ucStudentGradebook
     End Sub
 
     Private Sub ucStudentGradebook_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        If Not SessionManager.IsStudent OrElse
+           Not ClassService.StudentOwnsActiveEnrollment(_classId, _enrollmentId, SessionManager.CurrentUserId) Then
+            Msg.Warn("This class is not available in your active-term gradebook.")
+            Me.Enabled = False
+            Return
+        End If
+        EnsurePeriodSelector()
         LoadWeightsFromDatabase()
         BuildStudentGrid()
         LoadStudentGrades()
         RecalculateAll()
         SetGridReadOnly(True)
+        EnsurePredictionGrid()
+        StartLiveGradeRefresh()
+        AddHandler btnPredictive.MouseEnter, AddressOf PredictiveButtonMouseEnter
+        AddHandler btnPredictive.MouseLeave, AddressOf PredictiveButtonMouseLeave
+    End Sub
+
+    Private Sub EnsurePeriodSelector()
+        If _periodSelector IsNot Nothing Then Return
+        _periodSelector = New ComboBox With {
+            .DropDownStyle = ComboBoxStyle.DropDownList,
+            .Width = 150,
+            .Height = 28,
+            .Font = New Font("Century Gothic", 9.0F),
+            .Location = New Point(250, 26)
+        }
+        _periodSelector.Items.AddRange(New Object() {"Midterm", "Final"})
+        _periodSelector.SelectedItem = _period
+        _periodNotice = New Label With {
+            .AutoSize = True,
+            .Font = New Font("Century Gothic", 9.0F),
+            .ForeColor = Color.FromArgb(90, 90, 90),
+            .Location = New Point(420, 31)
+        }
+        AddHandler _periodSelector.SelectedIndexChanged,
+            Sub(sender, e)
+                If _periodSelector.SelectedItem Is Nothing Then Return
+                Dim selected As String = _periodSelector.SelectedItem.ToString()
+                If selected = _period Then Return
+                _period = selected
+                LoadWeightsFromDatabase()
+                BuildStudentGrid()
+                LoadStudentGrades()
+                RecalculateAll()
+                UpdatePeriodNotice()
+            End Sub
+        pnlTopRubricBG.Controls.Add(_periodSelector)
+        pnlTopRubricBG.Controls.Add(_periodNotice)
+        UpdatePeriodNotice()
+    End Sub
+
+    Private Function IsPeriodReleased() As Boolean
+        Dim col As String = If(_period = "Midterm", "midterm_released_at", "finals_released_at")
+        Return DatabaseHelper.ScalarInt("SELECT COUNT(*) FROM classes WHERE class_id = @c AND " & col & " IS NOT NULL",
+            {DatabaseHelper.P("@c", _classId)}) > 0
+    End Function
+
+    Private Sub UpdatePeriodNotice()
+        If _periodNotice Is Nothing Then Return
+        Try
+            _periodNotice.Text = If(IsPeriodReleased(),
+                "Published " & _period & " grades · new score updates appear live",
+                "Scores update live as your teacher enters them · official " & _period & " grades are not published yet")
+        Catch
+            _periodNotice.Text = "Scores refresh automatically while this gradebook is open."
+        End Try
+    End Sub
+
+    Private Sub PredictiveButtonMouseEnter(sender As Object, e As EventArgs)
+        btnPredictive.BackColor = If(_isPredictiveMode, Color.FromArgb(185, 45, 58), Color.FromArgb(255, 220, 90))
+    End Sub
+
+    Private Sub PredictiveButtonMouseLeave(sender As Object, e As EventArgs)
+        btnPredictive.BackColor = If(_isPredictiveMode, Color.FromArgb(220, 53, 69), Color.FromArgb(241, 196, 15))
     End Sub
 
     ' Category names and weights live in grading_rubric (per class).
@@ -114,8 +193,8 @@ Public Class ucStudentGradebook
         Try
             Dim dt As DataTable = DatabaseHelper.ExecuteQuery(
                 "SELECT rubric_id, component_name, weight_percent, is_fixed FROM grading_rubric " &
-                "WHERE class_id = @cid ORDER BY is_fixed ASC, rubric_id ASC",
-                {New MySqlParameter("@cid", _classId)})
+                "WHERE class_id = @cid AND period = @p ORDER BY is_fixed ASC, rubric_id ASC",
+                {New MySqlParameter("@cid", _classId), New MySqlParameter("@p", _period)})
             If dt Is Nothing Then Return
 
             Dim custom As Integer = 0
@@ -162,6 +241,8 @@ Public Class ucStudentGradebook
             .ColumnHeadersDefaultCellStyle.BackColor = HdrFixed
             .ColumnHeadersDefaultCellStyle.ForeColor = Color.Black
             .DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            .DefaultCellStyle.SelectionBackColor = Color.FromArgb(236, 236, 236)
+            .DefaultCellStyle.SelectionForeColor = Color.Black
         End With
 
         ' Fixed left columns matching teacher grid layout
@@ -204,7 +285,7 @@ Public Class ucStudentGradebook
                 dgvGradebook.Columns.Add(total)
             Next
         Catch ex As Exception
-            MessageBox.Show("Error building student grid columns: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            MessageBox.Show("Error building student grid columns: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.None)
         End Try
 
         ' Final Grade Column
@@ -319,44 +400,79 @@ Public Class ucStudentGradebook
     ' ==========================================
     ' 3. LOAD STUDENT GRADES
     ' ==========================================
-    Private Sub LoadStudentGrades()
-        dgvGradebook.Rows.Clear()
+    Private Sub LoadStudentGrades(Optional quiet As Boolean = False)
         Try
-            Dim sql As String = "SELECT e.enrollment_id, sp.last_name, sp.first_name, sp.middle_name, e.status, gi.item_id, ge.score " &
+            Dim sql As String = "SELECT e.enrollment_id, sp.last_name, sp.first_name, sp.middle_name, e.status, pg.item_id, pg.score " &
                                 "FROM enrollment e " &
                                 "JOIN student_profile sp ON sp.student_id = e.student_id " &
-                                "LEFT JOIN grade_entry ge ON ge.enrollment_id = e.enrollment_id " &
-                                "LEFT JOIN grade_item gi ON gi.item_id = ge.item_id " &
-                                "WHERE e.enrollment_id = @enrId"
+                                "LEFT JOIN (SELECT ge.enrollment_id, gi.item_id, ge.score " &
+                                "           FROM grade_entry ge " &
+                                "           JOIN grade_item gi ON gi.item_id = ge.item_id " &
+                                "           JOIN grading_rubric r ON r.rubric_id = gi.rubric_id " &
+                                "           WHERE r.class_id = @classId AND r.period = @period) pg ON pg.enrollment_id = e.enrollment_id " &
+                                "WHERE e.enrollment_id = @enrId AND e.class_id = @classId " &
+                                "AND sp.user_id = @userId AND e.status <> 'Dropped'"
 
-            Dim dt As DataTable = DatabaseHelper.ExecuteQuery(sql, {New MySqlParameter("@enrId", _enrollmentId)})
+            Dim dt As DataTable = DatabaseHelper.ExecuteQuery(sql, {
+                New MySqlParameter("@enrId", _enrollmentId),
+                New MySqlParameter("@classId", _classId),
+                New MySqlParameter("@userId", SessionManager.CurrentUserId),
+                New MySqlParameter("@period", _period)})
 
-            If dt IsNot Nothing AndAlso dt.Rows.Count > 0 Then
+            If dt Is Nothing OrElse dt.Rows.Count = 0 Then
+                dgvGradebook.Rows.Clear()
+                _realGrades.Clear()
+                Return
+            End If
+
+            Dim row As DataGridViewRow
+            Dim changed As Boolean = False
+            If dgvGradebook.Rows.Count = 0 Then
                 Dim idx As Integer = dgvGradebook.Rows.Add()
-                Dim row As DataGridViewRow = dgvGradebook.Rows(idx)
-                row.Tag = _enrollmentId
+                row = dgvGradebook.Rows(idx)
+                changed = True
+            Else
+                row = dgvGradebook.Rows(0)
+            End If
+            row.Tag = _enrollmentId
+            If Convert.ToString(row.Cells("number").Value) <> "1" Then
                 row.Cells("number").Value = 1
+                changed = True
+            End If
 
-                Dim r0 = dt.Rows(0)
-                Dim mi As String = If(IsDBNull(r0("middle_name")), "", r0("middle_name").ToString().Trim())
-                row.Cells("studname").Value = $"{r0("last_name")}, {r0("first_name")}" & If(mi = "", "", " " & mi)
-                row.Cells("status").Value = If(r0("status").ToString() = "Dropped", "Dropped", "")
+            Dim r0 As DataRow = dt.Rows(0)
+            Dim mi As String = If(IsDBNull(r0("middle_name")), "", r0("middle_name").ToString().Trim())
+            Dim fullName As String = $"{r0("last_name")}, {r0("first_name")}" & If(mi = "", "", " " & mi)
+            Dim rowStatus As String = If(r0("status").ToString() = "Dropped", "Dropped", "")
+            If Not String.Equals(Convert.ToString(row.Cells("studname").Value), fullName, StringComparison.Ordinal) Then
+                row.Cells("studname").Value = fullName
+                changed = True
+            End If
+            If Not String.Equals(Convert.ToString(row.Cells("status").Value), rowStatus, StringComparison.Ordinal) Then
+                row.Cells("status").Value = rowStatus
+                changed = True
+            End If
 
-                For Each r As DataRow In dt.Rows
-                    If Not IsDBNull(r("item_id")) AndAlso Not IsDBNull(r("score")) Then
-                        Dim targetItemId As Integer = Convert.ToInt32(r("item_id"))
-                        For Each col As DataGridViewColumn In dgvGradebook.Columns
-                            Dim info As ColInfo = GetInfo(col)
-                            If info.Kind = ColKind.Raw AndAlso col.Tag IsNot Nothing Then
-                                If info.ItemId = targetItemId Then
-                                    row.Cells(col.Index).Value = Convert.ToDecimal(r("score")).ToString("0.00")
-                                End If
-                            End If
-                        Next
-                    End If
-                Next
+            ' Raw scores are visible as soon as the teacher finishes an edit; publishing is a separate action.
+            Dim scores As New Dictionary(Of Integer, String)()
+            For Each r As DataRow In dt.Rows
+                If Not IsDBNull(r("item_id")) AndAlso Not IsDBNull(r("score")) Then
+                    scores(Convert.ToInt32(r("item_id"))) = Convert.ToDecimal(r("score")).ToString("0.00")
+                End If
+            Next
+            For Each col As DataGridViewColumn In dgvGradebook.Columns
+                Dim info As ColInfo = GetInfo(col)
+                If info.Kind <> ColKind.Raw Then Continue For
+                Dim value As Object = Nothing
+                If scores.ContainsKey(info.ItemId) Then value = scores(info.ItemId)
+                If Not String.Equals(Convert.ToString(row.Cells(col.Index).Value), Convert.ToString(value), StringComparison.Ordinal) Then
+                    row.Cells(col.Index).Value = value
+                    changed = True
+                End If
+            Next
 
-                ' Backup row for Predictive Mode restoration
+            If changed Then
+                RecalculateRow(row)
                 Dim backupRow(dgvGradebook.Columns.Count - 1) As Object
                 For cellIdx As Integer = 0 To row.Cells.Count - 1
                     backupRow(cellIdx) = row.Cells(cellIdx).Value
@@ -365,8 +481,28 @@ Public Class ucStudentGradebook
                 _realGrades.Add(backupRow)
             End If
         Catch ex As Exception
-            MessageBox.Show("Error loading student grades: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            If Not quiet Then MessageBox.Show("Error loading student grades: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.None)
         End Try
+    End Sub
+
+    Private Sub StartLiveGradeRefresh()
+        If _liveGradeRefreshTimer IsNot Nothing Then Return
+        _liveGradeRefreshTimer = New Timer() With {.Interval = 4000}
+        AddHandler _liveGradeRefreshTimer.Tick,
+            Sub(sender, e)
+                If IsDisposed OrElse Disposing OrElse Not Visible OrElse _isPredictiveMode Then Return
+                LoadStudentGrades(quiet:=True)
+                UpdatePeriodNotice()
+            End Sub
+        AddHandler Disposed,
+            Sub(sender, e)
+                If _liveGradeRefreshTimer IsNot Nothing Then
+                    _liveGradeRefreshTimer.Stop()
+                    _liveGradeRefreshTimer.Dispose()
+                    _liveGradeRefreshTimer = Nothing
+                End If
+            End Sub
+        _liveGradeRefreshTimer.Start()
     End Sub
 
     ' ==========================================
@@ -424,42 +560,121 @@ Public Class ucStudentGradebook
 
     Private Sub dgvGradebook_CellEndEdit(sender As Object, e As DataGridViewCellEventArgs) Handles dgvGradebook.CellEndEdit
         If e.RowIndex < 0 Then Return
+        Dim grid As DataGridView = TryCast(sender, DataGridView)
+        If Not _isPredictiveMode OrElse grid Is Nothing OrElse grid IsNot _predictionGrid Then Return
 
-        ' Guard: Block edits if Predictive Mode is turned off
-        If Not _isPredictiveMode Then Return
-
-        Dim info As ColInfo = GetInfo(dgvGradebook.Columns(e.ColumnIndex))
+        Dim info As ColInfo = GetInfo(grid.Columns(e.ColumnIndex))
         If info.Kind <> ColKind.Raw Then Return
 
-        Dim editedRow As DataGridViewRow = dgvGradebook.Rows(e.RowIndex)
+        Dim editedRow As DataGridViewRow = grid.Rows(e.RowIndex)
         Dim editedCell As DataGridViewCell = editedRow.Cells(e.ColumnIndex)
         Dim inputString As String = If(editedCell.Value IsNot Nothing, editedCell.Value.ToString(), "")
 
         If String.IsNullOrWhiteSpace(inputString) Then
             editedCell.Value = Nothing
-            RecalculateRow(editedRow)
+            RecalculatePredictionRow(editedRow)
             Return
         End If
 
         Dim numericValue As Decimal
         If Decimal.TryParse(inputString, numericValue) Then
             If numericValue < 0 OrElse numericValue > info.MaxScore Then
-                MessageBox.Show("Please enter a valid score between 0 and " & info.MaxScore.ToString("0.##") & ".", "Invalid Score", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                MessageBox.Show("Please enter a valid score between 0 and " & info.MaxScore.ToString("0.##") & ".", "Invalid Score", MessageBoxButtons.OK, MessageBoxIcon.None)
                 editedCell.Value = "0.00"
             Else
                 editedCell.Value = numericValue.ToString("0.00")
             End If
         Else
-            MessageBox.Show("Please enter a numeric value.", "Invalid Input", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            MessageBox.Show("Please enter a numeric value.", "Invalid Input", MessageBoxButtons.OK, MessageBoxIcon.None)
             editedCell.Value = "0.00"
         End If
 
-        RecalculateRow(editedRow)
+        RecalculatePredictionRow(editedRow)
     End Sub
 
     Private Sub SetGridReadOnly(isReadOnly As Boolean)
-        dgvGradebook.ReadOnly = isReadOnly
-        dgvGradebook.BackgroundColor = If(isReadOnly, Color.White, Color.FromArgb(255, 252, 230))
+        ' The published gradebook always remains read-only; prediction edits live in the separate grid.
+        dgvGradebook.ReadOnly = True
+        dgvGradebook.BackgroundColor = Color.White
+    End Sub
+
+    Private Sub EnsurePredictionGrid()
+        If _predictionPanel IsNot Nothing Then Return
+        _predictionPanel = New Panel With {.Dock = DockStyle.Fill, .Visible = False, .Padding = New Padding(20, 8, 20, 12), .BackColor = Color.White}
+        Dim title As New Label With {.Text = "PREDICTIVE COPY — edits here are temporary and never change published grades", .Dock = DockStyle.Top, .Height = 28, .Font = New Font("Century Gothic", 9.0F, FontStyle.Bold), .ForeColor = Color.FromArgb(34, 90, 74)}
+        _predictionGrid = New DataGridView With {.Dock = DockStyle.Fill, .AllowUserToAddRows = False, .AllowUserToDeleteRows = False, .AllowUserToOrderColumns = False, .RowHeadersVisible = False, .AutoSizeColumnsMode = dgvGradebook.AutoSizeColumnsMode, .BackgroundColor = Color.White, .BorderStyle = BorderStyle.None, .GridColor = Color.FromArgb(224, 230, 227), .SelectionMode = DataGridViewSelectionMode.CellSelect, .EditMode = DataGridViewEditMode.EditOnKeystrokeOrF2, .EnableHeadersVisualStyles = False}
+        _predictionGrid.ColumnHeadersDefaultCellStyle = dgvGradebook.ColumnHeadersDefaultCellStyle.Clone()
+        _predictionGrid.DefaultCellStyle = dgvGradebook.DefaultCellStyle.Clone()
+        _predictionGrid.ColumnHeadersHeight = dgvGradebook.ColumnHeadersHeight
+        _predictionGrid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(242, 247, 244)
+        _predictionPanel.Controls.Add(_predictionGrid)
+        _predictionPanel.Controls.Add(title)
+        tblMainRubric.RowCount = 3
+        tblMainRubric.RowStyles.Clear()
+        tblMainRubric.RowStyles.Add(New RowStyle(SizeType.Absolute, 125.0F))
+        tblMainRubric.RowStyles.Add(New RowStyle(SizeType.Percent, 100.0F))
+        tblMainRubric.RowStyles.Add(New RowStyle(SizeType.Absolute, 0.0F))
+        tblMainRubric.Controls.Add(_predictionPanel, 0, 2)
+        AddHandler _predictionGrid.CellEndEdit, AddressOf dgvGradebook_CellEndEdit
+    End Sub
+
+    Private Sub RefreshPredictionGrid()
+        _predictionGrid.Columns.Clear()
+        _predictionGrid.Rows.Clear()
+        For Each sourceColumn As DataGridViewColumn In dgvGradebook.Columns
+            Dim col As DataGridViewColumn = DirectCast(sourceColumn.Clone(), DataGridViewColumn)
+            Dim info As ColInfo = GetInfo(sourceColumn)
+            col.ReadOnly = (info.Kind <> ColKind.Raw)
+            _predictionGrid.Columns.Add(col)
+        Next
+        For Each sourceRow As DataGridViewRow In dgvGradebook.Rows
+            If sourceRow.IsNewRow Then Continue For
+            Dim index As Integer = _predictionGrid.Rows.Add()
+            For i As Integer = 0 To sourceRow.Cells.Count - 1
+                _predictionGrid.Rows(index).Cells(i).Value = sourceRow.Cells(i).Value
+            Next
+            _predictionGrid.Rows(index).Tag = sourceRow.Tag
+        Next
+        RecalculatePredictionAll()
+    End Sub
+
+    Private Sub RecalculatePredictionAll()
+        If _predictionGrid Is Nothing Then Return
+        For Each row As DataGridViewRow In _predictionGrid.Rows
+            RecalculatePredictionRow(row)
+        Next
+    End Sub
+
+    Private Sub RecalculatePredictionRow(row As DataGridViewRow)
+        If row Is Nothing OrElse row.IsNewRow Then Return
+        Dim sums(4) As Decimal
+        Dim counts(4) As Integer
+        For Each col As DataGridViewColumn In _predictionGrid.Columns
+            Dim info As ColInfo = GetInfo(col)
+            If info.Kind <> ColKind.Raw Then Continue For
+            Dim raw As Decimal
+            Dim value As Object = row.Cells(col.Index).Value
+            If value IsNot Nothing AndAlso Decimal.TryParse(value.ToString(), raw) Then
+                row.Cells(col.Name & "_gra").Value = ToGrA(raw, info.MaxScore).ToString("0.00")
+                sums(info.Category) += ToGrA(raw, info.MaxScore)
+                counts(info.Category) += 1
+            Else
+                row.Cells(col.Name & "_gra").Value = ""
+            End If
+        Next
+        Dim finalGrade As Decimal = 0D
+        For cat As Integer = 1 To 4
+            Dim name As String = "cat" & cat & "_total"
+            If Not _predictionGrid.Columns.Contains(name) Then Continue For
+            If counts(cat) > 0 Then
+                Dim weighted As Decimal = GradeCalculator.CategoryTotal(sums(cat), counts(cat), CategoryWeight(cat))
+                row.Cells(name).Value = weighted.ToString("0.00")
+                finalGrade += weighted
+            Else
+                row.Cells(name).Value = ""
+            End If
+        Next
+        row.Cells("grade").Value = If(Convert.ToString(row.Cells("status").Value).Equals("Dropped", StringComparison.OrdinalIgnoreCase), "DRP", finalGrade.ToString("0.00"))
     End Sub
 
     ' ==========================================
@@ -469,26 +684,35 @@ Public Class ucStudentGradebook
         _isPredictiveMode = Not _isPredictiveMode
 
         If _isPredictiveMode Then
-            btnPredictive.Text = "Exit Predictive Mode"
+            btnPredictive.Text = "Exit predictive"
             btnPredictive.BackColor = Color.FromArgb(220, 53, 69)
+            btnPredictive.ForeColor = Color.White
             btnPredictive.TextAlign = ContentAlignment.MiddleCenter
-            SetGridReadOnly(False)
+            btnPredictive.Padding = Padding.Empty
+            btnPredictive.Invalidate()
+            btnPredictive.TextAlign = ContentAlignment.MiddleCenter
+            RefreshPredictionGrid()
+            Dim usedHeight As Integer = dgvGradebook.ColumnHeadersHeight + dgvGradebook.Rows.Cast(Of DataGridViewRow)().Where(Function(r) Not r.IsNewRow).Sum(Function(r) r.Height) + 4
+            Dim maxTopHeight As Integer = Math.Max(180, (tblMainRubric.ClientSize.Height - 125) \ 2)
+            tblMainRubric.RowStyles(1).SizeType = SizeType.Absolute
+            tblMainRubric.RowStyles(1).Height = Math.Min(usedHeight, maxTopHeight)
+            tblMainRubric.RowStyles(2).SizeType = SizeType.Percent
+            tblMainRubric.RowStyles(2).Height = 50.0F
+            _predictionPanel.Visible = True
+            _predictionGrid.ReadOnly = False
+            dgvGradebook.ReadOnly = True
         Else
             btnPredictive.Text = "Predictive Mode"
             btnPredictive.BackColor = Color.FromArgb(241, 196, 15)
-            SetGridReadOnly(True)
-
-            ' Restore real grades from backup
-            If _realGrades.Count > 0 AndAlso dgvGradebook.Rows.Count > 0 Then
-                Dim row = dgvGradebook.Rows(0)
-                Dim backup = _realGrades(0)
-                For idx As Integer = 0 To backup.Length - 1
-                    If idx < row.Cells.Count Then
-                        row.Cells(idx).Value = backup(idx)
-                    End If
-                Next
-                RecalculateRow(row)
-            End If
+            btnPredictive.ForeColor = Color.Black
+            btnPredictive.Invalidate()
+            LoadStudentGrades(quiet:=True)
+            _predictionPanel.Visible = False
+            tblMainRubric.RowStyles(1).SizeType = SizeType.Percent
+            tblMainRubric.RowStyles(1).Height = 100.0F
+            tblMainRubric.RowStyles(2).SizeType = SizeType.Absolute
+            tblMainRubric.RowStyles(2).Height = 0.0F
+            dgvGradebook.ReadOnly = True
         End If
     End Sub
 

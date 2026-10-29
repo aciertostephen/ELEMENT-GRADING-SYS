@@ -1,24 +1,13 @@
-Imports System.Collections.Concurrent
-Imports System.Globalization
-Imports System.Text
-Imports System.Threading.Tasks
-Imports BCryptHasher = BCrypt.Net.BCrypt
-
-''' <summary>
+﻿''' <summary>
 ''' Teacher imports a class list (Excel) into ONE of their classes.
 '''
-'''   * Students already in the system are only ENROLLED in the class (their account / section is never touched).
-'''   * New students get an account: username = student number, starting password = student number,
-'''     e-mail = lastname_firstname@plpasig.edu.ph. They are placed in the section named by the Excel sheet
-'''     (the section row is created when it does not exist yet - that is the real section of the student).
+'''   * Only students who already have an account can be enrolled by a teacher.
+'''   * A teacher import never creates an account or changes a student's section.
 '''   * A student who was Dropped from this class is re-enrolled (grades are kept).
 '''   * Everything happens in ONE transaction: if anything fails, nothing is saved.
 ''' The class roster is the real roster (enrollment). The section of the class is only a label.
 ''' </summary>
 Public Class ClassListImportService
-
-  Public Const EmailDomain As String = "plpasig.edu.ph"
-  Private Const BcryptCost As Integer = 11          ' same cost as the admin's Create User
 
   Public Class ImportResult
     Public Property NewAccounts As Integer          ' accounts created
@@ -34,6 +23,7 @@ Public Class ClassListImportService
   Public Shared Function CannotImportReason(info As ClassService.ClassInfo, teacherUserId As Integer) As String
     If info Is Nothing Then Return "Class not found."
     If Not ClassService.TeacherOwnsClass(info.ClassId, teacherUserId) Then Return "You are not the teacher of this class."
+    If Not ClassService.IsClassInActiveTerm(info.ClassId) Then Return "Teachers can only import class lists for the active term."
     If Not AcademicContext.IsEditableYear(info.SchoolYear) Then
       Return "School year " & info.SchoolYear & " is past history and is read-only."
     End If
@@ -71,8 +61,21 @@ Public Class ClassListImportService
     Next
     If chosen.Count = 0 Then Throw New InvalidOperationException("There is no student to import.")
 
-    ' ---- who already has an account, and who is already in this class ----
+    ' Teachers may enroll existing accounts only. Account creation and section placement
+    ' belong to the administrator's user/placement workflows.
     Dim existing As HashSet(Of String) = FindExistingStudents(chosen.Select(Function(r) r.StudentNo))
+    Dim eligible As New List(Of ClassListRow)
+    For Each r As ClassListRow In chosen
+      If existing.Contains(r.StudentNo) Then
+        eligible.Add(r)
+      Else
+        result.Skipped.Add(r.StudentNo & " " & r.FullName & " (student account not found; ask an administrator to create it)")
+      End If
+    Next
+    chosen = eligible
+    If chosen.Count = 0 Then
+      Throw New InvalidOperationException("None of the selected student numbers have an existing student account. Ask an administrator to create the accounts, then import the list again.")
+    End If
 
     Dim roster As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
     For Each dr As DataRow In DatabaseHelper.ExecuteQuery(
@@ -80,38 +83,13 @@ Public Class ClassListImportService
       roster(dr("student_id").ToString()) = dr("status").ToString()
     Next
 
-    ' ---- password hashing is slow, so do it for all new students at once, in parallel ----
-    Dim hashes As New ConcurrentDictionary(Of String, String)()
-    Dim needHash As List(Of String) = chosen.Where(Function(r) Not existing.Contains(r.StudentNo)).
-                                             Select(Function(r) r.StudentNo).ToList()
-    Parallel.ForEach(Of String)(needHash,
-      Sub(sn As String)
-        hashes(sn) = BCryptHasher.HashPassword(sn, BcryptCost)
-      End Sub)
-
     ' ---- write everything atomically ----
-    Dim usedEmails As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
     DatabaseHelper.RunInTransaction(
       Sub(tx)
-        Dim sectionId As Integer = 0          ' only looked up / created when a NEW student needs it
         Dim ids As New EnrollmentService.IdAllocator(tx, info.SchoolYear)   ' enr-YY-NNNNN numbers
 
         For Each r As ClassListRow In chosen
-          Dim isNew As Boolean = Not existing.Contains(r.StudentNo)
-
-          If isNew Then
-            If Convert.ToInt32(tx.Scalar("SELECT COUNT(*) FROM users WHERE username = @u",
-                                         DatabaseHelper.P("@u", r.StudentNo))) > 0 Then
-              result.Skipped.Add(r.StudentNo & " " & r.FullName & " (username already used by another account)")
-              Continue For
-            End If
-            If sectionId = 0 Then sectionId = EnsureSection(tx, sheet, result)
-            CreateStudentAccount(tx, r, sectionId, sheet.YearLevel, hashes(r.StudentNo), usedEmails)
-            result.NewAccounts += 1
-          Else
-            result.ExistingAccounts += 1
-          End If
-
+          result.ExistingAccounts += 1
           EnrollInClass(tx, classId, r.StudentNo, roster, result, ids)
         Next
       End Sub)
@@ -140,49 +118,6 @@ Public Class ClassListImportService
     Return found
   End Function
 
-  ''' <summary>The section named by the sheet in the class's school year; created when it does not exist yet.</summary>
-  Private Shared Function EnsureSection(tx As DbTx, sheet As ClassListSheet, result As ImportResult) As Integer
-    Dim prog As Object = tx.Scalar("SELECT program_id FROM program WHERE program_code = @c",
-                                   DatabaseHelper.P("@c", sheet.ProgramCode))
-    If prog Is Nothing Then
-      Throw New InvalidOperationException("Program " & sheet.ProgramCode & " does not exist. Ask the admin to add it first.")
-    End If
-    Dim programId As Integer = Convert.ToInt32(prog)
-
-    Dim sec As Object = tx.Scalar(
-      "SELECT section_id FROM section WHERE program_id = @p AND school_year = @sy AND year_level = @yl AND section_code = @c",
-      DatabaseHelper.P("@p", programId), DatabaseHelper.P("@sy", sheet.SchoolYear),
-      DatabaseHelper.P("@yl", sheet.YearLevel), DatabaseHelper.P("@c", sheet.SectionCode))
-    If sec IsNot Nothing Then Return Convert.ToInt32(sec)
-
-    If sheet.SectionCode.Length > 15 Then
-      Throw New InvalidOperationException("Section code " & sheet.SectionCode & " is longer than 15 characters.")
-    End If
-    tx.Exec("INSERT INTO section (section_code, program_id, school_year, year_level) VALUES (@c, @p, @sy, @yl)",
-            DatabaseHelper.P("@c", sheet.SectionCode), DatabaseHelper.P("@p", programId),
-            DatabaseHelper.P("@sy", sheet.SchoolYear), DatabaseHelper.P("@yl", sheet.YearLevel))
-    result.SectionsCreated.Add(sheet.SectionCode & " (" & sheet.SchoolYear & ")")
-    Return Convert.ToInt32(tx.Scalar("SELECT LAST_INSERT_ID()"))
-  End Function
-
-  ''' <summary>users + student_profile. The DB triggers set year_level and write the section history.</summary>
-  Private Shared Sub CreateStudentAccount(tx As DbTx, r As ClassListRow, sectionId As Integer, yearLevel As Integer,
-                                          hash As String, usedEmails As HashSet(Of String))
-    Dim email As String = UniqueEmail(tx, r.LastName, r.FirstName, usedEmails)
-
-    tx.Exec("INSERT INTO users (username, email, password_hash, role, status, phone_no) " &
-            "VALUES (@u, @e, @h, 'Student', 'Active', NULL)",
-            DatabaseHelper.P("@u", r.StudentNo), DatabaseHelper.P("@e", email), DatabaseHelper.P("@h", hash))
-    Dim userId As Integer = Convert.ToInt32(tx.Scalar("SELECT LAST_INSERT_ID()"))
-
-    tx.Exec("INSERT INTO student_profile (student_id, user_id, first_name, middle_name, last_name, section_id, year_level) " &
-            "VALUES (@id, @uid, @f, @m, @l, @sec, @yl)",
-            DatabaseHelper.P("@id", r.StudentNo), DatabaseHelper.P("@uid", userId),
-            DatabaseHelper.P("@f", Clip(r.FirstName, 50)), DatabaseHelper.P("@m", Clip(r.MiddleName, 50)),
-            DatabaseHelper.P("@l", Clip(r.LastName, 50)), DatabaseHelper.P("@sec", sectionId),
-            DatabaseHelper.P("@yl", yearLevel.ToString()))
-  End Sub
-
   ''' <summary>Adds the student to the class roster, or re-enrolls a Dropped one.</summary>
   Private Shared Sub EnrollInClass(tx As DbTx, classId As Integer, studentNo As String,
                                    roster As Dictionary(Of String, String), result As ImportResult,
@@ -192,6 +127,7 @@ Public Class ClassListImportService
       If status = "Dropped" Then
         tx.Exec("UPDATE enrollment SET status = 'Enrolled' WHERE class_id = @c AND student_id = @s",
                 DatabaseHelper.P("@c", classId), DatabaseHelper.P("@s", studentNo))
+        NotificationService.NotifyStudentAssigned(tx, classId, studentNo)
         result.Reenrolled += 1
       Else
         result.AlreadyInClass += 1
@@ -201,44 +137,9 @@ Public Class ClassListImportService
               DatabaseHelper.P("@e", ids.NextId()),
               DatabaseHelper.P("@s", studentNo), DatabaseHelper.P("@c", classId))
       roster(studentNo) = "Enrolled"
+      NotificationService.NotifyStudentAssigned(tx, classId, studentNo)
       result.Enrolled += 1
     End If
   End Sub
 
-  ' ------------------------------------------------------------------
-  ' E-mail: lastname_firstname@plpasig.edu.ph (same style as the registrar's sheet)
-  ' ------------------------------------------------------------------
-
-  Private Shared Function UniqueEmail(tx As DbTx, last As String, first As String, used As HashSet(Of String)) As String
-    Dim localPart As String = Slug(last) & "_" & Slug(first)
-    If localPart = "_" Then localPart = "student"
-    If localPart.Length > 60 Then localPart = localPart.Substring(0, 60)
-
-    Dim n As Integer = 0
-    Do
-      Dim candidate As String = localPart & If(n = 0, "", n.ToString()) & "@" & EmailDomain
-      If Not used.Contains(candidate) AndAlso
-         Convert.ToInt32(tx.Scalar("SELECT COUNT(*) FROM users WHERE email = @e", DatabaseHelper.P("@e", candidate))) = 0 Then
-        used.Add(candidate)
-        Return candidate
-      End If
-      n += 1
-    Loop
-  End Function
-
-  ''' <summary>"CAÑARES" -> "canares", "DELA CRUZ" -> "delacruz" (letters, digits and hyphen only).</summary>
-  Private Shared Function Slug(s As String) As String
-    Dim sb As New StringBuilder()
-    For Each ch As Char In If(s, "").Normalize(NormalizationForm.FormD)
-      If CharUnicodeInfo.GetUnicodeCategory(ch) = UnicodeCategory.NonSpacingMark Then Continue For
-      Dim lc As Char = Char.ToLowerInvariant(ch)
-      If (lc >= "a"c AndAlso lc <= "z"c) OrElse (lc >= "0"c AndAlso lc <= "9"c) OrElse lc = "-"c Then sb.Append(lc)
-    Next
-    Return sb.ToString()
-  End Function
-
-  Private Shared Function Clip(s As String, maxLength As Integer) As String
-    s = If(s, "").Trim()
-    Return If(s.Length > maxLength, s.Substring(0, maxLength), s)
-  End Function
 End Class

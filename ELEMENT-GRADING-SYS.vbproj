@@ -2,7 +2,7 @@
 
 <PropertyGroup>
   <OutputType>WinExe</OutputType>
-  <TargetFramework>net8.0-windows</TargetFramework>
+  <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
   <RootNamespace>ELEMENT_GRADING_SYS</RootNamespace>
   <StartupObject>Sub Main</StartupObject>
   <UseWindowsForms>true</UseWindowsForms>
@@ -39,6 +39,9 @@
 
   <ItemGroup>
     <None Update="Templates\GradingTemplate.xlsm">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Resources\StudentTranscriptTemplate.jpg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="My Project\Application.myapp">

@@ -98,6 +98,7 @@ Partial Public Class ucAcademicManagement
         AddHandler cboViewMode.SelectedIndexChanged, AddressOf OnViewModeChanged
         addButtonDefaultText = btnAddCourse.Text
         InitSectionMenu()   ' right-click Edit/Delete + Student Placement button
+        ApplyViewMode()
     End Sub
 
     Private Sub OnViewModeChanged(sender As Object, e As EventArgs)
@@ -110,12 +111,9 @@ Partial Public Class ucAcademicManagement
         dgvSections.Visible = showingSections
         If btnPlacement IsNot Nothing Then btnPlacement.Visible = showingSections
 
-        ' the top-right button does "Add Course/Class" or "Add Section" depending on the view
-        If showingSections Then
-            btnAddCourse.Text = If(addButtonDefaultText.StartsWith("+"), "+ Add Section", "Add Section")
-        Else
-            btnAddCourse.Text = addButtonDefaultText
-        End If
+        btnAddSection.Visible = True
+        btnAddSection.UseWaitCursor = False
+        btnAddCourse.Text = addButtonDefaultText
 
         RefreshCurrentView()
     End Sub
@@ -200,7 +198,7 @@ Partial Public Class ucAcademicManagement
                 End If
             Next
         Catch ex As Exception
-            MessageBox.Show("Error loading sections: " & ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            MessageBox.Show("Error loading sections: " & ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.None)
         End Try
     End Sub
 
@@ -219,7 +217,7 @@ Partial Public Class ucAcademicManagement
         Dim dtPrograms As DataTable = DatabaseHelper.ExecuteQuery(
             "SELECT program_id, program_code, CONCAT(program_code, ' - ', program_name) AS display FROM program ORDER BY program_code ASC;")
         If dtPrograms Is Nothing OrElse dtPrograms.Rows.Count = 0 Then
-            MessageBox.Show("No programs found. Please add a program first.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            MessageBox.Show("No programs found. Please add a program first.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.None)
             Return
         End If
 
@@ -238,9 +236,10 @@ Partial Public Class ucAcademicManagement
             f.FormBorderStyle = FormBorderStyle.FixedDialog
             f.MaximizeBox = False
             f.MinimizeBox = False
-            f.Font = New Font("Century Gothic", 9, FontStyle.Regular)
+            f.ShowIcon = False
+            f.Font = SystemFonts.MessageBoxFont
 
-            Dim boldFont As New Font("Century Gothic", 9, FontStyle.Bold)
+            Dim boldFont As Font = SystemFonts.MessageBoxFont
 
             Dim lblProgram As New Label() With {.Text = "Program:", .Location = New Point(20, 20), .AutoSize = True, .Font = boldFont}
             Dim cboProgram As New ComboBox() With {.Location = New Point(20, 42), .Width = 390, .DropDownStyle = ComboBoxStyle.DropDownList}
@@ -274,7 +273,7 @@ Partial Public Class ucAcademicManagement
                 .MaximumSize = New Size(390, 0),
                 .AutoSize = True,
                 .ForeColor = Color.Gray,
-                .Font = New Font("Century Gothic", 8, FontStyle.Regular)
+                .Font = SystemFonts.MessageBoxFont
             }
 
             Dim btnSave As New Button() With {.Text = "Save Section", .Location = New Point(190, 270), .Width = 110, .Height = 35, .Font = boldFont}
@@ -322,7 +321,7 @@ Partial Public Class ucAcademicManagement
                         Convert.ToInt32(cboProgram.SelectedValue), cboSY.Text.Trim(), cboYL.SelectedIndex + 1,
                         txtCode.Text.Trim(), txtBatch.Text.Trim())
                     If problem <> "" Then
-                        MessageBox.Show(problem, "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                        MessageBox.Show(problem, "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.None)
                         Return
                     End If
                     f.DialogResult = DialogResult.OK
@@ -337,22 +336,26 @@ Partial Public Class ucAcademicManagement
             Dim batch As String = txtBatch.Text.Trim()
 
             Try
-                DatabaseHelper.ExecuteNonQuery(
-                    "INSERT INTO section (section_code, program_id, school_year, year_level, batch) VALUES (@code, @prog, @sy, @yl, @batch);", {
-                    New MySqlParameter("@code", code),
-                    New MySqlParameter("@prog", programId),
-                    New MySqlParameter("@sy", schoolYear),
-                    New MySqlParameter("@yl", yearLevel),
-                    New MySqlParameter("@batch", If(batch = "", DirectCast(DBNull.Value, Object), batch))
-                })
-                MessageBox.Show("Section " & code & " was added.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                Dim sectionId As Integer = SectionService.Create(programId, schoolYear, yearLevel, code, batch)
+                Msg.Info("Section " & code & " was added.", "Section created")
+
+                If Msg.Confirm("Would you like to import the student list for this section now? New student accounts will be created by the administrator.",
+                               "Import section students") Then
+                    Try
+                        AdminSectionStudentImportDialog.ChooseAndImport(sectionId, FindForm())
+                    Catch ex As InvalidOperationException
+                        Msg.Warn(ex.Message)
+                    Catch ex As Exception
+                        Msg.Fail("import the section student list", ex)
+                    End Try
+                End If
 
                 ' new section can add a new year level / section code to the filters, and changes the stat card
                 PopulateDropdowns()
                 LoadAcademicStats()
                 RefreshCurrentView()
             Catch ex As Exception
-                MessageBox.Show("Error adding section: " & ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                Msg.Fail("add the section", ex)
             End Try
         End Using
     End Sub

@@ -490,6 +490,7 @@ Partial Class ucGradebook
         btnSaveConfig.Image = Nothing
         btnSaveConfig.ImageAlign = ContentAlignment.MiddleLeft
         btnSaveConfig.InactiveColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
+        btnSaveConfig.Anchor = AnchorStyles.Top Or AnchorStyles.Right
         btnSaveConfig.Location = New Point(1642, 15)
         btnSaveConfig.Name = "btnSaveConfig"
         btnSaveConfig.PressedBorderColor = Color.Transparent

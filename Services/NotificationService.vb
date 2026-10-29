@@ -19,18 +19,24 @@ Public Class NotificationService
   ' Sending
   ' ---------------------------------------------------------------
 
-  ''' <summary>Called inside the transaction that releases grades: notice to the admin + one notice per student.</summary>
-  Friend Shared Sub NotifyGradesSaved(tx As DbTx, classId As Integer, teacherUserId As Integer)
+  ''' <summary>Called inside the grade-release transaction: a pending admin review plus notices to graded students.</summary>
+  Friend Shared Sub NotifyGradesPublished(tx As DbTx, classId As Integer, teacherUserId As Integer, period As String)
+    If period <> "Midterm" AndAlso period <> "Final" Then Throw New InvalidOperationException("Choose Midterm or Final.")
+    Dim gradeColumn As String = If(period = "Midterm", "midterm_grade", "finals_grade")
     Dim msg As String = Convert.ToString(tx.Scalar(
-      "SELECT CONCAT(tp.first_name, ' ', tp.last_name, ' saved the final grades of ', co.course_code, ' - ', s.section_code, " &
-      "' (', t.school_year, ' Sem ', t.semester, '). Grades are now visible to students.') " &
+      "SELECT CONCAT(tp.first_name, ' ', tp.last_name, ' published the official ', @p, ' period grades for ', co.course_code, ' - ', s.section_code, " &
+      "' (', t.school_year, ' Sem ', t.semester, ').') " &
       "FROM classes c JOIN teacher_profile tp ON tp.teacher_id = c.teacher_id " &
       "JOIN course co ON co.course_id = c.course_id JOIN section s ON s.section_id = c.section_id " &
-      "JOIN academic_term t ON t.term_id = c.term_id WHERE c.class_id = @c", DatabaseHelper.P("@c", classId)))
+      "JOIN academic_term t ON t.term_id = c.term_id WHERE c.class_id = @c",
+      DatabaseHelper.P("@c", classId), DatabaseHelper.P("@p", period)))
 
     Dim pending As Object = tx.Scalar(
       "SELECT notification_id FROM notification WHERE type = 'Grade Release' AND status = 'Pending' " &
-      "AND recipient_user_id IS NULL AND related_class_id = @c LIMIT 1", DatabaseHelper.P("@c", classId))
+      "AND recipient_user_id IS NULL AND related_class_id = @c " &
+      "AND (message LIKE CONCAT('% published the official ', @p, ' period grades for %') " &
+      "     OR message LIKE CONCAT('% saved the ', @p, ' grades of %')) LIMIT 1",
+      DatabaseHelper.P("@c", classId), DatabaseHelper.P("@p", period))
 
     If pending IsNot Nothing Then
       tx.Exec("UPDATE notification SET message = @m, created_at = NOW() WHERE notification_id = @n",
@@ -40,22 +46,46 @@ Public Class NotificationService
               DatabaseHelper.P("@u", teacherUserId), DatabaseHelper.P("@m", msg), DatabaseHelper.P("@c", classId))
     End If
 
-    ' one notice per student who now has a grade (skip if they still have an unread one for this class)
+    ' One unread notice per student and grading period; Midterm and Final releases stay distinct.
     tx.Exec(
       "INSERT INTO notification (sender_id, recipient_user_id, type, message, related_class_id, status) " &
       "SELECT @t, sp.user_id, 'Grade Release', " &
-      "       CONCAT('Official grades for ', co.course_code, ' - ', co.course_name, ' are now available.'), c.class_id, 'Completed' " &
+      "       CONCAT('Your official ', @p, ' period grade for ', co.course_code, ' - ', co.course_name, ' has been published.', " &
+      "              IF(@p = 'Final', ' The semester average appears after both Midterm and Final grades are published.', '')), " &
+      "       c.class_id, 'Completed' " &
       "FROM enrollment e JOIN student_profile sp ON sp.student_id = e.student_id " &
       "JOIN classes c ON c.class_id = e.class_id JOIN course co ON co.course_id = c.course_id " &
-      "WHERE e.class_id = @c AND e.status <> 'Dropped' AND e.final_grade IS NOT NULL " &
+      "WHERE e.class_id = @c AND e.status <> 'Dropped' AND e." & gradeColumn & " IS NOT NULL " &
       "AND NOT EXISTS (SELECT 1 FROM notification n WHERE n.recipient_user_id = sp.user_id " &
-      "                AND n.related_class_id = c.class_id AND n.type = 'Grade Release' AND n.is_read = 0)",
-      DatabaseHelper.P("@t", teacherUserId), DatabaseHelper.P("@c", classId))
+      "                AND n.related_class_id = c.class_id AND n.type = 'Grade Release' AND n.is_read = 0 " &
+      "                AND (n.message LIKE CONCAT('Your official ', @p, ' period grade for %') " &
+      "                     OR n.message LIKE CONCAT('Your ', @p, ' grades for %')))",
+      DatabaseHelper.P("@t", teacherUserId), DatabaseHelper.P("@c", classId), DatabaseHelper.P("@p", period))
+  End Sub
+
+  ''' <summary>Notifies a student when a teacher adds or re-enrolls them in a class roster.</summary>
+  Friend Shared Sub NotifyStudentAssigned(tx As DbTx, classId As Integer, studentId As String)
+    Dim recipient As Object = tx.Scalar(
+      "SELECT sp.user_id FROM student_profile sp WHERE sp.student_id = @s", DatabaseHelper.P("@s", studentId))
+    If recipient Is Nothing OrElse Convert.IsDBNull(recipient) Then Return
+
+    Dim label As String = Convert.ToString(tx.Scalar(
+      "SELECT CONCAT(co.course_code, ' - ', co.course_name, ' (', s.section_code, ', ', t.school_year, ')') " &
+      "FROM classes c JOIN course co ON co.course_id = c.course_id " &
+      "JOIN section s ON s.section_id = c.section_id JOIN academic_term t ON t.term_id = c.term_id " &
+      "WHERE c.class_id = @c", DatabaseHelper.P("@c", classId)))
+    tx.Exec(InsertNoticeSql,
+      DatabaseHelper.P("@s", SessionManager.CurrentUserId), DatabaseHelper.P("@r", Convert.ToInt32(recipient)),
+      DatabaseHelper.P("@t", "Class Update"), DatabaseHelper.P("@m", "You were added to " & label & ". Open the class to view its gradebook."),
+      DatabaseHelper.P("@c", classId))
   End Sub
 
   ''' <summary>Teacher sends a Class Update or Add-Drop-Transfer request to the admin.</summary>
   Public Shared Sub SendRequest(type As String, message As String, Optional classId As Integer? = Nothing)
     If Not SessionManager.IsTeacher Then Throw New InvalidOperationException("Only teachers can send requests.")
+    If classId.HasValue AndAlso Not ClassService.TeacherOwnsClass(classId.Value, SessionManager.CurrentUserId) Then
+      Throw New InvalidOperationException("You can only send a request about one of your classes.")
+    End If
     DatabaseHelper.ExecuteNonQuery(
       "INSERT INTO notification (sender_id, type, message, related_class_id) VALUES (@u, @t, @m, @c)",
       {DatabaseHelper.P("@u", SessionManager.CurrentUserId), DatabaseHelper.P("@t", type),
@@ -124,6 +154,13 @@ Public Class NotificationService
     If SessionManager.IsAdmin OrElse Not SessionManager.IsLoggedIn Then Return
     DatabaseHelper.ExecuteNonQuery("UPDATE notification SET is_read = 1 WHERE recipient_user_id = @u AND is_read = 0",
                                    {DatabaseHelper.P("@u", SessionManager.CurrentUserId)})
+  End Sub
+
+  Public Shared Sub MarkRead(notificationId As Integer)
+    If SessionManager.IsAdmin OrElse Not SessionManager.IsLoggedIn Then Return
+    DatabaseHelper.ExecuteNonQuery(
+      "UPDATE notification SET is_read = 1 WHERE notification_id = @n AND recipient_user_id = @u AND is_read = 0",
+      {DatabaseHelper.P("@n", notificationId), DatabaseHelper.P("@u", SessionManager.CurrentUserId)})
   End Sub
 
   ''' <summary>Admin marks a request as reviewed.</summary>

@@ -1,4 +1,4 @@
-Imports System.Text
+﻿Imports System.Text
 Imports System.Windows.Forms
 
 ''' <summary>
@@ -7,7 +7,7 @@ Imports System.Windows.Forms
 '''      student can be imported from any other sheet).
 '''   2. Review the students. Rows that are yellow / marked withdrawn, LOA, no show ... start unticked
 '''      (tick them if they really are enrolled). Rows without a student number cannot be imported.
-'''   3. Press Import. New students get an account, everybody is added to this class's list.
+'''   3. Press Import. Only students with an existing account are added to this class's list.
 ''' </summary>
 Public Class ImportClassListDialog
   Inherits DialogBase
@@ -47,7 +47,7 @@ Public Class ImportClassListDialog
     If cboSheet.Items.Count > 0 Then cboSheet.SelectedIndex = DefaultSheetIndex()
 
     AddNote("Importing into:  " & _info.Title & "  (" & _info.SchoolYear & ")")
-        AddNote("New students get an account")
+        AddNote("Only existing student accounts can be enrolled. Ask an administrator to create missing accounts.")
         AddField("Class list sheet:", cboSheet)
         AddField("Students in the sheet :", clb)
         AddField("", chkAll)
@@ -136,12 +136,12 @@ Public Class ImportClassListDialog
     Dim includable As Integer = _rows.Where(Function(r) r.CanInclude).Count()
     chkAll.Checked = (includable > 0 AndAlso picked = includable)     ' (does not raise Click, so no loop)
     Dim text As String = picked & " student(s) will be imported, " & (_rows.Count - picked) & " skipped."
-    lblStatus.ForeColor = UiTheme.Muted
+    lblStatus.ForeColor = SystemColors.ControlText
 
     Dim sheet As ClassListSheet = SelectedSheet()
     If sheet IsNot Nothing AndAlso sheet.SchoolYear <> _info.SchoolYear Then
       text &= vbCrLf & "This sheet is for " & sheet.SchoolYear & " but this class is " & _info.SchoolYear & ". It cannot be imported."
-      lblStatus.ForeColor = UiTheme.Danger
+      lblStatus.ForeColor = SystemColors.ControlText
     End If
     lblStatus.Text = text
   End Sub
@@ -192,7 +192,6 @@ Public Class ImportClassListDialog
     sb.AppendLine("Added to this class: " & (r.Enrolled + r.Reenrolled) &
                   If(r.Reenrolled > 0, "  (" & r.Reenrolled & " re-enrolled)", ""))
     sb.AppendLine("Already on this class list: " & r.AlreadyInClass)
-    sb.AppendLine("New student accounts created: " & r.NewAccounts)
     sb.AppendLine("Already had an account: " & r.ExistingAccounts)
     If r.SectionsCreated.Count > 0 Then
       sb.AppendLine("Section created: " & String.Join(", ", r.SectionsCreated))
@@ -204,10 +203,6 @@ Public Class ImportClassListDialog
         sb.AppendLine("  - " & s)
       Next
       If r.Skipped.Count > 8 Then sb.AppendLine("  ... and " & (r.Skipped.Count - 8) & " more")
-    End If
-    If r.NewAccounts > 0 Then
-      sb.AppendLine()
-      sb.AppendLine("New students sign in with their student number as username and starting password.")
     End If
     Return sb.ToString().TrimEnd()
   End Function

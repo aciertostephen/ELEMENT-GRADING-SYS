@@ -16,10 +16,11 @@ Public Class SectionRosterDialog
     StartPosition = FormStartPosition.CenterParent
     MinimizeBox = False
     ShowInTaskbar = False
+    ShowIcon = False
     ClientSize = New Size(640, 440)
 
     Dim lbl As New Label() With {
-      .Dock = DockStyle.Top, .Height = 44, .Padding = New Padding(10, 8, 10, 0), .ForeColor = UiTheme.Muted,
+      .Dock = DockStyle.Top, .Height = 44, .Padding = New Padding(10, 8, 10, 0), .ForeColor = SystemColors.ControlText,
       .Text = "Everyone who was placed in this section. Students who moved on are kept here as history. " &
               "Use ""View this section's classes"" to see the class lists of this batch."}
 

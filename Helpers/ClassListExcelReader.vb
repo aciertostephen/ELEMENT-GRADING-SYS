@@ -152,8 +152,6 @@ Public NotInheritable Class ClassListExcelReader
 
     Dim lastUsed As IXLRow = ws.LastRowUsed()
     Dim lastRow As Integer = If(lastUsed Is Nothing, headerRow, lastUsed.RowNumber())
-    lastRow = Math.Min(lastRow, headerRow + 500)
-
     ' 2) read the rows
     For r As Integer = headerRow + 1 To lastRow
       Dim sn As String = CleanSpaces(CellText(ws, r, noCol))
@@ -260,7 +258,9 @@ Public NotInheritable Class ClassListExcelReader
 
   ''' <summary>"     Student No." -> "studentno" (for matching header cells).</summary>
   Private Shared Function Compact(s As String) As String
-    Return Regex.Replace(If(s, ""), "[\s\.]", "").ToLowerInvariant()
+    ' The supplied workbook uses both "EMAIL" and "E-MAIL". Ignore punctuation
+    ' as well as spaces so the status columns are found in either layout.
+    Return Regex.Replace(If(s, ""), "[^\p{L}\p{N}]", "").ToLowerInvariant()
   End Function
 
   Private Shared Function HasLetterOrDigit(s As String) As Boolean

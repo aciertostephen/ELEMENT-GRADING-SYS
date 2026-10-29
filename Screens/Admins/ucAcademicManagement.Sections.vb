@@ -17,11 +17,13 @@ Partial Public Class ucAcademicManagement
         Dim miClasses As ToolStripItem = _sectionMenu.Items.Add("View this section's classes")
         _sectionMenu.Items.Add(New ToolStripSeparator())
         Dim miEdit As ToolStripItem = _sectionMenu.Items.Add("Edit section...")
+        Dim miImport As ToolStripItem = _sectionMenu.Items.Add("Import student list...")
         Dim miMove As ToolStripItem = _sectionMenu.Items.Add("Move students into this section...")
         Dim miDelete As ToolStripItem = _sectionMenu.Items.Add("Delete section")
         AddHandler miStudents.Click, Sub() ViewSectionStudents(_menuSectionId)
         AddHandler miClasses.Click, Sub() ViewSectionClasses(_menuSectionId)
         AddHandler miEdit.Click, Sub() EditSection(_menuSectionId)
+        AddHandler miImport.Click, Sub() ImportSectionStudents(_menuSectionId)
         AddHandler miMove.Click, Sub() OpenPlacement(0, _menuSectionId)
         AddHandler miDelete.Click, Sub() DeleteSection(_menuSectionId)
         AddHandler dgvSections.CellMouseDown, AddressOf SectionRowMouseDown
@@ -38,6 +40,16 @@ Partial Public Class ucAcademicManagement
         cboViewMode.Parent.Controls.Add(btnPlacement)
         btnPlacement.BringToFront()
         AddHandler btnPlacement.Click, Sub() OpenPlacement(0, 0)
+    End Sub
+
+    Private Sub ImportSectionStudents(sectionId As Integer)
+        Try
+            If AdminSectionStudentImportDialog.ChooseAndImport(sectionId, FindForm()) Then AfterSectionChange()
+        Catch ex As InvalidOperationException
+            Msg.Warn(ex.Message)
+        Catch ex As Exception
+            Msg.Fail("import students into the section", ex)
+        End Try
     End Sub
 
     Private Sub SectionRowMouseDown(sender As Object, e As DataGridViewCellMouseEventArgs)

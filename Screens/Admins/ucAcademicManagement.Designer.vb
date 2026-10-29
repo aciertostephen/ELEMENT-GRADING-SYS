@@ -103,7 +103,7 @@ Partial Class ucAcademicManagement
         ' 
         ' btnCreateCourse
         ' 
-        btnCreateCourse.Anchor = AnchorStyles.Left Or AnchorStyles.Right
+        btnCreateCourse.Anchor = AnchorStyles.Top Or AnchorStyles.Right
         btnCreateCourse.BackColor = Color.Transparent
         btnCreateCourse.BackgroundImageLayout = ImageLayout.Zoom
         btnCreateCourse.BorderColor = Color.Transparent
@@ -125,7 +125,7 @@ Partial Class ucAcademicManagement
         ' 
         ' btnAddSection
         ' 
-        btnAddSection.Anchor = AnchorStyles.Left Or AnchorStyles.Right
+        btnAddSection.Anchor = AnchorStyles.Top Or AnchorStyles.Right
         btnAddSection.BackColor = Color.Transparent
         btnAddSection.BackgroundImageLayout = ImageLayout.Zoom
         btnAddSection.BorderColor = Color.Transparent
@@ -147,7 +147,7 @@ Partial Class ucAcademicManagement
         ' 
         ' btnAddCourse
         ' 
-        btnAddCourse.Anchor = AnchorStyles.Left Or AnchorStyles.Right
+        btnAddCourse.Anchor = AnchorStyles.Top Or AnchorStyles.Right
         btnAddCourse.BackColor = Color.Transparent
         btnAddCourse.BackgroundImageLayout = ImageLayout.Zoom
         btnAddCourse.BorderColor = Color.Transparent

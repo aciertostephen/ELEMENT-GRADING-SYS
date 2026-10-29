@@ -1,4 +1,4 @@
-Imports System.Data
+﻿Imports System.Data
 Imports System.Text.RegularExpressions
 Imports MySqlConnector
 
@@ -48,13 +48,54 @@ Public Class SectionService
     End If
   End Sub
 
+  ''' <summary>Create a section for an active or upcoming school year.</summary>
+  Public Shared Function Create(programId As Integer, schoolYear As String, yearLevel As Integer,
+                                code As String, batch As String) As Integer
+    If Not SessionManager.IsAdmin Then Throw New InvalidOperationException("Only an administrator can create a section.")
+    schoolYear = If(schoolYear, "").Trim()
+    code = If(code, "").Trim().ToUpperInvariant()
+    batch = If(batch, "").Trim()
+    Dim years As Match = Regex.Match(schoolYear, "^(\d{4})-(\d{4})$")
+    If Not years.Success OrElse Integer.Parse(years.Groups(2).Value) <> Integer.Parse(years.Groups(1).Value) + 1 Then
+      Throw New InvalidOperationException("School year must contain two consecutive years, such as 2026-2027.")
+    End If
+    If Not AcademicContext.IsEditableYear(schoolYear) Then
+      Throw New InvalidOperationException("Sections can only be created in the active or a future school year.")
+    End If
+    If yearLevel < 1 OrElse yearLevel > 4 Then Throw New InvalidOperationException("Year level must be between 1 and 4.")
+    If programId <= 0 Then Throw New InvalidOperationException("Choose a program.")
+    If code.Length = 0 OrElse code.Length > 15 Then Throw New InvalidOperationException("Section code must be between 1 and 15 characters.")
+    If batch <> "" AndAlso Not Regex.IsMatch(batch, "^\d{4}-\d{4}$") Then
+      Throw New InvalidOperationException("Batch must look like 2025-2026, or be left blank.")
+    End If
+    If DatabaseHelper.ScalarInt("SELECT COUNT(*) FROM program WHERE program_id = @p", {DatabaseHelper.P("@p", programId)}) = 0 Then
+      Throw New InvalidOperationException("The selected program does not exist.")
+    End If
+    If DatabaseHelper.ScalarInt(
+      "SELECT COUNT(*) FROM section WHERE program_id = @p AND school_year = @sy AND year_level = @yl AND section_code = @c",
+      {DatabaseHelper.P("@p", programId), DatabaseHelper.P("@sy", schoolYear), DatabaseHelper.P("@yl", yearLevel), DatabaseHelper.P("@c", code)}) > 0 Then
+      Throw New InvalidOperationException("That section already exists for this program, year and school year.")
+    End If
+
+    Dim newId As Integer = 0
+    DatabaseHelper.RunInTransaction(
+      Sub(tx)
+        tx.Exec("INSERT INTO section (section_code, program_id, school_year, year_level, batch) VALUES (@c, @p, @sy, @yl, @b)",
+                DatabaseHelper.P("@c", code), DatabaseHelper.P("@p", programId), DatabaseHelper.P("@sy", schoolYear),
+                DatabaseHelper.P("@yl", yearLevel), DatabaseHelper.P("@b", If(batch = "", Nothing, batch)))
+        newId = Convert.ToInt32(tx.Scalar("SELECT LAST_INSERT_ID()"))
+      End Sub)
+    Return newId
+  End Function
+
   ''' <summary>Program, school year and year level define the section, so only the code and batch can change.</summary>
   Public Shared Sub Update(sectionId As Integer, code As String, batch As String)
+    If Not SessionManager.IsAdmin Then Throw New InvalidOperationException("Only an administrator can edit a section.")
     Dim info = GetInfo(sectionId)
     If info Is Nothing Then Throw New InvalidOperationException("Section not found.")
     EnsureEditable(info)
 
-    code = If(code, "").Trim()
+    code = If(code, "").Trim().ToUpperInvariant()
     batch = If(batch, "").Trim()
     If code.Length = 0 Then Throw New InvalidOperationException("Section code is required.")
     If code.Length > 15 Then Throw New InvalidOperationException("Section code can be at most 15 characters.")
@@ -76,6 +117,7 @@ Public Class SectionService
 
   ''' <summary>Only a section that never had students and has no classes can be deleted.</summary>
   Public Shared Sub Delete(sectionId As Integer)
+    If Not SessionManager.IsAdmin Then Throw New InvalidOperationException("Only an administrator can delete a section.")
     Dim info = GetInfo(sectionId)
     If info Is Nothing Then Return
     EnsureEditable(info)
@@ -117,8 +159,8 @@ Public Class SectionService
     Dim sql As String =
       "SELECT sp.student_id, " &
       "  CONCAT(sp.last_name, ', ', sp.first_name, IF(sp.middle_name IS NULL OR sp.middle_name = '', '', CONCAT(' ', sp.middle_name))) AS full_name, " &
-      "  CONCAT(s.section_code, ' ', s.school_year) AS section_label " &
-      "FROM student_profile sp JOIN section s ON s.section_id = sp.section_id "
+      "  COALESCE(CONCAT(s.section_code, ' ', s.school_year), 'Not placed') AS section_label " &
+      "FROM student_profile sp LEFT JOIN section s ON s.section_id = sp.section_id "
     If sectionId > 0 Then
       Return DatabaseHelper.ExecuteQuery(sql & "WHERE sp.section_id = @s ORDER BY sp.last_name, sp.first_name", {DatabaseHelper.P("@s", sectionId)})
     End If
@@ -145,6 +187,7 @@ Public Class SectionService
   ''' one and refresh year_level. Each student gets a notification. Returns how many moved.
   ''' </summary>
   Public Shared Function MoveStudents(studentIds As IEnumerable(Of String), destSectionId As Integer) As Integer
+    If Not SessionManager.IsAdmin Then Throw New InvalidOperationException("Only an administrator can move students between sections.")
     Dim dest = GetInfo(destSectionId)
     If dest Is Nothing Then Throw New InvalidOperationException("Destination section not found.")
     EnsureEditable(dest)
@@ -153,7 +196,7 @@ Public Class SectionService
     DatabaseHelper.RunInTransaction(
       Sub(tx)
         For Each id As String In studentIds
-          Dim n As Integer = tx.Exec("UPDATE student_profile SET section_id = @d WHERE student_id = @s AND section_id <> @d",
+          Dim n As Integer = tx.Exec("UPDATE student_profile SET section_id = @d WHERE student_id = @s AND NOT (section_id <=> @d)",
                                      DatabaseHelper.P("@d", destSectionId), DatabaseHelper.P("@s", id))
           moved += n
           If n > 0 Then

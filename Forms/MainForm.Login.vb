@@ -30,10 +30,15 @@ Partial Public Class MainForm
 
         Dim sql As String =
             "SELECT u.user_id, u.username, u.password_hash, u.role, u.status, " &
-            "COALESCE(CONCAT(tp.first_name, ' ', tp.last_name), CONCAT(sp.first_name, ' ', sp.last_name), 'Administrator') AS full_name " &
+            "COALESCE(" &
+            " NULLIF(TRIM(CONCAT_WS(' ', tp.first_name, tp.last_name)), ''), " &
+            " NULLIF(TRIM(CONCAT_WS(' ', sp.first_name, sp.last_name)), ''), " &
+            " NULLIF(TRIM(CONCAT_WS(' ', ap.first_name, NULLIF(ap.middle_name, ''), ap.last_name)), ''), " &
+            " u.username) AS full_name " &
             "FROM users u " &
             "LEFT JOIN teacher_profile tp ON u.user_id = tp.user_id " &
             "LEFT JOIN student_profile sp ON u.user_id = sp.user_id " &
+            "LEFT JOIN admin_profile ap ON u.user_id = ap.user_id " &
             "WHERE u.username = @login OR u.email = @login " &
             "LIMIT 1;"
 
@@ -89,11 +94,23 @@ Partial Public Class MainForm
             SessionManager.StartSession(userId, username, role, fullName)
             txtPassword.Clear()
             RouteToDashboard(role)
+            If SessionManager.IsAdmin Then StartAutomaticDatabaseBackup()
 
         Catch ex As Exception
             MessageBox.Show("Database Login Error: " & ex.Message, "Database Error",
                             MessageBoxButtons.OK)
         End Try
+    End Sub
+
+    Private Sub StartAutomaticDatabaseBackup()
+        Task.Run(Function() DatabaseBackupService.CreateDailyBackup()).ContinueWith(
+            Sub(task)
+                Dim warning As String = If(task.IsFaulted,
+                    "Automatic database backup failed: " & task.Exception.GetBaseException().Message,
+                    task.Result)
+                If String.IsNullOrWhiteSpace(warning) OrElse IsDisposed OrElse Not IsHandleCreated Then Return
+                BeginInvoke(New Action(Sub() Msg.Warn(warning, "Automatic Backup")))
+            End Sub)
     End Sub
 
     Private Sub RouteToDashboard(role As String)

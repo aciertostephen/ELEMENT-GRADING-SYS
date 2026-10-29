@@ -4,12 +4,12 @@ Imports MySqlConnector
 ''' <summary>
 ''' Single door to MySQL. Errors are THROWN (never swallowed), so callers' Try/Catch
 ''' blocks finally work and "success" messages can no longer show after a failed insert.
-''' Hook Application.ThreadException in your startup (see PATCHES_AND_TODO.md) so an
-''' uncaught DB error shows one friendly dialog instead of crashing.
+''' The application startup in MainForm catches uncaught UI-thread errors and
+''' shows one friendly dialog instead of crashing.
 ''' </summary>
 Public Class DatabaseHelper
 
-  Private Shared ReadOnly ConnectionString As String =
+  Public Shared ReadOnly ConnectionString As String =
     "Server=127.0.0.1;Database=gradebook_db;Uid=root;Pwd=;CharSet=utf8mb4;"
 
   Public Shared Function GetConnection() As MySqlConnection

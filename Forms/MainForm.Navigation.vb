@@ -31,6 +31,7 @@ Partial Public Class MainForm
             pnlContent.SuspendLayout()
             pnlContent.Controls.Clear()
             page.Dock = DockStyle.Fill
+            UiTheme.HookButtonReset(page)
             pnlContent.Controls.Add(page)
             page.BringToFront()
             pnlContent.ResumeLayout(True)
@@ -72,7 +73,7 @@ Partial Public Class MainForm
 
         StopNotificationPolling()
         If pnlNotifications IsNot Nothing Then pnlNotifications.Visible = False
-        If btnNotif IsNot Nothing Then btnNotif.Visible = False
+        If btnBell IsNot Nothing Then btnBell.Visible = False
         If btnLogoutAdmin IsNot Nothing Then btnLogoutAdmin.Visible = False
         If lblProfileSettingsLink IsNot Nothing Then lblProfileSettingsLink.Visible = False
 
@@ -115,8 +116,8 @@ Partial Public Class MainForm
                                    OrElse String.Equals(role, "Faculty", StringComparison.OrdinalIgnoreCase)
         Dim isStudent As Boolean = String.Equals(role, "Student", StringComparison.OrdinalIgnoreCase)
 
-        If btnNotif IsNot Nothing Then btnNotif.Visible = True
-        If btnLogoutAdmin IsNot Nothing Then btnLogoutAdmin.Visible = isAdmin
+        If btnBell IsNot Nothing Then btnBell.Visible = True
+        If btnLogoutAdmin IsNot Nothing Then btnLogoutAdmin.Visible = (isAdmin OrElse isTeacher OrElse isStudent)
         If pnlNotifications IsNot Nothing Then pnlNotifications.Visible = False
         If lblProfileSettingsLink IsNot Nothing Then
             lblProfileSettingsLink.Visible = (isTeacher OrElse isStudent)
@@ -128,7 +129,8 @@ Partial Public Class MainForm
                 AddNavButton("USER MANAGEMENT", Sub() ShowPage(New ucUserManagement()), isDefault:=True)
                 AddNavButton("ACADEMIC MANAGEMENT", Sub() ShowPage(New ucAcademicManagement()))
                 AddNavButton("SEMESTER/GRADING SETTINGS", Sub() ShowPage(New ucGradingConfig()))
-                LoadNotifications()
+            Case isTeacher
+                AddNavButton("MY COURSES", Sub() ShowPage(New ucTeacherDashboard()), isDefault:=True)
 
             Case isStudent
                 AddNavButton("MAIN DASHBOARD", Sub() ShowPage(New ucStudentDashboard()), isDefault:=True)
@@ -178,24 +180,6 @@ Partial Public Class MainForm
     '========================================
     ' NOTIFICATIONS MANAGEMENT
     '========================================
-
-    Private Sub btnNotificationBell_Click(sender As Object, e As EventArgs) Handles btnNotif.Click
-        ' 1. Bring the notification container to front and make it visible
-        If pnlNotifications IsNot Nothing Then
-            pnlNotifications.Visible = True
-            pnlNotifications.BringToFront()
-        End If
-
-        ' 2. Force layout calculation so flowNotifList has a valid width
-        If flowNotifList IsNot Nothing Then
-            flowNotifList.Visible = True
-            flowNotifList.BringToFront()
-            flowNotifList.PerformLayout()
-        End If
-
-        ' 3. Populate items
-        LoadNotifications()
-    End Sub
 
     '========================================
     ' PROFILE LINK & ACTIVE TAB STYLING

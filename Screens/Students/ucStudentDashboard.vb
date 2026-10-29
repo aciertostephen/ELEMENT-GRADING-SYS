@@ -40,7 +40,7 @@ Public Class ucStudentDashboard
                                  "JOIN section s ON c.section_id = s.section_id " &
                                  "JOIN teacher_profile tp ON c.teacher_id = tp.teacher_id " &
                                  "JOIN academic_term t ON c.term_id = t.term_id " &
-                                 "WHERE e.student_id = @sid AND t.is_active = 1"
+                                 "WHERE e.student_id = @sid AND e.status <> 'Dropped' AND t.is_active = 1"
 
                 Dim dt As DataTable = DatabaseHelper.ExecuteQuery(query, {New MySqlParameter("@sid", studentId)})
 
