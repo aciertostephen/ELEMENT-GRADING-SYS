@@ -9,8 +9,29 @@ Imports MySqlConnector
 ''' </summary>
 Public Class DatabaseHelper
 
-  Public Shared ReadOnly ConnectionString As String =
-    "Server=127.0.0.1;Database=gradebook_db;Uid=root;Pwd=;CharSet=utf8mb4;"
+  Private Shared ReadOnly _connectionString As New Lazy(Of String)(AddressOf ResolveConnectionString)
+
+  ''' <summary>
+  ''' Production builds must be configured outside the source tree. Debug builds retain
+  ''' the original local XAMPP default for developer machines.
+  ''' </summary>
+  Public Shared ReadOnly Property ConnectionString As String
+    Get
+      Return _connectionString.Value
+    End Get
+  End Property
+
+  Private Shared Function ResolveConnectionString() As String
+    Dim configured As String = Environment.GetEnvironmentVariable("ELEMENT_GRADING_DB_CONNECTION_STRING")
+    If Not String.IsNullOrWhiteSpace(configured) Then Return configured.Trim()
+
+#If DEBUG Then
+    Return "Server=127.0.0.1;Database=gradebook_db;Uid=root;Pwd=;CharSet=utf8mb4;"
+#Else
+    Throw New InvalidOperationException(
+      "Database configuration is missing. Set the ELEMENT_GRADING_DB_CONNECTION_STRING environment variable before starting a Release build.")
+#End If
+  End Function
 
   Public Shared Function GetConnection() As MySqlConnection
     Return New MySqlConnection(ConnectionString)
