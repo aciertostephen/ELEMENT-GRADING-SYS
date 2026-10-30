@@ -6,7 +6,7 @@ Partial Public Class MainForm
     Private _currentRole As String
 
     Private Sub BuildHeaderControls()
-        _flowNavHeader = New FlowLayoutPanel With {.Name = "codedHeaderNavigation", .AutoSize = True, .WrapContents = False, .BackColor = Color.Transparent, .FlowDirection = FlowDirection.LeftToRight, .Margin = Padding.Empty, .Padding = Padding.Empty}
+        _flowNavHeader = New FlowLayoutPanel With {.Name = "codedHeaderNavigation", .AutoSize = False, .Size = New Size(0, 40), .WrapContents = False, .BackColor = Color.Transparent, .FlowDirection = FlowDirection.LeftToRight, .Margin = Padding.Empty, .Padding = Padding.Empty}
         _btnProfileHeader = CreateHeaderAction("PROFILE")
         _btnLogoutHeader = CreateHeaderAction("LOG OUT")
         _btnRequestsHeader = CreateHeaderAction("REQUESTS")
@@ -162,6 +162,7 @@ Partial Public Class MainForm
                 AddNavButton("ANALYTICS", Sub() ShowPage(New ucAnalytics()))
         End Select
 
+        UpdateHeaderActions()
         StartNotificationPolling()   ' red badge on the bell, refreshed every 30 seconds
 
     End Sub
@@ -188,6 +189,7 @@ Partial Public Class MainForm
             b.AutoSize = False
             b.Size = New Size(boldSize.Width + 20, boldSize.Height + 10)
         End Using
+        b.Height = 40
         b.TextAlign = ContentAlignment.MiddleCenter
 
         b.Font = New Font("Century Gothic", 11, If(isDefault, FontStyle.Bold, FontStyle.Regular))

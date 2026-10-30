@@ -37,7 +37,11 @@
         If _btnLogoutHeader IsNot Nothing AndAlso _btnRequestsHeader IsNot Nothing Then _btnLogoutHeader.SetBounds(_btnRequestsHeader.Left - actionGap - 126, actionY, 126, 38)
         If _btnProfileHeader IsNot Nothing AndAlso _btnLogoutHeader IsNot Nothing Then _btnProfileHeader.SetBounds(_btnLogoutHeader.Left - actionGap - 112, actionY, 112, 38)
         If _flowNavHeader IsNot Nothing Then
-            _flowNavHeader.Location = New Point(690, Math.Max(0, centerY - (_flowNavHeader.Height \ 2)))
+            Dim navWidth As Integer = 0
+            For Each item As Control In _flowNavHeader.Controls
+                navWidth += item.Width + item.Margin.Horizontal
+            Next
+            _flowNavHeader.SetBounds(690, Math.Max(0, centerY - 20), navWidth, 40)
         End If
     End Sub
 
