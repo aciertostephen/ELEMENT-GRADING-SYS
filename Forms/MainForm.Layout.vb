@@ -41,7 +41,7 @@
             For Each item As Control In _flowNavHeader.Controls
                 navWidth += item.Width + item.Margin.Horizontal
             Next
-            _flowNavHeader.SetBounds(690, Math.Max(0, centerY - 20), navWidth, 40)
+            _flowNavHeader.SetBounds(690, Math.Max(0, centerY - 8), navWidth, 40)
         End If
     End Sub
 
