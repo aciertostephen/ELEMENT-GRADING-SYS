@@ -522,8 +522,8 @@ Public Class ucStudentGradebook
             Sub(sender, e)
                 If IsDisposed OrElse Disposing OrElse Not Visible Then Return
                 UpdatePredictiveAvailability()
-                If _isPredictiveMode Then Return
                 LoadStudentGrades(quiet:=True)
+                If _isPredictiveMode Then SyncPredictionTeacherScores()
                 UpdatePeriodNotice()
             End Sub
         AddHandler Disposed,
@@ -673,11 +673,44 @@ Public Class ucStudentGradebook
                 If GetInfo(column).Kind <> ColKind.Raw Then Continue For
                 Dim cell As DataGridViewCell = _predictionGrid.Rows(index).Cells(column.Index)
                 Dim hasTeacherScore As Boolean = cell.Value IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(Convert.ToString(cell.Value))
+                cell.Tag = hasTeacherScore
                 cell.ReadOnly = hasTeacherScore
                 cell.Style.ForeColor = If(hasTeacherScore, Color.Gray, Color.Black)
                 cell.Style.SelectionForeColor = If(hasTeacherScore, Color.Gray, Color.Black)
             Next
         Next
+        RecalculatePredictionAll()
+    End Sub
+
+    Private Sub SyncPredictionTeacherScores()
+        If _predictionGrid Is Nothing OrElse _predictionGrid.Rows.Count = 0 OrElse dgvGradebook.Rows.Count = 0 Then Return
+
+        Dim rowCount As Integer = Math.Min(_predictionGrid.Rows.Count, dgvGradebook.Rows.Count)
+        For rowIndex As Integer = 0 To rowCount - 1
+            For Each predictionColumn As DataGridViewColumn In _predictionGrid.Columns
+                If GetInfo(predictionColumn).Kind <> ColKind.Raw OrElse Not dgvGradebook.Columns.Contains(predictionColumn.Name) Then Continue For
+
+                Dim cell As DataGridViewCell = _predictionGrid.Rows(rowIndex).Cells(predictionColumn.Index)
+                Dim realValue As Object = dgvGradebook.Rows(rowIndex).Cells(predictionColumn.Name).Value
+                Dim hasTeacherScore As Boolean = realValue IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(Convert.ToString(realValue))
+                Dim wasTeacherScore As Boolean = (cell.Tag IsNot Nothing AndAlso Convert.ToBoolean(cell.Tag))
+
+                If hasTeacherScore Then
+                    If Not String.Equals(Convert.ToString(cell.Value), Convert.ToString(realValue), StringComparison.Ordinal) Then cell.Value = realValue
+                    cell.Tag = True
+                    cell.ReadOnly = True
+                    cell.Style.ForeColor = Color.Gray
+                    cell.Style.SelectionForeColor = Color.Gray
+                ElseIf wasTeacherScore Then
+                    cell.Value = Nothing
+                    cell.Tag = False
+                    cell.ReadOnly = False
+                    cell.Style.ForeColor = Color.Black
+                    cell.Style.SelectionForeColor = Color.Black
+                End If
+            Next
+        Next
+
         RecalculatePredictionAll()
     End Sub
 
