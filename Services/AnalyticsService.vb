@@ -41,8 +41,8 @@ Public Class AnalyticsService
   Public Shared Function GradeTrend(studentId As String, period As String) As List(Of KeyValuePair(Of String, Double))
     Dim bucketFormat As String
     Select Case If(period, "").Trim().ToLowerInvariant()
-      Case "week" : bucketFormat = "%x-W%v"
-      Case "year" : bucketFormat = "%Y"
+      Case "week", "weekly" : bucketFormat = "%x-W%v"
+      Case "year", "yearly" : bucketFormat = "%Y"
       Case Else : bucketFormat = "%Y-%m"
     End Select
     Dim dt = DatabaseHelper.ExecuteQuery(

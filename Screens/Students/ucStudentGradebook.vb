@@ -13,6 +13,7 @@ Public Class ucStudentGradebook
     Private _realGrades As New List(Of Object())
     Private _predictionPanel As Panel
     Private _predictionGrid As DataGridView
+    Private _predictionTitle As Label
     Private _liveGradeRefreshTimer As Timer
 
     ' grading_rubric.rubric_id for each category 1..4 of this class (index 0 unused)
@@ -160,6 +161,7 @@ Public Class ucStudentGradebook
                 LoadStudentGrades()
                 RecalculateAll()
                 UpdatePeriodNotice()
+                If _isPredictiveMode Then RefreshPredictionGrid()
             End Sub
         pnlTopRubricBG.Controls.Add(_periodSelector)
         pnlTopRubricBG.Controls.Add(_periodNotice)
@@ -608,14 +610,14 @@ Public Class ucStudentGradebook
     Private Sub EnsurePredictionGrid()
         If _predictionPanel IsNot Nothing Then Return
         _predictionPanel = New Panel With {.Dock = DockStyle.Fill, .Visible = False, .Padding = New Padding(20, 8, 20, 12), .BackColor = Color.White}
-        Dim title As New Label With {.Text = "PREDICTIVE COPY — edits here are temporary and never change published grades", .Dock = DockStyle.Top, .Height = 28, .Font = New Font("Century Gothic", 9.0F, FontStyle.Bold), .ForeColor = Color.FromArgb(34, 90, 74)}
+        _predictionTitle = New Label With {.Dock = DockStyle.Top, .Height = 28, .Font = New Font("Century Gothic", 9.0F, FontStyle.Bold), .ForeColor = Color.FromArgb(34, 90, 74)}
         _predictionGrid = New DataGridView With {.Dock = DockStyle.Fill, .AllowUserToAddRows = False, .AllowUserToDeleteRows = False, .AllowUserToOrderColumns = False, .RowHeadersVisible = False, .AutoSizeColumnsMode = dgvGradebook.AutoSizeColumnsMode, .BackgroundColor = Color.White, .BorderStyle = BorderStyle.None, .GridColor = Color.FromArgb(224, 230, 227), .SelectionMode = DataGridViewSelectionMode.CellSelect, .EditMode = DataGridViewEditMode.EditOnKeystrokeOrF2, .EnableHeadersVisualStyles = False}
         _predictionGrid.ColumnHeadersDefaultCellStyle = dgvGradebook.ColumnHeadersDefaultCellStyle.Clone()
         _predictionGrid.DefaultCellStyle = dgvGradebook.DefaultCellStyle.Clone()
         _predictionGrid.ColumnHeadersHeight = dgvGradebook.ColumnHeadersHeight
         _predictionGrid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(242, 247, 244)
         _predictionPanel.Controls.Add(_predictionGrid)
-        _predictionPanel.Controls.Add(title)
+        _predictionPanel.Controls.Add(_predictionTitle)
         tblMainRubric.RowCount = 3
         tblMainRubric.RowStyles.Clear()
         tblMainRubric.RowStyles.Add(New RowStyle(SizeType.Absolute, 125.0F))
@@ -626,11 +628,14 @@ Public Class ucStudentGradebook
     End Sub
 
     Private Sub RefreshPredictionGrid()
+        If _predictionGrid Is Nothing Then Return
+        _predictionTitle.Text = "PREDICTIVE COPY — " & _period.ToUpperInvariant() & " · edits here are temporary and never change published grades"
         _predictionGrid.Columns.Clear()
         _predictionGrid.Rows.Clear()
         For Each sourceColumn As DataGridViewColumn In dgvGradebook.Columns
             Dim col As DataGridViewColumn = DirectCast(sourceColumn.Clone(), DataGridViewColumn)
             Dim info As ColInfo = GetInfo(sourceColumn)
+            col.Tag = sourceColumn.Tag
             col.ReadOnly = (info.Kind <> ColKind.Raw)
             _predictionGrid.Columns.Add(col)
         Next

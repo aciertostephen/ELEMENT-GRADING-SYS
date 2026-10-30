@@ -180,6 +180,7 @@ Public Class ucAnalytics
             FormsPlot1.Plot.Axes.Bottom.SetTicks(Enumerable.Range(0, labels.Length).Select(Function(i) CDbl(i)).ToArray(), labels)
             FormsPlot1.Plot.Axes.Bottom.TickLabelStyle.Rotation = 45 ' Rotate labels for better readability
         End If
+        FormsPlot1.Plot.Axes.SetLimitsY(0, 100)
         FormsPlot1.Refresh()
     End Sub
 
@@ -193,6 +194,7 @@ Public Class ucAnalytics
             FormsPlot2.Plot.Axes.Bottom.SetTicks(Enumerable.Range(0, _componentData.Count).Select(Function(i) CDbl(i)).ToArray(),
                                          _componentData.Select(Function(d) d.Key).ToArray())
         End If
+        FormsPlot2.Plot.Axes.SetLimitsY(0, 100)
         FormsPlot2.Refresh()
     End Sub
 
@@ -206,6 +208,7 @@ Public Class ucAnalytics
             FormsPlot3.Plot.Axes.Bottom.SetTicks(Enumerable.Range(0, data.Count).Select(Function(i) CDbl(i)).ToArray(),
                                          data.Select(Function(d) d.Key).ToArray())
         End If
+        FormsPlot3.Plot.Axes.SetLimitsY(0, 100)
         FormsPlot3.Refresh()
     End Sub
 
