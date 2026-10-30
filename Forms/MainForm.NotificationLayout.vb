@@ -94,6 +94,7 @@ Partial Public Class MainForm
     pnlNotifications.Controls.Add(closeButton)
     pnlApp.Controls.Add(pnlNotifications)
     AddHandler pnlNotifications.Resize, AddressOf LayoutNotificationDropDown
+    AddHandler pnlNotifications.VisibleChanged, Sub() If _btnRequestsHeader IsNot Nothing Then SetFontStyle(_btnRequestsHeader, If(pnlNotifications.Visible, FontStyle.Bold, FontStyle.Regular))
     AddHandler pnlApp.Resize, Sub() PositionNotificationPanel()
     LayoutNotificationDropDown(Nothing, EventArgs.Empty)
     PositionNotificationPanel()
@@ -115,8 +116,8 @@ Partial Public Class MainForm
   End Sub
 
   Private Sub PositionNotificationPanel()
-    If pnlNotifications Is Nothing OrElse pnlApp Is Nothing OrElse btnBell Is Nothing OrElse pnlApp.ClientSize.Width <= 0 Then Return
-    Dim bellBottom As Point = pnlApp.PointToClient(btnBell.PointToScreen(New Point(btnBell.Width, btnBell.Height)))
+    If pnlNotifications Is Nothing OrElse pnlApp Is Nothing OrElse _btnRequestsHeader Is Nothing OrElse pnlApp.ClientSize.Width <= 0 Then Return
+    Dim bellBottom As Point = pnlApp.PointToClient(_btnRequestsHeader.PointToScreen(New Point(_btnRequestsHeader.Width, _btnRequestsHeader.Height)))
     Dim x As Integer = Math.Max(8, Math.Min(pnlApp.ClientSize.Width - pnlNotifications.Width - 8, bellBottom.X - pnlNotifications.Width))
     Dim yMax As Integer = Math.Max(8, pnlApp.ClientSize.Height - pnlNotifications.Height - 8)
     Dim y As Integer = Math.Min(Math.Max(pnlHeader.Height - 4, bellBottom.Y + 4), yMax)
@@ -124,7 +125,7 @@ Partial Public Class MainForm
   End Sub
 
   Private Sub EnsureBadge()
-    If _lblBadge IsNot Nothing OrElse btnBell Is Nothing Then Return
+    If _lblBadge IsNot Nothing OrElse _btnRequestsHeader Is Nothing Then Return
     _lblBadge = New Label() With {
       .AutoSize = False, .Size = New Size(20, 20), .BackColor = Color.Firebrick, .ForeColor = Color.White,
       .TextAlign = ContentAlignment.MiddleCenter, .Font = New Font("Segoe UI", 8, FontStyle.Bold),
@@ -134,11 +135,11 @@ Partial Public Class MainForm
       path.AddEllipse(0, 0, 20, 20)
       _lblBadge.Region = New Region(path)
     End Using
-    _lblBadge.Location = New Point(Math.Max(btnBell.Width - 20, 0), 0)
+    _lblBadge.Location = New Point(Math.Max(_btnRequestsHeader.Width - 20, 0), 0)
     AddHandler _lblBadge.Click, Sub(s, ev) ToggleNotificationPanel()
-    btnBell.Controls.Add(_lblBadge)
+    _btnRequestsHeader.Controls.Add(_lblBadge)
     _lblBadge.BringToFront()
-    btnBell.Cursor = Cursors.Hand
+    _btnRequestsHeader.Cursor = Cursors.Hand
   End Sub
 
   Private Sub RefreshNotificationBadge()
@@ -156,7 +157,7 @@ Partial Public Class MainForm
     End Try
   End Sub
 
-  Private Sub btnBell_Click(sender As Object, e As EventArgs) Handles btnBell.Click
+  Private Sub btnBell_Click(sender As Object, e As EventArgs)
     ToggleNotificationPanel()
   End Sub
 
@@ -164,38 +165,38 @@ Partial Public Class MainForm
     Dim isActive As Boolean = pnlNotifications IsNot Nothing AndAlso pnlNotifications.Visible
     If _requestsPressed OrElse isActive Then
       Using brush As New SolidBrush(Color.FromArgb(20, 70, 56))
-        e.Graphics.FillRectangle(brush, btnBell.ClientRectangle)
+        e.Graphics.FillRectangle(brush, _btnRequestsHeader.ClientRectangle)
       End Using
     ElseIf _requestsHovered Then
       Using brush As New SolidBrush(Color.FromArgb(45, 108, 89))
-        e.Graphics.FillRectangle(brush, btnBell.ClientRectangle)
+        e.Graphics.FillRectangle(brush, _btnRequestsHeader.ClientRectangle)
       End Using
     End If
     Using requestFont As New Font("Century Gothic", 11.0F, If(isActive, FontStyle.Bold, FontStyle.Regular))
-      TextRenderer.DrawText(e.Graphics, "REQUESTS", requestFont, btnBell.ClientRectangle, Color.White, TextFormatFlags.HorizontalCenter Or TextFormatFlags.VerticalCenter)
+      TextRenderer.DrawText(e.Graphics, "REQUESTS", requestFont, _btnRequestsHeader.ClientRectangle, Color.White, TextFormatFlags.HorizontalCenter Or TextFormatFlags.VerticalCenter)
     End Using
   End Sub
 
   Private Sub RequestsButtonMouseEnter(sender As Object, e As EventArgs)
     _requestsHovered = True
-    btnBell.Invalidate()
+    _btnRequestsHeader.Invalidate()
   End Sub
 
   Private Sub RequestsButtonMouseLeave(sender As Object, e As EventArgs)
     _requestsHovered = False
     _requestsPressed = False
-    btnBell.Invalidate()
+    _btnRequestsHeader.Invalidate()
   End Sub
 
   Private Sub RequestsButtonMouseDown(sender As Object, e As MouseEventArgs)
     If e.Button <> MouseButtons.Left Then Return
     _requestsPressed = True
-    btnBell.Invalidate()
+    _btnRequestsHeader.Invalidate()
   End Sub
 
   Private Sub RequestsButtonMouseUp(sender As Object, e As MouseEventArgs)
     _requestsPressed = False
-    btnBell.Invalidate()
+    _btnRequestsHeader.Invalidate()
   End Sub
 
   Private Sub ToggleNotificationPanel()
@@ -203,12 +204,12 @@ Partial Public Class MainForm
     If pnlNotifications Is Nothing Then Return
     If pnlNotifications.Visible Then
       pnlNotifications.Visible = False
-      btnBell.Invalidate()
+      _btnRequestsHeader.Invalidate()
       Return
     End If
     PositionNotificationPanel()
     pnlNotifications.Visible = True
-    btnBell.Invalidate()
+    _btnRequestsHeader.Invalidate()
     pnlNotifications.BringToFront()
     LoadNotifications()
   End Sub
@@ -436,8 +437,8 @@ Partial Public Class MainForm
       If SessionManager.IsAdmin Then
         Dim page As New ucAcademicManagement()
         AddHandler page.Load, Sub(s, ev) page.OpenClassFromNotification(classId)
-        If flowNav IsNot Nothing Then
-          For Each control As Control In flowNav.Controls
+        If _flowNavHeader IsNot Nothing Then
+          For Each control As Control In _flowNavHeader.Controls
             If control.Text = "ACADEMIC MANAGEMENT" Then SetActiveNavControl(control)
           Next
         End If

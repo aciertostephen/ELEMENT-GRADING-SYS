@@ -1,9 +1,14 @@
-﻿Imports System.Drawing
+Imports System.Drawing
 Imports System.Windows.Forms
 
 Public Class MainForm
     Inherits Form
     Implements IMessageFilter
+
+    Private _flowNavHeader As FlowLayoutPanel
+    Private WithEvents _btnRequestsHeader As Button
+    Private WithEvents _btnProfileHeader As Button
+    Private WithEvents _btnLogoutHeader As Button
 
     Private Sub MainForm_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         AddHandler Application.ThreadException, Sub(s, ex) Msg.Fail("complete the action", ex.Exception)
@@ -24,6 +29,8 @@ Public Class MainForm
         If txtPassword IsNot Nothing Then
             txtPassword.UseSystemPasswordChar = True
         End If
+
+        BuildHeaderControls()
 
         If btnMinLog IsNot Nothing Then StyleWindowButton(btnMinLog, Color.FromArgb(230, 230, 230), Color.FromArgb(210, 210, 210))
         If btnExitLog IsNot Nothing Then StyleWindowButton(btnExitLog, Color.FromArgb(232, 17, 35), Color.FromArgb(241, 112, 122))
@@ -55,7 +62,7 @@ Public Class MainForm
     '========================================
     ' ADMIN LOGOUT HANDLER
     '========================================
-    Private Sub btnLogoutAdmin_Click(sender As Object, e As EventArgs) Handles btnLogoutAdmin.Click
+    Private Sub btnLogoutAdmin_Click(sender As Object, e As EventArgs)
         ' 1. Show confirmation dialog
         Dim result As DialogResult = MessageBox.Show(
         "Are you sure you want to log out?",
@@ -112,8 +119,8 @@ Public Class MainForm
 
                 ' Get screen bounds of the notification bell button (so clicking it doesn't instantly re-open/close glitch)
                 Dim bellRect As Rectangle = Rectangle.Empty
-                If btnBell IsNot Nothing Then
-                    bellRect = btnBell.RectangleToScreen(btnBell.ClientRectangle)
+                If _btnRequestsHeader IsNot Nothing Then
+                    bellRect = _btnRequestsHeader.RectangleToScreen(_btnRequestsHeader.ClientRectangle)
                 End If
 
                 ' If the click occurred outside both the panel and the bell button, hide the panel

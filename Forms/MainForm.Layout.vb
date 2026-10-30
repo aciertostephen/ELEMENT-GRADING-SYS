@@ -32,33 +32,13 @@
         Const rightMargin As Integer = 18
         Const actionGap As Integer = 24
         Dim centerY As Integer = pnlHeader.ClientSize.Height \ 2
-        If flowNav IsNot Nothing Then
-            flowNav.Location = New Point(flowNav.Left, Math.Max(0, centerY - (flowNav.Height \ 2)))
+        Dim actionY As Integer = Math.Max(0, centerY - 19)
+        If _btnRequestsHeader IsNot Nothing Then _btnRequestsHeader.SetBounds(pnlHeader.ClientSize.Width - rightMargin - 112, actionY, 112, 38)
+        If _btnLogoutHeader IsNot Nothing AndAlso _btnRequestsHeader IsNot Nothing Then _btnLogoutHeader.SetBounds(_btnRequestsHeader.Left - actionGap - 126, actionY, 126, 38)
+        If _btnProfileHeader IsNot Nothing AndAlso _btnLogoutHeader IsNot Nothing Then _btnProfileHeader.SetBounds(_btnLogoutHeader.Left - actionGap - 112, actionY, 112, 38)
+        If _flowNavHeader IsNot Nothing Then
+            _flowNavHeader.Location = New Point(690, Math.Max(0, centerY - (_flowNavHeader.Height \ 2)))
         End If
-        btnBell.BackgroundImage = Nothing
-        btnBell.Size = New Size(112, 38)
-        btnBell.Location = New Point(pnlHeader.ClientSize.Width - rightMargin - btnBell.Width, centerY - (btnBell.Height \ 2))
-        btnBell.BackColor = Color.Transparent
-        btnBell.Font = New Font("Century Gothic", 11.0F, FontStyle.Regular)
-        btnBell.ForeColor = Color.White
-        btnBell.Text = "REQUESTS"
-        If Not CBool(If(btnBell.Tag, False)) Then
-            AddHandler btnBell.Paint, AddressOf RequestsButtonPaint
-            AddHandler btnBell.MouseEnter, AddressOf RequestsButtonMouseEnter
-            AddHandler btnBell.MouseLeave, AddressOf RequestsButtonMouseLeave
-            AddHandler btnBell.MouseDown, AddressOf RequestsButtonMouseDown
-            AddHandler btnBell.MouseUp, AddressOf RequestsButtonMouseUp
-            btnBell.Tag = True
-        End If
-        btnLogoutAdmin.Size = New Size(126, 38)
-        btnLogoutAdmin.Location = New Point(btnBell.Left - actionGap - btnLogoutAdmin.Width, centerY - (btnLogoutAdmin.Height \ 2))
-        lblProfileSettingsLink.AutoSize = False
-        lblProfileSettingsLink.Size = New Size(112, 38)
-        lblProfileSettingsLink.Location = New Point(btnLogoutAdmin.Left - actionGap - lblProfileSettingsLink.Width, centerY - (lblProfileSettingsLink.Height \ 2))
-        lblProfileSettingsLink.TextAlign = ContentAlignment.MiddleCenter
-        lblProfileSettingsLink.Text = "PROFILE"
-        lblProfileSettingsLink.Font = New Font("Century Gothic", 11.0F, FontStyle.Regular)
-        btnLogoutAdmin.Font = New Font("Century Gothic", 11.0F, FontStyle.Regular)
     End Sub
 
     Private Sub UpdateLeftPanel()

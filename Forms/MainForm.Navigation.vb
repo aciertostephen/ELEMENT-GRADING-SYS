@@ -5,6 +5,38 @@ Partial Public Class MainForm
 
     Private _currentRole As String
 
+    Private Sub BuildHeaderControls()
+        For Each legacy As Control In {flowNav, btnBell, btnLogoutAdmin, lblProfileSettingsLink}
+            If pnlHeader.Controls.Contains(legacy) Then pnlHeader.Controls.Remove(legacy)
+            legacy.Dispose()
+        Next
+
+        _flowNavHeader = New FlowLayoutPanel With {.Name = "codedHeaderNavigation", .AutoSize = True, .WrapContents = False, .BackColor = Color.Transparent, .FlowDirection = FlowDirection.LeftToRight, .Margin = Padding.Empty, .Padding = Padding.Empty}
+        _btnProfileHeader = CreateHeaderAction("PROFILE")
+        _btnLogoutHeader = CreateHeaderAction("LOG OUT")
+        _btnRequestsHeader = CreateHeaderAction("REQUESTS")
+        AddHandler _btnProfileHeader.Click, AddressOf ProfileHeader_Click
+        AddHandler _btnLogoutHeader.Click, AddressOf btnLogoutAdmin_Click
+        AddHandler _btnRequestsHeader.Click, AddressOf btnBell_Click
+        pnlHeader.Controls.AddRange({_flowNavHeader, _btnProfileHeader, _btnLogoutHeader, _btnRequestsHeader})
+    End Sub
+
+    Private Function CreateHeaderAction(caption As String) As Button
+        Dim button As New Button With {.Text = caption, .AutoSize = False, .FlatStyle = FlatStyle.Flat, .UseVisualStyleBackColor = False, .BackColor = Color.Transparent, .ForeColor = Color.White, .Font = New Font("Century Gothic", 11.0F, FontStyle.Regular), .TextAlign = ContentAlignment.MiddleCenter, .Cursor = Cursors.Hand, .TabStop = False}
+        button.FlatAppearance.BorderSize = 0
+        button.FlatAppearance.MouseOverBackColor = Color.FromArgb(45, 108, 89)
+        button.FlatAppearance.MouseDownBackColor = Color.FromArgb(20, 70, 56)
+        Return button
+    End Function
+
+    Private Sub ProfileHeader_Click(sender As Object, e As EventArgs)
+        SetActiveNavControl(_btnProfileHeader)
+        Dim profile = ProfileService.Load(SessionManager.CurrentUserId)
+        Dim page As New ucProfileSettings()
+        page.SetData(SessionManager.CurrentFullName, _currentRole, profile.RoleLabel, profile.Department, profile.Email, profile.Phone)
+        ShowPage(page)
+    End Sub
+
     '========================================
     ' PAGE NAVIGATION HELPERS
     '========================================
@@ -67,15 +99,15 @@ Partial Public Class MainForm
     Public Sub ShowLoginScreen()
         _currentRole = Nothing
 
-        If flowNav IsNot Nothing Then DisposeAndClear(flowNav)
+        If _flowNavHeader IsNot Nothing Then DisposeAndClear(_flowNavHeader)
         If pnlContent IsNot Nothing Then DisposeAndClear(pnlContent)
         If flowNotifList IsNot Nothing Then DisposeAndClear(flowNotifList)
 
         StopNotificationPolling()
         If pnlNotifications IsNot Nothing Then pnlNotifications.Visible = False
-        If btnBell IsNot Nothing Then btnBell.Visible = False
-        If btnLogoutAdmin IsNot Nothing Then btnLogoutAdmin.Visible = False
-        If lblProfileSettingsLink IsNot Nothing Then lblProfileSettingsLink.Visible = False
+        If _btnRequestsHeader IsNot Nothing Then _btnRequestsHeader.Visible = False
+        If _btnLogoutHeader IsNot Nothing Then _btnLogoutHeader.Visible = False
+        If _btnProfileHeader IsNot Nothing Then _btnProfileHeader.Visible = False
 
         If pnlApp IsNot Nothing Then pnlApp.Visible = False
 
@@ -109,21 +141,17 @@ Partial Public Class MainForm
 
         _currentRole = role
 
-        If flowNav IsNot Nothing Then DisposeAndClear(flowNav)
+        If _flowNavHeader IsNot Nothing Then DisposeAndClear(_flowNavHeader)
 
         Dim isAdmin As Boolean = String.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase)
         Dim isTeacher As Boolean = String.Equals(role, "Teacher", StringComparison.OrdinalIgnoreCase) _
                                    OrElse String.Equals(role, "Faculty", StringComparison.OrdinalIgnoreCase)
         Dim isStudent As Boolean = String.Equals(role, "Student", StringComparison.OrdinalIgnoreCase)
 
-        If btnBell IsNot Nothing Then btnBell.Visible = True
-        If btnLogoutAdmin IsNot Nothing Then btnLogoutAdmin.Visible = (isAdmin OrElse isTeacher OrElse isStudent)
+        If _btnRequestsHeader IsNot Nothing Then _btnRequestsHeader.Visible = True
+        If _btnLogoutHeader IsNot Nothing Then _btnLogoutHeader.Visible = (isAdmin OrElse isTeacher OrElse isStudent)
         If pnlNotifications IsNot Nothing Then pnlNotifications.Visible = False
-        If lblProfileSettingsLink IsNot Nothing Then
-            lblProfileSettingsLink.Visible = (isTeacher OrElse isStudent)
-            lblProfileSettingsLink.Text = "PROFILE"
-            SetFontStyle(lblProfileSettingsLink, FontStyle.Regular)
-        End If
+        If _btnProfileHeader IsNot Nothing Then _btnProfileHeader.Visible = (isTeacher OrElse isStudent)
 
         Select Case True
             Case isAdmin
@@ -145,11 +173,11 @@ Partial Public Class MainForm
 
     Private Sub AddNavButton(text As String, onClick As Action, Optional isDefault As Boolean = False)
 
-        If flowNav Is Nothing Then Return
+        If _flowNavHeader Is Nothing Then Return
 
         Dim b As New Button()
         b.Text = text
-        b.Margin = New Padding(40, 0, 0, 0)
+        b.Margin = New Padding(18, 0, 0, 0)
         b.FlatStyle = FlatStyle.Flat
         b.FlatAppearance.BorderSize = 0
         b.FlatAppearance.MouseOverBackColor = Color.FromArgb(30, 110, 80)
@@ -160,21 +188,21 @@ Partial Public Class MainForm
         b.Cursor = Cursors.Hand
         b.TabStop = False
 
-        Using boldFont As New Font("Century Gothic", 10, FontStyle.Bold)
+        Using boldFont As New Font("Century Gothic", 11, FontStyle.Bold)
             Dim boldSize As Size = TextRenderer.MeasureText(text, boldFont)
             b.AutoSize = False
             b.Size = New Size(boldSize.Width + 20, boldSize.Height + 10)
         End Using
         b.TextAlign = ContentAlignment.MiddleCenter
 
-        b.Font = New Font("Century Gothic", 10, If(isDefault, FontStyle.Bold, FontStyle.Regular))
+        b.Font = New Font("Century Gothic", 11, If(isDefault, FontStyle.Bold, FontStyle.Regular))
 
         AddHandler b.Click, Sub(s, e)
                                 SetActiveNavControl(b)
                                 onClick()
                             End Sub
 
-        flowNav.Controls.Add(b)
+        _flowNavHeader.Controls.Add(b)
 
     End Sub
 
@@ -185,26 +213,15 @@ Partial Public Class MainForm
     '========================================
     ' PROFILE LINK & ACTIVE TAB STYLING
     '========================================
-    Private Sub lblProfileSettingsLink_Click(sender As Object, e As EventArgs) Handles lblProfileSettingsLink.Click
-        SetActiveNavControl(lblProfileSettingsLink)
-
-        Dim p = ProfileService.Load(SessionManager.CurrentUserId)
-        Dim page As New ucProfileSettings()
-        page.SetData(SessionManager.CurrentFullName, _currentRole, p.RoleLabel, p.Department, p.Email, p.Phone)
-        ShowPage(page)
-    End Sub
-
     Private Sub SetActiveNavControl(active As Control)
 
-        If flowNav IsNot Nothing Then
-            For Each ctrl As Control In flowNav.Controls
+        If _flowNavHeader IsNot Nothing Then
+            For Each ctrl As Control In _flowNavHeader.Controls
                 SetFontStyle(ctrl, FontStyle.Regular)
             Next
         End If
 
-        If lblProfileSettingsLink IsNot Nothing Then
-            SetFontStyle(lblProfileSettingsLink, FontStyle.Regular)
-        End If
+        If _btnProfileHeader IsNot Nothing Then SetFontStyle(_btnProfileHeader, FontStyle.Regular)
 
         If active IsNot Nothing Then
             SetFontStyle(active, FontStyle.Bold)
