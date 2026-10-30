@@ -149,21 +149,13 @@ Public Class ucAnalytics
             Dim targetStudentId As String = GetStudentId()
 
             If Not String.IsNullOrEmpty(targetStudentId) Then
-                ' Query the student's actual courses, course codes, and final grades for the active term
-                Dim query As String = "SELECT co.course_code, co.course_name, e.final_grade " &
-                                     "FROM enrollment e " &
-                                     "JOIN classes c ON e.class_id = c.class_id " &
-                                     "JOIN course co ON c.course_id = co.course_id " &
-                                     "JOIN academic_term t ON c.term_id = t.term_id " &
-                                     "WHERE e.student_id = @sid AND e.status <> 'Dropped' AND t.is_active = 1 " &
-                                     "AND c.grades_released_at IS NOT NULL AND e.final_grade IS NOT NULL"
-
-                Dim dt As DataTable = DatabaseHelper.ExecuteQuery(query, {New MySqlParameter("@sid", targetStudentId)})
+                ' Calculate live period grades from saved scores; publication is not required.
+                Dim dt As DataTable = AnalyticsService.LiveGradeStanding(targetStudentId)
 
                 If dt IsNot Nothing AndAlso dt.Rows.Count > 0 Then
                     For Each row As DataRow In dt.Rows
                         labelsList.Add(row("course_code").ToString())
-                        valuesList.Add(Convert.ToDouble(row("final_grade")))
+                        valuesList.Add(Convert.ToDouble(row("live_grade")))
                     Next
                 End If
             End If
