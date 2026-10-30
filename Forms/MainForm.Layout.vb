@@ -32,6 +32,9 @@
         Const rightMargin As Integer = 18
         Const actionGap As Integer = 24
         Dim centerY As Integer = pnlHeader.ClientSize.Height \ 2
+        If flowNav IsNot Nothing Then
+            flowNav.Location = New Point(flowNav.Left, Math.Max(0, centerY - (flowNav.Height \ 2)))
+        End If
         btnBell.BackgroundImage = Nothing
         btnBell.Size = New Size(112, 38)
         btnBell.Location = New Point(pnlHeader.ClientSize.Width - rightMargin - btnBell.Width, centerY - (btnBell.Height \ 2))
