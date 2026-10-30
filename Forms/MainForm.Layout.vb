@@ -30,16 +30,32 @@
     Private Sub UpdateHeaderActions()
         If pnlHeader Is Nothing OrElse pnlHeader.ClientSize.Width <= 0 Then Return
         Const rightMargin As Integer = 18
-        Const actionGap As Integer = 20
+        Const actionGap As Integer = 24
         Dim centerY As Integer = pnlHeader.ClientSize.Height \ 2
-        btnBell.Size = New Size(50, 50)
+        btnBell.BackgroundImage = Nothing
+        btnBell.Size = New Size(112, 38)
         btnBell.Location = New Point(pnlHeader.ClientSize.Width - rightMargin - btnBell.Width, centerY - (btnBell.Height \ 2))
+        btnBell.BackColor = Color.Transparent
+        btnBell.Font = New Font("Century Gothic", 11.0F, FontStyle.Regular)
+        btnBell.ForeColor = Color.White
+        btnBell.Text = "REQUESTS"
+        If Not CBool(If(btnBell.Tag, False)) Then
+            AddHandler btnBell.Paint, Sub(sender, e)
+                                          Using requestFont As New Font("Century Gothic", 11.0F, FontStyle.Regular)
+                                              TextRenderer.DrawText(e.Graphics, "REQUESTS", requestFont, btnBell.ClientRectangle, Color.White, TextFormatFlags.HorizontalCenter Or TextFormatFlags.VerticalCenter)
+                                          End Using
+                                      End Sub
+            btnBell.Tag = True
+        End If
         btnLogoutAdmin.Size = New Size(126, 38)
         btnLogoutAdmin.Location = New Point(btnBell.Left - actionGap - btnLogoutAdmin.Width, centerY - (btnLogoutAdmin.Height \ 2))
         lblProfileSettingsLink.AutoSize = False
-        lblProfileSettingsLink.Size = New Size(220, 38)
+        lblProfileSettingsLink.Size = New Size(112, 38)
         lblProfileSettingsLink.Location = New Point(btnLogoutAdmin.Left - actionGap - lblProfileSettingsLink.Width, centerY - (lblProfileSettingsLink.Height \ 2))
         lblProfileSettingsLink.TextAlign = ContentAlignment.MiddleCenter
+        lblProfileSettingsLink.Text = "PROFILE"
+        lblProfileSettingsLink.Font = New Font("Century Gothic", 11.0F, FontStyle.Regular)
+        btnLogoutAdmin.Font = New Font("Century Gothic", 11.0F, FontStyle.Regular)
     End Sub
 
     Private Sub UpdateLeftPanel()

@@ -121,6 +121,7 @@ Partial Public Class MainForm
         If pnlNotifications IsNot Nothing Then pnlNotifications.Visible = False
         If lblProfileSettingsLink IsNot Nothing Then
             lblProfileSettingsLink.Visible = (isTeacher OrElse isStudent)
+            lblProfileSettingsLink.Text = "PROFILE"
             SetFontStyle(lblProfileSettingsLink, FontStyle.Regular)
         End If
 
@@ -128,7 +129,7 @@ Partial Public Class MainForm
             Case isAdmin
                 AddNavButton("USER MANAGEMENT", Sub() ShowPage(New ucUserManagement()), isDefault:=True)
                 AddNavButton("ACADEMIC MANAGEMENT", Sub() ShowPage(New ucAcademicManagement()))
-                AddNavButton("SEMESTER/GRADING SETTINGS", Sub() ShowPage(New ucGradingConfig()))
+                AddNavButton("GRADING CONFIGURATION", Sub() ShowPage(New ucGradingConfig()))
             Case isTeacher
                 AddNavButton("MY COURSES", Sub() ShowPage(New ucTeacherDashboard()), isDefault:=True)
 
