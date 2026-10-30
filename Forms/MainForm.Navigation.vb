@@ -6,11 +6,6 @@ Partial Public Class MainForm
     Private _currentRole As String
 
     Private Sub BuildHeaderControls()
-        For Each legacy As Control In {flowNav, btnBell, btnLogoutAdmin, lblProfileSettingsLink}
-            If pnlHeader.Controls.Contains(legacy) Then pnlHeader.Controls.Remove(legacy)
-            legacy.Dispose()
-        Next
-
         _flowNavHeader = New FlowLayoutPanel With {.Name = "codedHeaderNavigation", .AutoSize = True, .WrapContents = False, .BackColor = Color.Transparent, .FlowDirection = FlowDirection.LeftToRight, .Margin = Padding.Empty, .Padding = Padding.Empty}
         _btnProfileHeader = CreateHeaderAction("PROFILE")
         _btnLogoutHeader = CreateHeaderAction("LOG OUT")

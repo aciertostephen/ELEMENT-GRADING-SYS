@@ -45,7 +45,6 @@ Partial Class MainForm
         lblUsername = New Label()
         lblPassword = New Label()
         linkForgot = New LinkLabel()
-        flowNav = New FlowLayoutPanel()
         btnEXITF = New ReaLTaiizor.Controls.Button()
         btnCANCEL = New ReaLTaiizor.Controls.Button()
         exitQuestions = New Label()
@@ -53,9 +52,6 @@ Partial Class MainForm
         pnlApp = New Panel()
         pnlContent = New Panel()
         pnlHeader = New Panel()
-        btnBell = New PictureBox()
-        btnLogoutAdmin = New ReaLTaiizor.Controls.Button()
-        lblProfileSettingsLink = New LinkLabel()
         btnMinApp = New Button()
         btnExitApp = New Button()
         lblAppTitle = New Label()
@@ -75,7 +71,6 @@ Partial Class MainForm
         pnlExitConfirmation.SuspendLayout()
         pnlApp.SuspendLayout()
         pnlHeader.SuspendLayout()
-        CType(btnBell, ComponentModel.ISupportInitialize).BeginInit()
         CType(picLogoApp, ComponentModel.ISupportInitialize).BeginInit()
         CType(picCCSApp, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
@@ -372,17 +367,6 @@ Partial Class MainForm
         linkForgot.TabStop = True
         linkForgot.Text = "Forgot Password?"
         ' 
-        ' flowNav
-        ' 
-        flowNav.AutoSize = True
-        flowNav.AutoSizeMode = AutoSizeMode.GrowAndShrink
-        flowNav.BackColor = Color.Transparent
-        flowNav.Location = New Point(671, 80)
-        flowNav.Name = "flowNav"
-        flowNav.Size = New Size(0, 0)
-        flowNav.TabIndex = 3
-        flowNav.WrapContents = False
-        ' 
         ' btnEXITF
         ' 
         btnEXITF.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
@@ -477,12 +461,8 @@ Partial Class MainForm
         ' pnlHeader
         ' 
         pnlHeader.BackColor = Color.FromArgb(CByte(34), CByte(90), CByte(74))
-        pnlHeader.Controls.Add(btnBell)
-        pnlHeader.Controls.Add(btnLogoutAdmin)
-        pnlHeader.Controls.Add(lblProfileSettingsLink)
         pnlHeader.Controls.Add(btnMinApp)
         pnlHeader.Controls.Add(btnExitApp)
-        pnlHeader.Controls.Add(flowNav)
         pnlHeader.Controls.Add(lblAppTitle)
         pnlHeader.Controls.Add(picLogoApp)
         pnlHeader.Controls.Add(picCCSApp)
@@ -491,54 +471,6 @@ Partial Class MainForm
         pnlHeader.Name = "pnlHeader"
         pnlHeader.Size = New Size(1925, 139)
         pnlHeader.TabIndex = 0
-        ' 
-        ' btnBell
-        ' 
-        btnBell.Anchor = AnchorStyles.Top Or AnchorStyles.Right
-        btnBell.BackColor = Color.Transparent
-        btnBell.BackgroundImage = CType(resources.GetObject("btnBell.BackgroundImage"), Image)
-        btnBell.BackgroundImageLayout = ImageLayout.Zoom
-        btnBell.Location = New Point(1849, 56)
-        btnBell.Name = "btnBell"
-        btnBell.Size = New Size(50, 50)
-        btnBell.TabIndex = 11
-        btnBell.TabStop = False
-        ' 
-        ' btnLogoutAdmin
-        ' 
-        btnLogoutAdmin.Anchor = AnchorStyles.Right
-        btnLogoutAdmin.BackColor = Color.Transparent
-        btnLogoutAdmin.BackgroundImageLayout = ImageLayout.Zoom
-        btnLogoutAdmin.BorderColor = Color.Transparent
-        btnLogoutAdmin.EnteredBorderColor = Color.Empty
-        btnLogoutAdmin.EnteredColor = Color.FromArgb(CByte(23), CByte(61), CByte(50))
-        btnLogoutAdmin.Font = New Font("Century Gothic", 10.2F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        btnLogoutAdmin.Image = Nothing
-        btnLogoutAdmin.ImageAlign = ContentAlignment.MiddleLeft
-        btnLogoutAdmin.InactiveColor = Color.Transparent
-        btnLogoutAdmin.Location = New Point(1638, 68)
-        btnLogoutAdmin.Name = "btnLogoutAdmin"
-        btnLogoutAdmin.PressedBorderColor = Color.Transparent
-        btnLogoutAdmin.PressedColor = Color.Transparent
-        btnLogoutAdmin.Size = New Size(126, 38)
-        btnLogoutAdmin.TabIndex = 10
-        btnLogoutAdmin.Text = "LOG OUT"
-        btnLogoutAdmin.TextAlignment = StringAlignment.Center
-        btnLogoutAdmin.UseWaitCursor = False
-        ' 
-        ' lblProfileSettingsLink
-        ' 
-        lblProfileSettingsLink.Anchor = AnchorStyles.Right
-        lblProfileSettingsLink.AutoSize = False
-        lblProfileSettingsLink.Font = New Font("Century Gothic", 13.8F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        lblProfileSettingsLink.LinkBehavior = LinkBehavior.NeverUnderline
-        lblProfileSettingsLink.LinkColor = Color.White
-        lblProfileSettingsLink.Location = New Point(1400, 74)
-        lblProfileSettingsLink.Name = "lblProfileSettingsLink"
-        lblProfileSettingsLink.Size = New Size(220, 38)
-        lblProfileSettingsLink.TabIndex = 9
-        lblProfileSettingsLink.TabStop = True
-        lblProfileSettingsLink.Text = "PROFILE SETTINGS"
         ' 
         ' btnMinApp
         ' 
@@ -637,7 +569,6 @@ Partial Class MainForm
         pnlApp.PerformLayout()
         pnlHeader.ResumeLayout(False)
         pnlHeader.PerformLayout()
-        CType(btnBell, ComponentModel.ISupportInitialize).EndInit()
         CType(picLogoApp, ComponentModel.ISupportInitialize).EndInit()
         CType(picCCSApp, ComponentModel.ISupportInitialize).EndInit()
         ResumeLayout(False)
@@ -676,11 +607,7 @@ Partial Class MainForm
     Friend WithEvents picLogoApp As PictureBox
     Friend WithEvents picCCSApp As PictureBox
     Friend WithEvents lblAppTitle As Label
-    Friend WithEvents flowNav As FlowLayoutPanel
     Friend WithEvents btnMinApp As Button
     Friend WithEvents btnExitApp As Button
-    Friend WithEvents lblProfileSettingsLink As LinkLabel
-    Friend WithEvents btnLogoutAdmin As ReaLTaiizor.Controls.Button
-    Friend WithEvents btnBell As PictureBox
 
 End Class
