@@ -33,9 +33,15 @@
         Const actionGap As Integer = 24
         Dim centerY As Integer = pnlHeader.ClientSize.Height \ 2
         Dim actionY As Integer = Math.Max(0, centerY - 5)
-        If _btnRequestsHeader IsNot Nothing Then _btnRequestsHeader.SetBounds(pnlHeader.ClientSize.Width - rightMargin - 112, actionY, 112, 38)
-        If _btnLogoutHeader IsNot Nothing AndAlso _btnRequestsHeader IsNot Nothing Then _btnLogoutHeader.SetBounds(_btnRequestsHeader.Left - actionGap - 126, actionY, 126, 38)
-        If _btnProfileHeader IsNot Nothing AndAlso _btnLogoutHeader IsNot Nothing Then _btnProfileHeader.SetBounds(_btnLogoutHeader.Left - actionGap - 112, actionY, 112, 38)
+        Dim rightX As Integer = pnlHeader.ClientSize.Width - rightMargin - 112
+        Dim swapActions As Boolean = String.Equals(_currentRole, "Teacher", StringComparison.OrdinalIgnoreCase) OrElse
+                                     String.Equals(_currentRole, "Faculty", StringComparison.OrdinalIgnoreCase) OrElse
+                                     String.Equals(_currentRole, "Student", StringComparison.OrdinalIgnoreCase)
+        Dim requestsX As Integer = If(swapActions, rightX - actionGap - 126, rightX)
+        Dim logoutX As Integer = If(swapActions, rightX, rightX - actionGap - 126)
+        If _btnRequestsHeader IsNot Nothing Then _btnRequestsHeader.SetBounds(requestsX, actionY, 112, 38)
+        If _btnLogoutHeader IsNot Nothing Then _btnLogoutHeader.SetBounds(logoutX, actionY, 126, 38)
+        If _btnProfileHeader IsNot Nothing Then _btnProfileHeader.SetBounds(Math.Min(requestsX, logoutX) - actionGap - 112, actionY, 112, 38)
         If _flowNavHeader IsNot Nothing Then
             Dim navWidth As Integer = 0
             For Each item As Control In _flowNavHeader.Controls
