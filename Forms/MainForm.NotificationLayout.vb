@@ -15,6 +15,8 @@ Partial Public Class MainForm
   Private _unreadNotificationsButton As Button
   Private _markAllReadButton As Button
   Private _notificationSubtitle As Label
+  Private _requestsHovered As Boolean
+  Private _requestsPressed As Boolean
 
   Friend Sub StartNotificationPolling()
     EnsureNotificationUi()
@@ -158,15 +160,55 @@ Partial Public Class MainForm
     ToggleNotificationPanel()
   End Sub
 
+  Private Sub RequestsButtonPaint(sender As Object, e As PaintEventArgs)
+    Dim isActive As Boolean = pnlNotifications IsNot Nothing AndAlso pnlNotifications.Visible
+    If _requestsPressed OrElse isActive Then
+      Using brush As New SolidBrush(Color.FromArgb(20, 70, 56))
+        e.Graphics.FillRectangle(brush, btnBell.ClientRectangle)
+      End Using
+    ElseIf _requestsHovered Then
+      Using brush As New SolidBrush(Color.FromArgb(45, 108, 89))
+        e.Graphics.FillRectangle(brush, btnBell.ClientRectangle)
+      End Using
+    End If
+    Using requestFont As New Font("Century Gothic", 11.0F, If(isActive, FontStyle.Bold, FontStyle.Regular))
+      TextRenderer.DrawText(e.Graphics, "REQUESTS", requestFont, btnBell.ClientRectangle, Color.White, TextFormatFlags.HorizontalCenter Or TextFormatFlags.VerticalCenter)
+    End Using
+  End Sub
+
+  Private Sub RequestsButtonMouseEnter(sender As Object, e As EventArgs)
+    _requestsHovered = True
+    btnBell.Invalidate()
+  End Sub
+
+  Private Sub RequestsButtonMouseLeave(sender As Object, e As EventArgs)
+    _requestsHovered = False
+    _requestsPressed = False
+    btnBell.Invalidate()
+  End Sub
+
+  Private Sub RequestsButtonMouseDown(sender As Object, e As MouseEventArgs)
+    If e.Button <> MouseButtons.Left Then Return
+    _requestsPressed = True
+    btnBell.Invalidate()
+  End Sub
+
+  Private Sub RequestsButtonMouseUp(sender As Object, e As MouseEventArgs)
+    _requestsPressed = False
+    btnBell.Invalidate()
+  End Sub
+
   Private Sub ToggleNotificationPanel()
     EnsureNotificationUi()
     If pnlNotifications Is Nothing Then Return
     If pnlNotifications.Visible Then
       pnlNotifications.Visible = False
+      btnBell.Invalidate()
       Return
     End If
     PositionNotificationPanel()
     pnlNotifications.Visible = True
+    btnBell.Invalidate()
     pnlNotifications.BringToFront()
     LoadNotifications()
   End Sub

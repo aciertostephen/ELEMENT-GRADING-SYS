@@ -43,11 +43,11 @@
         btnBell.ForeColor = Color.White
         btnBell.Text = "REQUESTS"
         If Not CBool(If(btnBell.Tag, False)) Then
-            AddHandler btnBell.Paint, Sub(sender, e)
-                                          Using requestFont As New Font("Century Gothic", 11.0F, FontStyle.Regular)
-                                              TextRenderer.DrawText(e.Graphics, "REQUESTS", requestFont, btnBell.ClientRectangle, Color.White, TextFormatFlags.HorizontalCenter Or TextFormatFlags.VerticalCenter)
-                                          End Using
-                                      End Sub
+            AddHandler btnBell.Paint, AddressOf RequestsButtonPaint
+            AddHandler btnBell.MouseEnter, AddressOf RequestsButtonMouseEnter
+            AddHandler btnBell.MouseLeave, AddressOf RequestsButtonMouseLeave
+            AddHandler btnBell.MouseDown, AddressOf RequestsButtonMouseDown
+            AddHandler btnBell.MouseUp, AddressOf RequestsButtonMouseUp
             btnBell.Tag = True
         End If
         btnLogoutAdmin.Size = New Size(126, 38)
