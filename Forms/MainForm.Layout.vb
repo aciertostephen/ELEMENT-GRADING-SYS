@@ -32,7 +32,7 @@
         Const rightMargin As Integer = 18
         Const actionGap As Integer = 24
         Dim centerY As Integer = pnlHeader.ClientSize.Height \ 2
-        Dim actionY As Integer = Math.Max(0, centerY - 19)
+        Dim actionY As Integer = Math.Max(0, centerY - 5)
         If _btnRequestsHeader IsNot Nothing Then _btnRequestsHeader.SetBounds(pnlHeader.ClientSize.Width - rightMargin - 112, actionY, 112, 38)
         If _btnLogoutHeader IsNot Nothing AndAlso _btnRequestsHeader IsNot Nothing Then _btnLogoutHeader.SetBounds(_btnRequestsHeader.Left - actionGap - 126, actionY, 126, 38)
         If _btnProfileHeader IsNot Nothing AndAlso _btnLogoutHeader IsNot Nothing Then _btnProfileHeader.SetBounds(_btnLogoutHeader.Left - actionGap - 112, actionY, 112, 38)
