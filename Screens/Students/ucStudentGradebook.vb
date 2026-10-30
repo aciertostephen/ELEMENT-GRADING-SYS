@@ -128,6 +128,7 @@ Public Class ucStudentGradebook
         RecalculateAll()
         SetGridReadOnly(True)
         EnsurePredictionGrid()
+        UpdatePredictiveAvailability()
         StartLiveGradeRefresh()
         AddHandler btnPredictive.MouseEnter, AddressOf PredictiveButtonMouseEnter
         AddHandler btnPredictive.MouseLeave, AddressOf PredictiveButtonMouseLeave
@@ -162,6 +163,7 @@ Public Class ucStudentGradebook
                 RecalculateAll()
                 UpdatePeriodNotice()
                 If _isPredictiveMode Then RefreshPredictionGrid()
+                UpdatePredictiveAvailability()
             End Sub
         pnlTopRubricBG.Controls.Add(_periodSelector)
         pnlTopRubricBG.Controls.Add(_periodNotice)
@@ -191,6 +193,25 @@ Public Class ucStudentGradebook
 
     Private Sub PredictiveButtonMouseLeave(sender As Object, e As EventArgs)
         btnPredictive.BackColor = If(_isPredictiveMode, Color.FromArgb(220, 53, 69), Color.FromArgb(241, 196, 15))
+    End Sub
+
+    Private Sub UpdatePredictiveAvailability()
+        Try
+            Dim released As Boolean = IsPeriodReleased()
+            If released AndAlso _isPredictiveMode Then SetPredictiveMode(False)
+
+            btnPredictive.Enabled = Not released
+            btnPredictive.Text = If(released, "Predictive unavailable", If(_isPredictiveMode, "Exit predictive", "Predictive Mode"))
+            btnPredictive.BackColor = If(released, Color.LightGray, If(_isPredictiveMode, Color.FromArgb(220, 53, 69), Color.FromArgb(241, 196, 15)))
+            btnPredictive.ForeColor = If(_isPredictiveMode, Color.White, Color.Black)
+        Catch
+            ' If publication state cannot be confirmed, keep predictive editing disabled.
+            If _isPredictiveMode Then SetPredictiveMode(False)
+            btnPredictive.Enabled = False
+            btnPredictive.Text = "Predictive unavailable"
+            btnPredictive.BackColor = Color.LightGray
+            btnPredictive.ForeColor = Color.Black
+        End Try
     End Sub
 
     ' Category names and weights live in grading_rubric (per class).
@@ -499,7 +520,9 @@ Public Class ucStudentGradebook
         _liveGradeRefreshTimer = New Timer() With {.Interval = 4000}
         AddHandler _liveGradeRefreshTimer.Tick,
             Sub(sender, e)
-                If IsDisposed OrElse Disposing OrElse Not Visible OrElse _isPredictiveMode Then Return
+                If IsDisposed OrElse Disposing OrElse Not Visible Then Return
+                UpdatePredictiveAvailability()
+                If _isPredictiveMode Then Return
                 LoadStudentGrades(quiet:=True)
                 UpdatePeriodNotice()
             End Sub
@@ -629,7 +652,7 @@ Public Class ucStudentGradebook
 
     Private Sub RefreshPredictionGrid()
         If _predictionGrid Is Nothing Then Return
-        _predictionTitle.Text = "PREDICTIVE COPY — " & _period.ToUpperInvariant() & " · edits here are temporary and never change published grades"
+        _predictionTitle.Text = "PREDICTIVE COPY — " & _period.ToUpperInvariant() & " · saved teacher scores are gray and locked; blanks are temporary predictions"
         _predictionGrid.Columns.Clear()
         _predictionGrid.Rows.Clear()
         For Each sourceColumn As DataGridViewColumn In dgvGradebook.Columns
@@ -646,6 +669,14 @@ Public Class ucStudentGradebook
                 _predictionGrid.Rows(index).Cells(i).Value = sourceRow.Cells(i).Value
             Next
             _predictionGrid.Rows(index).Tag = sourceRow.Tag
+            For Each column As DataGridViewColumn In _predictionGrid.Columns
+                If GetInfo(column).Kind <> ColKind.Raw Then Continue For
+                Dim cell As DataGridViewCell = _predictionGrid.Rows(index).Cells(column.Index)
+                Dim hasTeacherScore As Boolean = cell.Value IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(Convert.ToString(cell.Value))
+                cell.ReadOnly = hasTeacherScore
+                cell.Style.ForeColor = If(hasTeacherScore, Color.Gray, Color.Black)
+                cell.Style.SelectionForeColor = If(hasTeacherScore, Color.Gray, Color.Black)
+            Next
         Next
         RecalculatePredictionAll()
     End Sub
@@ -692,10 +723,12 @@ Public Class ucStudentGradebook
     ' ==========================================
     ' PREDICTIVE MODE TOGGLE
     ' ==========================================
-    Private Sub btnPredictive_Click(sender As Object, e As EventArgs) Handles btnPredictive.Click
-        _isPredictiveMode = Not _isPredictiveMode
+    Private Sub SetPredictiveMode(enabled As Boolean)
+        If enabled AndAlso Not btnPredictive.Enabled Then Return
+        If _isPredictiveMode = enabled Then Return
+        _isPredictiveMode = enabled
 
-        If _isPredictiveMode Then
+        If enabled Then
             btnPredictive.Text = "Exit predictive"
             btnPredictive.BackColor = Color.FromArgb(220, 53, 69)
             btnPredictive.ForeColor = Color.White
@@ -726,6 +759,10 @@ Public Class ucStudentGradebook
             tblMainRubric.RowStyles(2).Height = 0.0F
             dgvGradebook.ReadOnly = True
         End If
+    End Sub
+
+    Private Sub btnPredictive_Click(sender As Object, e As EventArgs) Handles btnPredictive.Click
+        SetPredictiveMode(Not _isPredictiveMode)
     End Sub
 
 End Class
