@@ -26,12 +26,12 @@ Public Class DatabaseHelper
     If Not String.IsNullOrWhiteSpace(configured) Then Return configured.Trim()
 
 #If DEBUG Then
-    Return "Server=127.0.0.1;Database=gradebook_db;Uid=root;Pwd=;CharSet=utf8mb4;"
+        Return "Server=26.39.153.99;Database=gradebook_db;uid=grading_user;pwd=StrongPassword123!;CharSet=utf8mb4;"
 #Else
     Throw New InvalidOperationException(
       "Database configuration is missing. Set the ELEMENT_GRADING_DB_CONNECTION_STRING environment variable before starting a Release build.")
 #End If
-  End Function
+    End Function
 
   Public Shared Function GetConnection() As MySqlConnection
     Return New MySqlConnection(ConnectionString)

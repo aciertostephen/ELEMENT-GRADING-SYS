@@ -24,7 +24,6 @@ Partial Class ucProfileSettings
     Private Sub InitializeComponent()
         Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(ucProfileSettings))
         picAvatar = New PictureBox()
-        pnlInfoCard = New RoundedPanel()
         lblPhone = New Label()
         lblEmail = New Label()
         linkEditInfo = New LinkLabel()
@@ -35,37 +34,20 @@ Partial Class ucProfileSettings
         btnBack = New ReaLTaiizor.Controls.Button()
         linkProfilePicture = New ReaLTaiizor.Controls.LinkLabelEdit()
         CType(picAvatar, ComponentModel.ISupportInitialize).BeginInit()
-        pnlInfoCard.SuspendLayout()
         SuspendLayout()
         ' 
         ' picAvatar
         ' 
         picAvatar.BackgroundImage = CType(resources.GetObject("picAvatar.BackgroundImage"), Image)
         picAvatar.BackgroundImageLayout = ImageLayout.Zoom
+        picAvatar.Image = CType(resources.GetObject("picAvatar.Image"), Image)
         picAvatar.InitialImage = Nothing
         picAvatar.Location = New Point(862, 71)
         picAvatar.Name = "picAvatar"
         picAvatar.Size = New Size(200, 200)
+        picAvatar.SizeMode = PictureBoxSizeMode.StretchImage
         picAvatar.TabIndex = 0
         picAvatar.TabStop = False
-        ' 
-        ' pnlInfoCard
-        ' 
-        pnlInfoCard.ActiveBorderColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
-        pnlInfoCard.BackColor = Color.FromArgb(CByte(248), CByte(248), CByte(248))
-        pnlInfoCard.BorderColor = Color.FromArgb(CByte(209), CByte(213), CByte(219))
-        pnlInfoCard.BorderThickness = 1
-        pnlInfoCard.Controls.Add(lblPhone)
-        pnlInfoCard.Controls.Add(lblEmail)
-        pnlInfoCard.Controls.Add(linkEditInfo)
-        pnlInfoCard.Controls.Add(lblDepartment)
-        pnlInfoCard.Controls.Add(lblRole)
-        pnlInfoCard.Controls.Add(lblFullName)
-        pnlInfoCard.Location = New Point(487, 320)
-        pnlInfoCard.Name = "pnlInfoCard"
-        pnlInfoCard.Radius = 20
-        pnlInfoCard.Size = New Size(933, 237)
-        pnlInfoCard.TabIndex = 3
         ' 
         ' lblPhone
         ' 
@@ -210,13 +192,10 @@ Partial Class ucProfileSettings
         Controls.Add(linkProfilePicture)
         Controls.Add(btnBack)
         Controls.Add(btnLogOut)
-        Controls.Add(pnlInfoCard)
         Controls.Add(picAvatar)
         Name = "ucProfileSettings"
         Size = New Size(1924, 917)
         CType(picAvatar, ComponentModel.ISupportInitialize).EndInit()
-        pnlInfoCard.ResumeLayout(False)
-        pnlInfoCard.PerformLayout()
         ResumeLayout(False)
         PerformLayout()
     End Sub

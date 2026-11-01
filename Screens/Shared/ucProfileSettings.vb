@@ -5,12 +5,12 @@ Imports System.Windows.Forms
 
 Public Class ucProfileSettings
 
-    Private _role As String
+    Private _role As String   ' the actual role code: "Teacher" or "Student"
 
     Public Sub SetData(fullName As String, roleCode As String, roleLabel As String, department As String, email As String, phone As String)
-        _role = roleCode
+        _role = roleCode          ' "Teacher" / "Student" — used for routing
         lblFullName.Text = fullName
-        lblRole.Text = roleLabel
+        lblRole.Text = roleLabel  ' "Professor" / "Student" — used for display
         lblDepartment.Text = department
         lblEmail.Text = email
         lblPhone.Text = phone
@@ -21,6 +21,7 @@ Public Class ucProfileSettings
             SetData("Last Name, Full Name M.I.", "Teacher", "Professor", "Department", "Email", "Phone Number")
         End If
 
+        ' Prevent click color change by setting ActiveLinkColor to normal link color
         linkProfilePicture.ActiveLinkColor = Color.FromArgb(32, 124, 64)
         linkEditInfo.ActiveLinkColor = Color.FromArgb(32, 124, 64)
 
@@ -55,9 +56,11 @@ Public Class ucProfileSettings
 
             If ofd.ShowDialog(Me.FindForm()) = DialogResult.OK Then
                 Try
+                    ' Read image into MemoryStream to prevent file lock
                     Dim imgBytes As Byte() = File.ReadAllBytes(ofd.FileName)
                     Using ms As New MemoryStream(imgBytes)
                         Using originalImg As Image = Image.FromStream(ms)
+                            ' Crop center square into circle
                             Dim circularImg As Bitmap = MakeCenterCircularBitmap(originalImg, picAvatar.Width, picAvatar.Height)
 
                             If picAvatar.Image IsNot Nothing Then
@@ -65,7 +68,6 @@ Public Class ucProfileSettings
                             End If
 
                             picAvatar.Image = circularImg
-                            ProfileService.SavePicture(SessionManager.CurrentUserId, circularImg)
                         End Using
                     End Using
 
@@ -79,8 +81,12 @@ Public Class ucProfileSettings
         End Using
     End Sub
 
-
+    ''' <summary>
+    ''' Extracts the largest possible center square from the image and crops it into a anti-aliased circle.
+    ''' Prevents stretching or distortion.
+    ''' </summary>
     Private Function MakeCenterCircularBitmap(srcImage As Image, targetWidth As Integer, targetHeight As Integer) As Bitmap
+        ' 1. Determine maximum square dimensions from source center
         Dim squareSize As Integer = Math.Min(srcImage.Width, srcImage.Height)
         Dim srcX As Integer = (srcImage.Width - squareSize) \ 2
         Dim srcY As Integer = (srcImage.Height - squareSize) \ 2
@@ -88,6 +94,7 @@ Public Class ucProfileSettings
         Dim srcRect As New Rectangle(srcX, srcY, squareSize, squareSize)
         Dim destRect As New Rectangle(0, 0, targetWidth, targetHeight)
 
+        ' 2. Draw cropped center square into circular path
         Dim bmp As New Bitmap(targetWidth, targetHeight)
 
         Using g As Graphics = Graphics.FromImage(bmp)
@@ -98,6 +105,7 @@ Public Class ucProfileSettings
             Using path As New GraphicsPath()
                 path.AddEllipse(0, 0, targetWidth - 1, targetHeight - 1)
                 g.SetClip(path)
+                ' Draws the center square without scaling non-proportionally
                 g.DrawImage(srcImage, destRect, srcRect, GraphicsUnit.Pixel)
             End Using
         End Using
@@ -136,29 +144,22 @@ Public Class ucProfileSettings
     End Sub
 
     Private Sub btnLogOut_Click(sender As Object, e As EventArgs) Handles btnLogOut.Click
-        ' Show confirmation dialog
-        Dim result As DialogResult = MessageBox.Show(
-        "Are you sure you want to log out?",
-        "Confirm Logout",
-        MessageBoxButtons.YesNo)
-
-        ' Cancel if not confirmed
-        If result <> DialogResult.Yes Then Return
-
-        ' Proceed with session cleanup
-        SessionManager.EndSession()
         Dim mainForm As MainForm = TryCast(Me.FindForm(), MainForm)
         If mainForm IsNot Nothing Then
-            If mainForm.pnlApp IsNot Nothing Then
-                mainForm.pnlApp.Visible = False
-            End If
+            ' 1. Hide the application dashboard
+            mainForm.pnlApp.Visible = False
+
+            ' 2. Show the main login container
+            mainForm.pnlLogin.Visible = True
+
+            ' 3. Explicitly show the right-side login card panel containing the inputs and button
             If mainForm.pnlLoginCard IsNot Nothing Then
                 mainForm.pnlLoginCard.Visible = True
-                mainForm.pnlLoginCard.BringToFront()
             End If
-            If mainForm.txtPassword IsNot Nothing Then
-                mainForm.txtPassword.Clear()
-            End If
+
+            ' 4. Clear the textboxes for security
+            If mainForm.txtUsername IsNot Nothing Then mainForm.txtUsername.Clear()
+            If mainForm.txtPassword IsNot Nothing Then mainForm.txtPassword.Clear()
         End If
     End Sub
 
