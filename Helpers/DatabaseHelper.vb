@@ -27,6 +27,7 @@ Public Class DatabaseHelper
 
 #If DEBUG Then
         Return "Server=26.39.153.99;Database=gradebook_db;uid=grading_user;pwd=StrongPassword123!;CharSet=utf8mb4;"
+      ' ' ' "Server=127.0.0.0;Database=gradebook_db;uid=root;pwd=;CharSet=utf8mb4;"
 #Else
     Throw New InvalidOperationException(
       "Database configuration is missing. Set the ELEMENT_GRADING_DB_CONNECTION_STRING environment variable before starting a Release build.")
