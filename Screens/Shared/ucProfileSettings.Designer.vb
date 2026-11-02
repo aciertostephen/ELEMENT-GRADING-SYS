@@ -45,7 +45,7 @@ Partial Class ucProfileSettings
         picAvatar.InitialImage = Nothing
         picAvatar.Location = New Point(862, 71)
         picAvatar.Name = "picAvatar"
-        picAvatar.Size = New Size(200, 200)
+        picAvatar.Size = New Size(189, 189)
         picAvatar.TabIndex = 0
         picAvatar.TabStop = False
         ' 
