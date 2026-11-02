@@ -16,6 +16,41 @@ Public Class ucStudentGradebook
     Private _predictionTitle As Label
     Private _liveGradeRefreshTimer As Timer
 
+    ' ---------- Red row highlight (failing after the period is published) ----------
+
+    ' Keep this equal to PassingGrade in ucGradebook (and to cell D9 of the Excel template).
+    Private Const PassingGrade As Decimal = 75D
+
+    ' True once the selected period (Midterm/Final) has been published by the teacher
+    Private _periodPublished As Boolean = False
+
+    Private ReadOnly RedRowBack As Color = Color.FromArgb(255, 199, 206)
+    Private ReadOnly RedRowFore As Color = Color.FromArgb(156, 0, 6)
+    Private ReadOnly RedRowSelect As Color = Color.FromArgb(255, 170, 180)
+
+    Private Sub RefreshPublishedFlag()
+        Try
+            _periodPublished = IsPeriodReleased()
+        Catch
+            _periodPublished = False
+        End Try
+    End Sub
+
+    Private Sub ApplyRowHighlight(row As DataGridViewRow, highlight As Boolean)
+        If highlight Then
+            row.DefaultCellStyle.BackColor = RedRowBack
+            row.DefaultCellStyle.ForeColor = RedRowFore
+            row.DefaultCellStyle.SelectionBackColor = RedRowSelect
+            row.DefaultCellStyle.SelectionForeColor = RedRowFore
+        Else
+            ' Color.Empty = fall back to the column / grid styles (GrA blue, TOTAL green, gray selection)
+            row.DefaultCellStyle.BackColor = Color.Empty
+            row.DefaultCellStyle.ForeColor = Color.Empty
+            row.DefaultCellStyle.SelectionBackColor = Color.Empty
+            row.DefaultCellStyle.SelectionForeColor = Color.Empty
+        End If
+    End Sub
+
     ' grading_rubric.rubric_id for each category 1..4 of this class (index 0 unused)
     Private rubricIdByCat(4) As Integer
 
@@ -125,6 +160,7 @@ Public Class ucStudentGradebook
         LoadWeightsFromDatabase()
         BuildStudentGrid()
         LoadStudentGrades()
+        RefreshPublishedFlag()      ' <-- new: must be known before the first recalculation
         RecalculateAll()
         SetGridReadOnly(True)
         EnsurePredictionGrid()
@@ -160,6 +196,7 @@ Public Class ucStudentGradebook
                 LoadWeightsFromDatabase()
                 BuildStudentGrid()
                 LoadStudentGrades()
+                RefreshPublishedFlag()      ' <-- new
                 RecalculateAll()
                 UpdatePeriodNotice()
                 If _isPredictiveMode Then RefreshPredictionGrid()
@@ -523,6 +560,12 @@ Public Class ucStudentGradebook
                 If IsDisposed OrElse Disposing OrElse Not Visible Then Return
                 UpdatePredictiveAvailability()
                 LoadStudentGrades(quiet:=True)
+
+                ' If the teacher just published (or un-published) this period, repaint the red highlight
+                Dim wasPublished As Boolean = _periodPublished
+                RefreshPublishedFlag()
+                If wasPublished <> _periodPublished Then RecalculateAll()
+
                 If _isPredictiveMode Then SyncPredictionTeacherScores()
                 UpdatePeriodNotice()
             End Sub
@@ -574,10 +617,12 @@ Public Class ucStudentGradebook
         Next
 
         Dim finalGrade As Decimal = 0D
+        Dim anyScore As Boolean = False
         For cat As Integer = 1 To 4
             Dim totalCol As String = "cat" & cat & "_total"
             If Not dgvGradebook.Columns.Contains(totalCol) Then Continue For
             If counts(cat) > 0 Then
+                anyScore = True
                 Dim weighted As Decimal = GradeCalculator.CategoryTotal(sums(cat), counts(cat), CategoryWeight(cat))
                 row.Cells(totalCol).Value = weighted.ToString("0.00")
                 finalGrade += weighted
@@ -587,7 +632,12 @@ Public Class ucStudentGradebook
         Next
 
         Dim status As String = If(row.Cells("status").Value IsNot Nothing, row.Cells("status").Value.ToString(), "")
-        row.Cells("grade").Value = If(status.Equals("Dropped", StringComparison.OrdinalIgnoreCase), "DRP", finalGrade.ToString("0.00"))
+        Dim isDropped As Boolean = status.Equals("Dropped", StringComparison.OrdinalIgnoreCase)
+        row.Cells("grade").Value = If(isDropped, "DRP", finalGrade.ToString("0.00"))
+
+        ' Red row: dropped, or failing once this period has been published
+        Dim failing As Boolean = _periodPublished AndAlso anyScore AndAlso Math.Min(100D, finalGrade) < PassingGrade
+        ApplyRowHighlight(row, isDropped OrElse failing)
     End Sub
 
     Private Sub dgvGradebook_CellEndEdit(sender As Object, e As DataGridViewCellEventArgs) Handles dgvGradebook.CellEndEdit

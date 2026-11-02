@@ -95,6 +95,44 @@ Public Class ucGradebook
     ' Value of the cell before the user started editing (used to undo a failed save)
     Private _oldCellValue As Object = Nothing
 
+    ' ---------- Red row highlight (dropped / failing after publish) ----------
+
+    ' Passing grade used for the red "failed" highlight. Keep it equal to the template's cell D9
+    ' (the Excel REMARKS column uses $D$9 for Pass/Fail).
+    Private Const PassingGrade As Decimal = 75D
+
+    ' True once the current period (Midterm/Final) has been published
+    Private _periodPublished As Boolean = False
+
+    ' Red row palette
+    Private ReadOnly RedRowBack As Color = Color.FromArgb(255, 199, 206)
+    Private ReadOnly RedRowFore As Color = Color.FromArgb(156, 0, 6)
+    Private ReadOnly RedRowSelect As Color = Color.FromArgb(255, 170, 180)
+
+    Private Sub RefreshPublishedFlag()
+        Try
+            _periodPublished = IsPeriodReleased()
+        Catch
+            _periodPublished = False
+        End Try
+    End Sub
+
+    ' Red row = student is Dropped, OR (period published AND the grade is failing)
+    Private Sub ApplyRowHighlight(row As DataGridViewRow, highlight As Boolean)
+        If highlight Then
+            row.DefaultCellStyle.BackColor = RedRowBack
+            row.DefaultCellStyle.ForeColor = RedRowFore
+            row.DefaultCellStyle.SelectionBackColor = RedRowSelect
+            row.DefaultCellStyle.SelectionForeColor = RedRowFore
+        Else
+            ' Color.Empty = fall back to the column / grid styles (GrA blue, TOTAL green, gray selection)
+            row.DefaultCellStyle.BackColor = Color.Empty
+            row.DefaultCellStyle.ForeColor = Color.Empty
+            row.DefaultCellStyle.SelectionBackColor = Color.Empty
+            row.DefaultCellStyle.SelectionForeColor = Color.Empty
+        End If
+    End Sub
+
     ' True right after Save Config: the gradebook is saved, and the next change has to be confirmed
     Private _gradebookSaved As Boolean = False
 
@@ -200,6 +238,7 @@ Public Class ucGradebook
         LoadWeightsFromDatabase()
         BuildGrid()
         LoadStudents()
+        RefreshPublishedFlag()      ' <-- new: must be known before the first recalculation
         RecalculateAll()
         UpdateWeightDistributionComboBox()
         _gradebookSaved = IsPeriodReleased()
@@ -234,6 +273,7 @@ Public Class ucGradebook
                 LoadWeightsFromDatabase()
                 BuildGrid()
                 LoadStudents()
+                RefreshPublishedFlag()      ' <-- new
                 RecalculateAll()
                 UpdateWeightDistributionComboBox()
                 _gradebookSaved = IsPeriodReleased()
@@ -681,23 +721,24 @@ Public Class ucGradebook
     End Sub
 
     ' ==========================================
-    ' 4. EXPORT TO THE EXCEL TEMPLATE (dynamic layout)
+    ' 4. EXPORT TO THE EXCEL TEMPLATE (Midterm + Final + Semestral in ONE workbook)
     ' ==========================================
 
     ' ---- Template settings ----
     Private Const TemplateFileName As String = "GradingTemplate.xlsm"   ' <app folder>\Templates\
-    Private Const RosterSheetName As String = "Midterm"                ' Semestral reads the names from here
+    Private Const RosterSheetName As String = "Midterm"                ' header cells (rows 1-3) live here; Final/Semestral link to them
     Private Const HeaderTopRow As Integer = 12                         ' row 12 = category band, 13 = labels, 14 = max score / weight
     Private Const FirstStudentRow As Integer = 15
     Private Const LastStudentRow As Integer = 59                       ' Semestral (and the template summary) stop at row 59
     Private Const ClearToRow As Integer = 133                          ' everything from row 12 to here is rebuilt
     Private Const ClearToCol As Integer = 32                           ' ... and from column A to AF
-    Private Const ExportFontSize As Double = 10                         ' font size of the exported table (rows 12 and below)
+    Private Const ExportFontSize As Double = 10                        ' font size of the exported tables (rows 12 and below)
     Private Const StudentRowHeight As Double = 21                      ' height of one line of a student row (points)
     Private Const NameColWidth As Double = 34                          ' width of the NAME column (characters)
 
-    ' Old fixed template input columns - only used to blank the sample scores of the period that is NOT exported
-    Private ReadOnly OldInputColumns As String() = {"C", "D", "F", "G", "H", "J", "M", "P"}
+    ' Layout used for a period that has no gradebook set up yet (same defaults as EnsureClassRubric)
+    Private ReadOnly DefaultCatNames As String() = {"", "Class Participation", "Quizzes", "Projects", "Major Exam"}
+    Private ReadOnly DefaultCatWeights As Decimal() = {0D, 10D, 20D, 30D, 40D}
 
     Private Class ExportHeaderInfo
         Public SchoolYear As String = ""   ' -> C1
@@ -739,39 +780,166 @@ Public Class ucGradebook
         Return info
     End Function
 
-    Private Function AskGradingPeriod() As String
-        Using dlg As New GradebookValueDialog("Grading Period", "Choose the grading period to export:", "Midterm",
-                                               New String() {"Midterm", "Final"})
-            If dlg.ShowDialog(FindForm()) <> DialogResult.OK Then Return Nothing
-            Return dlg.Value
-        End Using
+    ' ---------- Data of one grading period, read straight from the database ----------
+    ' The export does not use the grid, so it always has BOTH periods no matter which one is on screen.
+
+    Private Class SnapItem
+        Public ItemId As Integer
+        Public Name As String
+        Public MaxScore As Decimal
+        Public Category As Integer
+    End Class
+
+    Private Class SnapStudent
+        Public Name As String
+        Public Dropped As Boolean
+        Public Scores As New Dictionary(Of Integer, Decimal)     ' grade_item.item_id -> score
+    End Class
+
+    Private Class PeriodSnapshot
+        Public Period As String
+        Public CatNames(4) As String                              ' index 1..4 (4 = Major Exam)
+        Public CatWeights(4) As Decimal
+        Public Items As New List(Of SnapItem)
+        Public Students As New List(Of SnapStudent)
+        Public UsedDefaultLayout As Boolean                       ' True when the period had no gradebook columns yet
+        Public Published As Boolean                               ' True when this period's grades were officially published
+    End Class
+
+    Private Function LoadPeriodSnapshot(periodName As String) As PeriodSnapshot
+        Dim snap As New PeriodSnapshot() With {.Period = periodName}
+
+        ' Published? (failing students are only shown in red once the period is published)
+        Dim releasedCol As String = If(periodName = "Midterm", "midterm_released_at", "finals_released_at")
+        snap.Published = DatabaseHelper.ScalarInt(
+            "SELECT COUNT(*) FROM classes WHERE class_id = @c AND " & releasedCol & " IS NOT NULL",
+            {DatabaseHelper.P("@c", _classId)}) > 0
+
+        For cat As Integer = 1 To 4
+            snap.CatNames(cat) = DefaultCatNames(cat)
+            snap.CatWeights(cat) = DefaultCatWeights(cat)
+        Next
+
+        ' --- category names / weights (same rule as LoadWeightsFromDatabase) ---
+        Dim rubricIds(4) As Integer
+        Dim dtRubric As DataTable = DatabaseHelper.ExecuteQuery(
+            "SELECT rubric_id, component_name, weight_percent, is_fixed FROM grading_rubric " &
+            "WHERE class_id = @cid AND period = @p ORDER BY is_fixed ASC, rubric_id ASC",
+            {New MySqlParameter("@cid", _classId), New MySqlParameter("@p", periodName)})
+
+        If dtRubric IsNot Nothing Then
+            Dim customCount As Integer = 0
+            For Each rr As DataRow In dtRubric.Rows
+                Dim catNo As Integer
+                If Convert.ToInt32(rr("is_fixed")) = 1 Then
+                    catNo = 4
+                Else
+                    customCount += 1
+                    If customCount > 3 Then Continue For
+                    catNo = customCount
+                End If
+                rubricIds(catNo) = Convert.ToInt32(rr("rubric_id"))
+                snap.CatWeights(catNo) = Convert.ToDecimal(rr("weight_percent"))
+                If catNo <> 4 Then snap.CatNames(catNo) = rr("component_name").ToString()
+            Next
+        End If
+
+        ' --- assessment columns of each category, in creation order ---
+        For cat As Integer = 1 To 4
+            If rubricIds(cat) <= 0 Then Continue For
+            Dim dtItems As DataTable = DatabaseHelper.ExecuteQuery(
+                "SELECT item_id, item_name, max_score FROM grade_item WHERE rubric_id = @rid ORDER BY item_id",
+                {New MySqlParameter("@rid", rubricIds(cat))})
+            If dtItems Is Nothing Then Continue For
+            For Each ir As DataRow In dtItems.Rows
+                snap.Items.Add(New SnapItem() With {
+                    .ItemId = Convert.ToInt32(ir("item_id")),
+                    .Name = ir("item_name").ToString(),
+                    .MaxScore = Convert.ToDecimal(ir("max_score")),
+                    .Category = cat})
+            Next
+        Next
+
+        ' A period nobody has opened yet still gets the standard layout (blank scores)
+        If snap.Items.Count = 0 Then
+            snap.UsedDefaultLayout = True
+            For Each di In defaultItems
+                snap.Items.Add(New SnapItem() With {.ItemId = 0, .Name = di.ItemName, .MaxScore = di.MaxScore, .Category = di.Category})
+            Next
+        End If
+
+        ' --- students and their scores for this period ---
+        Dim sql As String =
+            "SELECT e.enrollment_id, sp.last_name, sp.first_name, sp.middle_name, e.status, " &
+            "       pg.item_id, pg.score " &
+            "FROM enrollment e " &
+            "JOIN student_profile sp ON sp.student_id = e.student_id " &
+            "LEFT JOIN (SELECT ge.enrollment_id, gi.item_id, ge.score " &
+            "           FROM grade_entry ge " &
+            "           JOIN grade_item gi ON gi.item_id = ge.item_id " &
+            "           JOIN grading_rubric rp ON rp.rubric_id = gi.rubric_id " &
+            "           WHERE rp.class_id = @cid AND rp.period = @p) pg ON pg.enrollment_id = e.enrollment_id " &
+            "WHERE e.class_id = @cid " &
+            "ORDER BY sp.last_name, sp.first_name"
+
+        Dim dtStud As DataTable = DatabaseHelper.ExecuteQuery(sql,
+            {New MySqlParameter("@cid", _classId), New MySqlParameter("@p", periodName)})
+
+        If dtStud IsNot Nothing Then
+            Dim byEnrollment As New Dictionary(Of String, SnapStudent)
+            For Each sr As DataRow In dtStud.Rows
+                Dim enrKey As String = sr("enrollment_id").ToString()
+
+                If Not byEnrollment.ContainsKey(enrKey) Then
+                    Dim mi As String = sr("middle_name").ToString().Trim()
+                    Dim stu As New SnapStudent() With {
+                        .Name = $"{sr("last_name")}, {sr("first_name")}" & If(mi = "", "", " " & mi),
+                        .Dropped = (sr("status").ToString() = "Dropped")}
+                    byEnrollment(enrKey) = stu
+                    snap.Students.Add(stu)
+                End If
+
+                If Not IsDBNull(sr("item_id")) AndAlso Not IsDBNull(sr("score")) Then
+                    byEnrollment(enrKey).Scores(Convert.ToInt32(sr("item_id"))) = Convert.ToDecimal(sr("score"))
+                End If
+            Next
+        End If
+
+        Return snap
     End Function
 
-    Private Sub btnExport_Click(sender As Object, e As EventArgs) Handles btnExportExcel.Click
-        Dim period As String = AskGradingPeriod()
-        If period Is Nothing Then Return
-        If _periodSelector IsNot Nothing Then _periodSelector.SelectedItem = period
+    ' Students (not dropped) that still have at least one blank score in this period
+    Private Function CountIncompleteStudents(snap As PeriodSnapshot) As Integer
+        Dim total As Integer = 0
+        For Each stu As SnapStudent In snap.Students
+            If stu.Dropped Then Continue For
+            For Each it As SnapItem In snap.Items
+                If it.ItemId <= 0 OrElse Not stu.Scores.ContainsKey(it.ItemId) Then
+                    total += 1
+                    Exit For
+                End If
+            Next
+        Next
+        Return total
+    End Function
 
+    ' ---------- The export ----------
+
+    Private Sub btnExport_Click(sender As Object, e As EventArgs) Handles btnExportExcel.Click
         Using sfd As New SaveFileDialog()
             sfd.Filter = "Excel Workbook|*.xlsx"
-            sfd.Title = "Export Class Grades"
-            sfd.FileName = "Class_Grades_" & period & "_" & DateTime.Now.ToString("yyyyMMdd") & ".xlsx"
+            sfd.Title = "Export Class Grades (Midterm, Final and Semestral)"
+            sfd.FileName = "Class_Grades_" & DateTime.Now.ToString("yyyyMMdd") & ".xlsx"
 
             If sfd.ShowDialog() = DialogResult.OK Then
-                ExportToTemplate(sfd.FileName, period, GetExportHeaderInfo())
+                ExportToTemplate(sfd.FileName, GetExportHeaderInfo())
             End If
         End Using
     End Sub
 
-    Private Sub ExportToTemplate(savePath As String, period As String, header As ExportHeaderInfo)
-        ' --- Semestral has no input cells: every cell is a formula over Midterm and Final ---
-        If period = "Semestral" Then
-            MessageBox.Show("The Semestral sheet is fully calculated from the Midterm and Final sheets." & vbCrLf &
-                        "Export the Midterm and Final periods instead.",
-                        "Semestral Not Exportable", MessageBoxButtons.OK)
-            Return
-        End If
-
+    ' One workbook, three tabs:  Midterm = the Midterm gradebook,  Final = the Final gradebook,
+    ' Semestral = calculated by the template from both of them.
+    Private Sub ExportToTemplate(savePath As String, header As ExportHeaderInfo)
         ' --- Template must exist ---
         Dim templatePath As String = System.IO.Path.Combine(Application.StartupPath, "Templates", TemplateFileName)
         If Not System.IO.File.Exists(templatePath) Then
@@ -780,78 +948,77 @@ Public Class ucGradebook
             Return
         End If
 
-        ' --- Students currently shown in the gradebook ---
-        Dim students As List(Of DataGridViewRow) =
-            dgvGradebook.Rows.Cast(Of DataGridViewRow)().Where(Function(r) Not r.IsNewRow).ToList()
-
-        Dim capacity As Integer = LastStudentRow - FirstStudentRow + 1
-        If students.Count > capacity Then
-            MessageBox.Show($"The template holds at most {capacity} students (rows {FirstStudentRow}-{LastStudentRow}), " &
-                        $"but this class has {students.Count}.",
-                        "Too Many Students", MessageBoxButtons.OK)
-            Return
-        End If
-
         Try
+            ' --- Both gradebooks, straight from the database ---
+            Dim midSnap As PeriodSnapshot = LoadPeriodSnapshot("Midterm")
+            Dim finSnap As PeriodSnapshot = LoadPeriodSnapshot("Final")
+
+            Dim capacity As Integer = LastStudentRow - FirstStudentRow + 1
+            If midSnap.Students.Count > capacity Then
+                MessageBox.Show($"The template holds at most {capacity} students (rows {FirstStudentRow}-{LastStudentRow}), " &
+                            $"but this class has {midSnap.Students.Count}.",
+                            "Too Many Students", MessageBoxButtons.OK)
+                Return
+            End If
+
             Using wb As New XLWorkbook(templatePath)
 
-                ' --- Worksheet lookups ---
-                Dim wsTarget As IXLWorksheet = Nothing
-                If Not wb.Worksheets.TryGetWorksheet(period, wsTarget) Then
-                    MessageBox.Show($"The template has no worksheet named '{period}'.", "Worksheet Not Found", MessageBoxButtons.OK)
-                    Return
-                End If
-
-                Dim wsRoster As IXLWorksheet = Nothing
-                If Not wb.Worksheets.TryGetWorksheet(RosterSheetName, wsRoster) Then
-                    MessageBox.Show($"The template has no worksheet named '{RosterSheetName}'.", "Worksheet Not Found", MessageBoxButtons.OK)
-                    Return
-                End If
-
-                ' --- 1. Header information (rows 1-3, unchanged mapping) ---
-                ' C1, F1, I1, C2, F3 live on the roster sheet (Final links to them by formula).
-                SetTextOrNumber(wsRoster, "C1", header.SchoolYear)
-                SetTextOrNumber(wsRoster, "F1", header.Semester)
-                SetTextOrNumber(wsRoster, "I1", header.Section)      ' I1:L1 is merged - I1 is the anchor
-                SetTextOrNumber(wsRoster, "C2", header.Program)
-                SetTextOrNumber(wsRoster, "F3", header.Professor)
-                SetTextOrNumber(wsTarget, "C3", period)              ' grading period, on the selected sheet
-
-                ' --- 2. Rows 12+ : rebuilt from the gradebook grid, column for column ---
-                Dim layout As ExportLayout = BuildGradebookSheet(wsTarget, students)
-
-                ' --- 3. Keep the rest of the workbook consistent with the new layout ---
-                ' Semestral reads the names from the roster sheet. When Final is exported the roster (Midterm)
-                ' still needs the names, otherwise Semestral would show the template's sample students.
-                If Not String.Equals(period, RosterSheetName, StringComparison.OrdinalIgnoreCase) Then
-                    For i As Integer = 0 To capacity - 1
-                        SetText(wsRoster, "B" & (FirstStudentRow + i), If(i < students.Count, GridText(students(i), "studname"), ""))
-                    Next
-                End If
-
-                ' The period that is NOT exported still holds the template's sample scores: clear them
-                For Each otherName As String In New String() {"Midterm", "Final"}
-                    Dim wsOther As IXLWorksheet = Nothing
-                    If Not String.Equals(otherName, period, StringComparison.OrdinalIgnoreCase) AndAlso
-                       wb.Worksheets.TryGetWorksheet(otherName, wsOther) Then
-                        For rowNo As Integer = FirstStudentRow To LastStudentRow
-                            For Each colLetter As String In OldInputColumns
-                                Dim sample As IXLCell = wsOther.Cell(colLetter & rowNo)
-                                If Not sample.HasFormula Then sample.Clear(XLClearOptions.Contents)
-                            Next
-                        Next
+                ' --- Worksheet lookups (all three tabs are required) ---
+                Dim wsMid As IXLWorksheet = Nothing
+                Dim wsFin As IXLWorksheet = Nothing
+                Dim wsSem As IXLWorksheet = Nothing
+                For Each requiredName As String In New String() {"Midterm", "Final", "Semestral"}
+                    Dim found As IXLWorksheet = Nothing
+                    If Not wb.Worksheets.TryGetWorksheet(requiredName, found) Then
+                        MessageBox.Show($"The template has no worksheet named '{requiredName}'.", "Worksheet Not Found", MessageBoxButtons.OK)
+                        Return
                     End If
+                    Select Case requiredName
+                        Case "Midterm" : wsMid = found
+                        Case "Final" : wsFin = found
+                        Case "Semestral" : wsSem = found
+                    End Select
                 Next
 
-                RepointSummaryAndSemestral(wb, wsTarget, period, layout)
+                ' --- 1. Header information (rows 1-3). C1, F1, I1, C2, F3 live on Midterm; Final and Semestral link to them ---
+                SetTextOrNumber(wsMid, "C1", header.SchoolYear)
+                SetTextOrNumber(wsMid, "F1", header.Semester)
+                SetTextOrNumber(wsMid, "I1", header.Section)         ' I1:L1 is merged - I1 is the anchor
+                SetTextOrNumber(wsMid, "C2", header.Program)
+                SetTextOrNumber(wsMid, "F3", header.Professor)
+                SetTextOrNumber(wsMid, "C3", "Midterm")              ' grading period of each tab
+                SetTextOrNumber(wsFin, "C3", "Final")
 
-                ' Make Excel recalculate every template formula when the file is opened
+                ' --- 2. Rows 12+ of Midterm and Final, rebuilt from each gradebook ---
+                Dim layoutMid As ExportLayout = BuildPeriodSheet(wsMid, midSnap)
+                Dim layoutFin As ExportLayout = BuildPeriodSheet(wsFin, finSnap)
+
+                ' --- 3. Summary boxes, print areas and the Semestral formulas follow the new columns ---
+                RepointSummaryAndSemestral(wb, wsMid, "Midterm", layoutMid)
+                RepointSummaryAndSemestral(wb, wsFin, "Final", layoutFin)
+
+                ' Make Excel recalculate every template formula (including Semestral) when the file is opened
                 wb.FullCalculationOnLoad = True
 
                 wb.SaveAs(savePath)
             End Using
 
-            MessageBox.Show("Class grades have been exported successfully!", "Export Complete", MessageBoxButtons.OK)
+            ' --- Tell the user what was exported and what was still incomplete ---
+            Dim summaryText As String = "Midterm, Final and Semestral grades were exported to one workbook."
+            Dim notes As New List(Of String)
+            For Each snap As PeriodSnapshot In New PeriodSnapshot() {midSnap, finSnap}
+                If snap.UsedDefaultLayout Then
+                    notes.Add(snap.Period & ": no gradebook set up yet - the standard layout was exported with blank scores.")
+                Else
+                    Dim incomplete As Integer = CountIncompleteStudents(snap)
+                    If incomplete > 0 Then notes.Add(snap.Period & ": " & incomplete & " student(s) still have blank scores (exported as blank cells).")
+                End If
+            Next
+            If notes.Count > 0 Then
+                summaryText &= vbCrLf & vbCrLf & "Please note:" & vbCrLf & "- " & String.Join(vbCrLf & "- ", notes) &
+                       vbCrLf & vbCrLf & "The Semestral tab uses the grades as they are now, so it updates once the missing scores are filled in."
+            End If
+            MessageBox.Show(summaryText, "Export Complete", MessageBoxButtons.OK)
 
         Catch ex As System.IO.IOException
             MessageBox.Show("The file could not be saved. If it is open in Excel, close it and try again." & vbCrLf & vbCrLf & ex.Message,
@@ -870,34 +1037,60 @@ Public Class ucGradebook
         Public RemarksCol As Integer
     End Class
 
+    ' One column of the exported table (same order as the gradebook grid: NO., NAME, DRP, [Raw, GrA]..., TOTAL..., GRADE)
+    Private Class ExportCol
+        Public Kind As ColKind
+        Public Category As Integer
+        Public Item As SnapItem
+        Public Key As String            ' "number", "studname", "status", "grade" for the fixed columns
+        Public Header As String
+    End Class
+
     Private Function ColLetter(colNumber As Integer) As String
         Return XLHelper.GetColumnLetterFromNumber(colNumber)
     End Function
 
-    ' Rebuilds rows 12+ of 'ws' so that it mirrors dgvGradebook:
-    '   Excel column n  =  grid column n  (NO., NAME, DRP, [Raw, GrA]..., TOTAL, ..., GRADE)
-    '   + two extra columns after GRADE: EQ and REMARKS (the template's summary and Semestral sheet need them).
-    ' Adding or deleting a column in the grid therefore adds or deletes it in the export automatically.
-    ' Row 12 = category band, row 13 = column label, row 14 = max score (Raw) or weight % (TOTAL).
-    ' GrA, TOTAL and GRADE are Excel formulas that use the same rules as the grid, so the sheet stays live.
-    Private Function BuildGradebookSheet(ws As IXLWorksheet, students As List(Of DataGridViewRow)) As ExportLayout
-        Dim gridCols As List(Of DataGridViewColumn) =
-            dgvGradebook.Columns.Cast(Of DataGridViewColumn)().OrderBy(Function(c) c.DisplayIndex).ToList()
+    Private Function BuildExportPlan(snap As PeriodSnapshot) As List(Of ExportCol)
+        Dim plan As New List(Of ExportCol)
+        plan.Add(New ExportCol() With {.Kind = ColKind.None, .Key = "number", .Header = "NO."})
+        plan.Add(New ExportCol() With {.Kind = ColKind.None, .Key = "studname", .Header = "STUDENT NAME"})
+        plan.Add(New ExportCol() With {.Kind = ColKind.None, .Key = "status", .Header = "DRP"})
 
-        ' Excel column number of every grid column (1-based, same order)
-        Dim idxByName As New Dictionary(Of String, Integer)
-        For i As Integer = 0 To gridCols.Count - 1
-            idxByName(gridCols(i).Name) = i + 1
+        For cat As Integer = 1 To 4
+            Dim catNo As Integer = cat
+            For Each it As SnapItem In snap.Items.Where(Function(si) si.Category = catNo)
+                plan.Add(New ExportCol() With {.Kind = ColKind.Raw, .Category = cat, .Item = it, .Header = it.Name.ToUpper()})
+                plan.Add(New ExportCol() With {.Kind = ColKind.GrA, .Category = cat, .Item = it, .Header = "GrA"})
+            Next
+            plan.Add(New ExportCol() With {.Kind = ColKind.CatTotal, .Category = cat, .Header = If(cat = 4, "MAJOR EXAM", "TOTAL")})
         Next
-        If Not idxByName.ContainsKey("studname") OrElse Not idxByName.ContainsKey("status") OrElse Not idxByName.ContainsKey("grade") Then
-            Throw New InvalidOperationException("The gradebook grid is missing its name, DRP or GRADE column.")
-        End If
 
-        Dim colName As Integer = idxByName("studname")
-        Dim colDrp As Integer = idxByName("status")
-        Dim colGrade As Integer = idxByName("grade")
-        Dim colEq As Integer = gridCols.Count + 1
-        Dim colRem As Integer = gridCols.Count + 2
+        plan.Add(New ExportCol() With {.Kind = ColKind.None, .Key = "grade", .Header = "GRADE"})
+        Return plan
+    End Function
+
+    ' Rebuilds rows 12+ of 'ws' for one grading period:
+    '   Excel column n  =  gradebook column n  (NO., NAME, DRP, [Raw, GrA]..., TOTAL, ..., GRADE)
+    '   + two extra columns after GRADE: EQ and REMARKS (the template's summary and Semestral sheet need them).
+    ' Row 12 = category band, row 13 = column label, row 14 = max score (Raw) or weight % (TOTAL).
+    ' GrA, TOTAL and GRADE are Excel formulas that use the same rules as the gradebook grid.
+    ' A period with blank scores still gets its full layout and one row per student.
+    Private Function BuildPeriodSheet(ws As IXLWorksheet, snap As PeriodSnapshot) As ExportLayout
+        Dim plan As List(Of ExportCol) = BuildExportPlan(snap)
+
+        ' Excel column of the fixed columns
+        Dim colName As Integer = 0
+        Dim colDrp As Integer = 0
+        Dim colGrade As Integer = 0
+        For i As Integer = 0 To plan.Count - 1
+            Select Case plan(i).Key
+                Case "studname" : colName = i + 1
+                Case "status" : colDrp = i + 1
+                Case "grade" : colGrade = i + 1
+            End Select
+        Next
+        Dim colEq As Integer = plan.Count + 1
+        Dim colRem As Integer = plan.Count + 2
 
         ' GrA columns and the TOTAL column of each category
         Dim graByCat(4) As List(Of Integer)
@@ -905,10 +1098,9 @@ Public Class ucGradebook
         For cat As Integer = 1 To 4
             graByCat(cat) = New List(Of Integer)
         Next
-        For i As Integer = 0 To gridCols.Count - 1
-            Dim info As ColInfo = GetInfo(gridCols(i))
-            If info.Kind = ColKind.GrA Then graByCat(info.Category).Add(i + 1)
-            If info.Kind = ColKind.CatTotal Then totalByCat(info.Category) = i + 1
+        For i As Integer = 0 To plan.Count - 1
+            If plan(i).Kind = ColKind.GrA Then graByCat(plan(i).Category).Add(i + 1)
+            If plan(i).Kind = ColKind.CatTotal Then totalByCat(plan(i).Category) = i + 1
         Next
 
         ' ---- 1. Wipe rows 12+ of the old fixed layout (merges, formulas, formats, validations) ----
@@ -919,7 +1111,7 @@ Public Class ucGradebook
         Next
         ws.Range(HeaderTopRow, 1, ClearToRow, Math.Max(ClearToCol, colRem)).Clear()
 
-        Dim lastRow As Integer = FirstStudentRow - 1 + students.Count
+        Dim lastRow As Integer = FirstStudentRow - 1 + snap.Students.Count
         Dim ci As Globalization.CultureInfo = Globalization.CultureInfo.InvariantCulture
         Dim graBaseTxt As String = GrABase.ToString(ci)
         Dim graSpanTxt As String = (100D - GrABase).ToString(ci)
@@ -934,13 +1126,13 @@ Public Class ucGradebook
 
         ' ---- 2. Header rows 12-14 ----
         Dim pos As Integer = 1
-        While pos <= gridCols.Count
-            Dim cat As Integer = GetInfo(gridCols(pos - 1)).Category
+        While pos <= plan.Count
+            Dim cat As Integer = plan(pos - 1).Category
 
             If cat = 0 Then
                 ' NO., NAME, DRP, GRADE: one tall dark cell (rows 12-14)
                 Dim tall As IXLRange = ws.Range(HeaderTopRow, pos, HeaderTopRow + 2, pos).Merge()
-                tall.FirstCell().Value = gridCols(pos - 1).HeaderText
+                tall.FirstCell().Value = plan(pos - 1).Header
                 tall.Style.Fill.BackgroundColor = cDark
                 tall.Style.Font.FontColor = XLColor.White
                 tall.Style.Font.Bold = True
@@ -948,32 +1140,32 @@ Public Class ucGradebook
             Else
                 ' Category run: merged band over all of its columns
                 Dim first As Integer = pos
-                While pos <= gridCols.Count AndAlso GetInfo(gridCols(pos - 1)).Category = cat
+                While pos <= plan.Count AndAlso plan(pos - 1).Category = cat
                     pos += 1
                 End While
                 Dim last As Integer = pos - 1
 
                 Dim band As IXLRange = ws.Range(HeaderTopRow, first, HeaderTopRow, last).Merge()
-                band.FirstCell().Value = (CategoryName(cat) & " " & CategoryWeight(cat).ToString("0.##") & "%").ToUpper()
+                band.FirstCell().Value = (snap.CatNames(cat) & " " & snap.CatWeights(cat).ToString("0.##") & "%").ToUpper()
                 band.Style.Fill.BackgroundColor = If(cat Mod 2 = 1, cDark, cDark2)
                 band.Style.Font.FontColor = XLColor.White
                 band.Style.Font.Bold = True
 
                 For k As Integer = first To last
-                    Dim gi As ColInfo = GetInfo(gridCols(k - 1))
+                    Dim pc As ExportCol = plan(k - 1)
                     Dim lbl As IXLCell = ws.Cell(HeaderTopRow + 1, k)
                     Dim sub14 As IXLCell = ws.Cell(HeaderTopRow + 2, k)
 
-                    Select Case gi.Kind
+                    Select Case pc.Kind
                         Case ColKind.Raw
-                            lbl.Value = gi.ItemName.ToUpper()
-                            sub14.Value = CDbl(gi.MaxScore)                     ' max score: GrA formulas read this cell
+                            lbl.Value = pc.Header
+                            sub14.Value = CDbl(pc.Item.MaxScore)                 ' max score: GrA formulas read this cell
                             sub14.Style.NumberFormat.Format = """MAX: ""General"
                         Case ColKind.GrA
                             lbl.Value = "GrA"
                         Case ColKind.CatTotal
-                            lbl.Value = If(cat = 4, "MAJOR EXAM", "TOTAL")
-                            sub14.Value = CDbl(CategoryWeight(cat))              ' weight: TOTAL formulas read this cell
+                            lbl.Value = pc.Header
+                            sub14.Value = CDbl(snap.CatWeights(cat))             ' weight: TOTAL formulas read this cell
                             sub14.Style.NumberFormat.Format = "General""%"""
                     End Select
                 Next
@@ -1005,26 +1197,25 @@ Public Class ucGradebook
         ws.Row(HeaderTopRow + 2).Height = 18
 
         ' ---- 3. Student rows ----
-        For i As Integer = 0 To students.Count - 1
-            Dim r As Integer = FirstStudentRow + i
-            Dim g As DataGridViewRow = students(i)
+        For si As Integer = 0 To snap.Students.Count - 1
+            Dim r As Integer = FirstStudentRow + si
+            Dim stu As SnapStudent = snap.Students(si)
 
             ' NO., NAME (Lastname, Firstname), DRP ("Drp" only for dropped students)
-            Dim studentName As String = GridText(g, "studname")
-            ws.Cell(r, 1).Value = i + 1
-            ws.Cell(r, colName).Value = studentName
-            Dim nameLines As Integer = Math.Max(1, CInt(Math.Ceiling(studentName.Length / (NameColWidth - 4))))
+            ws.Cell(r, 1).Value = si + 1
+            ws.Cell(r, colName).Value = stu.Name
+            Dim nameLines As Integer = Math.Max(1, CInt(Math.Ceiling(stu.Name.Length / (NameColWidth - 4))))
             ws.Row(r).Height = StudentRowHeight * nameLines
-            If GridText(g, "status").Equals("Dropped", StringComparison.OrdinalIgnoreCase) Then ws.Cell(r, colDrp).Value = "Drp"
+            If stu.Dropped Then ws.Cell(r, colDrp).Value = "Drp"
 
-            For k As Integer = 1 To gridCols.Count
-                Dim gi As ColInfo = GetInfo(gridCols(k - 1))
+            For k As Integer = 1 To plan.Count
+                Dim pc As ExportCol = plan(k - 1)
                 Dim cell As IXLCell = ws.Cell(r, k)
 
-                Select Case gi.Kind
+                Select Case pc.Kind
                     Case ColKind.Raw
-                        Dim v As Decimal? = GridNumber(g, gridCols(k - 1))
-                        If v.HasValue Then cell.Value = CDbl(v.Value)
+                        Dim sc As Decimal
+                        If stu.Scores.TryGetValue(pc.Item.ItemId, sc) Then cell.Value = CDbl(sc)
                         cell.Style.NumberFormat.Format = "0.00"
                         cell.Style.Protection.Locked = False        ' the sheet is protected: scores stay editable
 
@@ -1039,8 +1230,8 @@ Public Class ucGradebook
 
                     Case ColKind.CatTotal
                         ' category average of the graded GrA cells x category weight / 100
-                        If graByCat(gi.Category).Count > 0 Then
-                            Dim refs As String = String.Join(",", graByCat(gi.Category).Select(Function(n) ColLetter(n) & r))
+                        If graByCat(pc.Category).Count > 0 Then
+                            Dim refs As String = String.Join(",", graByCat(pc.Category).Select(Function(n) ColLetter(n) & r))
                             Dim wRef As String = ColLetter(k) & "$" & (HeaderTopRow + 2)
                             cell.FormulaA1 = $"IF(COUNT({refs})=0,"""",ROUND(AVERAGE({refs})*{wRef}/100,2))"
                         End If
@@ -1071,23 +1262,40 @@ Public Class ucGradebook
         body.Style.Border.InsideBorderColor = cLine
         body.Style.Font.FontSize = ExportFontSize
 
-        If students.Count > 0 Then
+        If snap.Students.Count > 0 Then
             Dim data As IXLRange = ws.Range(FirstStudentRow, 1, lastRow, colRem)
             data.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center
             data.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center
             Dim nameRange As IXLRange = ws.Range(FirstStudentRow, colName, lastRow, colName)
             nameRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left
             nameRange.Style.Alignment.WrapText = True
+
+            ' Red rows: dropped students always; failing students only once the period is published.
+            ' Live conditional formatting, so it keeps working if scores are edited in Excel.
+            Dim redFill As XLColor = XLColor.FromArgb(255, 199, 206)
+            Dim redFont As XLColor = XLColor.FromArgb(156, 0, 6)
+            Dim drpL As String = ColLetter(colDrp)
+            Dim remColL As String = ColLetter(colRem)
+
+            Dim cfDrop As IXLStyle = data.AddConditionalFormat().WhenIsTrue($"=LOWER(${drpL}{FirstStudentRow})=""drp""")
+            cfDrop.Fill.BackgroundColor = redFill
+            cfDrop.Font.FontColor = redFont
+
+            If snap.Published Then
+                Dim cfFail As IXLStyle = data.AddConditionalFormat().WhenIsTrue($"=${remColL}{FirstStudentRow}=""Fail""")
+                cfFail.Fill.BackgroundColor = redFill
+                cfFail.Font.FontColor = redFont
+            End If
         End If
 
         ' ---- 5. Column widths ----
         ws.Column(1).Width = 6
         ws.Column(colName).Width = NameColWidth
         ws.Column(colDrp).Width = 8
-        For k As Integer = 1 To gridCols.Count
-            Dim gi As ColInfo = GetInfo(gridCols(k - 1))
-            Select Case gi.Kind
-                Case ColKind.Raw : ws.Column(k).Width = Math.Min(22, Math.Max(11, gi.ItemName.Length + 3))
+        For k As Integer = 1 To plan.Count
+            Dim pc As ExportCol = plan(k - 1)
+            Select Case pc.Kind
+                Case ColKind.Raw : ws.Column(k).Width = Math.Min(22, Math.Max(11, pc.Item.Name.Length + 3))
                 Case ColKind.GrA : ws.Column(k).Width = 9
                 Case ColKind.CatTotal : ws.Column(k).Width = 12
             End Select
@@ -1101,6 +1309,7 @@ Public Class ucGradebook
 
     ' The template's summary box (Q6:Q9) and the Semestral sheet pointed at the OLD fixed columns
     ' (S = EQ, T = Grade, U = Remarks). Point them at the columns of the rebuilt sheet instead.
+    ' Called once per rebuilt period, so Semestral follows BOTH gradebooks (they may have different column counts).
     Private Sub RepointSummaryAndSemestral(wb As XLWorkbook, wsTarget As IXLWorksheet, period As String, layout As ExportLayout)
         Dim remL As String = ColLetter(layout.RemarksCol)
 
@@ -1136,7 +1345,7 @@ Public Class ucGradebook
                 Dim cell As IXLCell = wsSem.Cell(r, c)
                 If Not cell.HasFormula Then Continue For
                 Dim f As String = cell.FormulaA1
-                Dim nf As String = Regex.Replace(f, pattern, Function(m As Match) period & "!" & map(m.Groups(1).Value) & m.Groups(2).Value, RegexOptions.IgnoreCase)
+                Dim nf As String = Regex.Replace(f, pattern, Function(m As Match) period & "!" & map(m.Groups(1).Value.ToUpper()) & m.Groups(2).Value, RegexOptions.IgnoreCase)
                 If nf <> f Then cell.FormulaA1 = nf
             Next
         Next
@@ -1148,24 +1357,6 @@ Public Class ucGradebook
         Dim v As Object = row.Cells(colName).Value
         Return If(v Is Nothing, "", v.ToString().Trim())
     End Function
-
-    Private Function GridNumber(row As DataGridViewRow, col As DataGridViewColumn) As Decimal?
-        Dim v As Object = row.Cells(col.Index).Value
-        Dim d As Decimal
-        If v IsNot Nothing AndAlso Decimal.TryParse(v.ToString(), d) Then Return d
-        Return Nothing
-    End Function
-
-    ' Skips formula cells (template formulas are never overwritten) and clears the cell when there is no value
-    Private Sub SetText(ws As IXLWorksheet, address As String, value As String)
-        Dim cell As IXLCell = ws.Cell(address)
-        If cell.HasFormula Then Return
-        If String.IsNullOrEmpty(value) Then
-            cell.Clear(XLClearOptions.Contents)
-        Else
-            cell.Value = value
-        End If
-    End Sub
 
     ' Header cells: blank input is ignored (template text stays); numeric text becomes a number
     Private Sub SetTextOrNumber(ws As IXLWorksheet, address As String, value As String)
@@ -1249,7 +1440,7 @@ Public Class ucGradebook
                 End If
             End If
 
-            RecalculateRow(dgvGradebook.Rows(e.RowIndex))
+            RecalculateRow(dgvGradebook.Rows(e.RowIndex))     ' also updates the red highlight
             dgvGradebook.InvalidateRow(e.RowIndex)
             UpdateSaveButtonState()
         End If
@@ -1468,6 +1659,10 @@ Public Class ucGradebook
         Dim status As String = If(row.Cells("status").Value IsNot Nothing, row.Cells("status").Value.ToString(), "")
         Dim isDropped As Boolean = status.Equals("Dropped", StringComparison.OrdinalIgnoreCase)
         row.Cells("grade").Value = If(isDropped, "DRP", finalGrade.ToString("0.00"))
+
+        ' Red row: dropped, or failing once this period has been published
+        Dim failing As Boolean = _periodPublished AndAlso anyScore AndAlso Math.Min(100D, finalGrade) < PassingGrade
+        ApplyRowHighlight(row, isDropped OrElse failing)
 
         If isDropped OrElse Not anyScore Then Return Nothing
         Return Math.Min(100D, finalGrade)
@@ -1975,6 +2170,8 @@ Public Class ucGradebook
             Dim n As Integer = GradeReleaseService.SaveAndRelease(_classId, _period)
 
             _gradebookSaved = True
+            _periodPublished = True     ' <-- new: failing students turn red from now on
+            RecalculateAll()            ' <-- new: repaint the rows with the red highlight right away
             UpdateSaveButtonState()
             Msg.Info("The official " & _period & " period grades were published." & vbCrLf &
                      n & " student(s) have a published " & _period & " period grade. The admin was notified for review." &

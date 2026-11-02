@@ -13,6 +13,37 @@ Public Class AnalyticsService
       {DatabaseHelper.P("@s", studentId)})
   End Function
 
+  ''' <summary>Current gradebook standing, calculated from saved item scores without requiring publication.</summary>
+  Public Shared Function LiveGradeStanding(studentId As String) As DataTable
+    Return DatabaseHelper.ExecuteQuery(
+      "SELECT co.course_code, co.course_name, ROUND(AVG(pg.period_grade), 2) AS live_grade " &
+      "FROM enrollment e " &
+      "JOIN classes c ON c.class_id = e.class_id " &
+      "JOIN course co ON co.course_id = c.course_id " &
+      "JOIN academic_term t ON t.term_id = c.term_id AND t.is_active = 1 " &
+      "JOIN (" &
+      "  SELECT e2.enrollment_id, c2.class_id, r.period, " &
+      "         LEAST(100, SUM(ROUND(ra.avg_gra * r.weight_percent / 100, 2))) AS period_grade " &
+      "  FROM enrollment e2 " &
+      "  JOIN classes c2 ON c2.class_id = e2.class_id " &
+      "  JOIN grading_rubric r ON r.class_id = c2.class_id " &
+      "  JOIN (" &
+      "    SELECT ge.enrollment_id, gi.rubric_id, " &
+      "           AVG(ROUND(50 + 50 * ge.score / gi.max_score, 2)) AS avg_gra " &
+      "    FROM grade_entry ge " &
+      "    JOIN grade_item gi ON gi.item_id = ge.item_id AND gi.max_score > 0 " &
+      "    WHERE ge.score IS NOT NULL " &
+      "    GROUP BY ge.enrollment_id, gi.rubric_id" &
+      "  ) ra ON ra.enrollment_id = e2.enrollment_id AND ra.rubric_id = r.rubric_id " &
+      "  WHERE r.period IN ('Midterm', 'Final') " &
+      "  GROUP BY e2.enrollment_id, c2.class_id, r.period" &
+      ") pg ON pg.enrollment_id = e.enrollment_id AND pg.class_id = c.class_id " &
+      "WHERE e.student_id = @s AND e.status <> 'Dropped' " &
+      "GROUP BY c.class_id, co.course_code, co.course_name " &
+      "ORDER BY co.course_code, co.course_name",
+      {DatabaseHelper.P("@s", studentId)})
+  End Function
+
   ''' <summary>Average scored percent by rubric category, for all active classes or one selected class.</summary>
   Public Shared Function ComponentAverages(studentId As String, Optional classId As Integer = 0) As List(Of KeyValuePair(Of String, Double))
     Dim sql As String =
